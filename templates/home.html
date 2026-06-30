@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CareerGrid</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <div class="hero-section">
+        <nav class="navbar">
+            <h2 class="logo">CareerGrid</h2>
+            <div>
+                <a href="/login">Login</a>
+                <a href="/register" class="btn-small">Sign Up</a>
+            </div>
+        </nav>
+
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1>Find your career path through interactive simulations</h1>
+                <p>
+                    CareerGrid helps students explore careers, test their skills,
+                    and receive personalized AI-based learning roadmaps.
+                </p>
+
+                <a href="/career" class="main-btn">Start Exploring</a>
+            </div>
+
+            <div class="hero-card">
+                <div class="puzzle">🧩</div>
+                <h3>Career Simulation</h3>
+                <p>Choose a career, complete tasks, and get feedback.</p>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Choose Career | CareerGrid</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <div class="career-page">
+        <nav class="navbar">
+            <h2 class="logo">CareerGrid</h2>
+            <a href="/">Home</a>
+        </nav>
+
+        <div class="career-header">
+            <h1>Choose a Career Path</h1>
+            <p>Select a career you want to explore through an interactive simulation.</p>
+        </div>
+
+        <div class="career-grid">
+
+            <div class="career-card">
+                <div class="career-icon">💻</div>
+                <h3>Software Developer</h3>
+                <p>Practice problem-solving, debugging, and coding decisions.</p>
+                <a href="/simulation">Start Simulation</a>
+            </div>
+
+            <div class="career-card">
+                <div class="career-icon">🎨</div>
+                <h3>UI/UX Designer</h3>
+                <p>Explore user needs, design choices, and interface decisions.</p>
+                <a href="/simulation">Start Simulation</a>
+            </div>
+
+            <div class="career-card">
+                <div class="career-icon">📊</div>
+                <h3>Data Analyst</h3>
+                <p>Analyze data, understand patterns, and make recommendations.</p>
+                <a href="/simulation">Start Simulation</a>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>
