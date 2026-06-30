@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simulation | CareerGrid</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <div class="simulation-page">
+        <nav class="navbar">
+            <h2 class="logo">CareerGrid</h2>
+            <a href="/career">Back to Careers</a>
+        </nav>
+
+        <div class="simulation-header">
+            <h1>{{ career_name }} Simulation</h1>
+            <p>Step {{ step }} of {{ total_steps }}</p>
+        </div>
+
+        <div class="simulation-card">
+
+            {% if step == 1 %}
+                <h3>📧 New Message</h3>
+                <div class="email-box">
+                    <p><strong>From:</strong> Alex Carter, Team Lead</p>
+                    <p><strong>Subject:</strong> Welcome to your first day</p>
+                    <p class="email-body">
+                        Hi! Welcome to the team. Before we get started, take a moment
+                        to read this message carefully — your first task will be based
+                        on what's discussed here. Once you're ready, click Continue below.
+                    </p>
+                </div>
+            {% else %}
+                <p>Task {{ step }} is coming soon.</p>
+            {% endif %}
+
+            {% if step < total_steps %}
+                <a href="/simulation/{{ career_id }}/{{ step + 1 }}" class="main-btn">Continue</a>
+            {% else %}
+                <a href="/roadmap" class="main-btn">Finish Simulation</a>
+            {% endif %}
+
+        </div>
+    </div>
+
+</body>
+</html>
