@@ -25,6 +25,25 @@ SIMULATION_DATA = {
     }
 }
 
+POSITIONS_DATA = {
+    "software-developer": {
+        "backend-developer": {
+            "title": "Backend Developer",
+            "companies": [
+                {"id": "technova", "name": "TechNova", "location": "Local"},
+                {"id": "brightsoft", "name": "BrightSoft", "location": "Global"}
+            ]
+        },
+        "frontend-developer": {
+            "title": "Frontend Developer",
+            "companies": [
+                {"id": "pixelworks", "name": "PixelWorks", "location": "Local"},
+                {"id": "cloudbyte", "name": "CloudByte", "location": "Global"}
+            ]
+        }
+    }
+}
+
 @app.route("/")
 def home():
     return render_template("home.html")
@@ -40,6 +59,30 @@ def register():
 @app.route("/career")
 def career():
     return render_template("career.html")
+
+@app.route("/positions/<career_id>")
+def positions(career_id):
+    career_name = career_id.replace("-", " ").title()
+    position_data = POSITIONS_DATA.get(career_id, {})
+    return render_template(
+        "positions.html",
+        career_id=career_id,
+        career_name=career_name,
+        positions=position_data
+    )
+
+@app.route("/positions/<career_id>/<position_id>")
+def companies(career_id, position_id):
+    career_name = career_id.replace("-", " ").title()
+    position_data = POSITIONS_DATA.get(career_id, {}).get(position_id, {})
+    return render_template(
+        "companies.html",
+        career_id=career_id,
+        career_name=career_name,
+        position_id=position_id,
+        position_title=position_data.get("title", ""),
+        companies=position_data.get("companies", [])
+    )
 
 @app.route("/simulation/<career_id>")
 def simulation(career_id):
