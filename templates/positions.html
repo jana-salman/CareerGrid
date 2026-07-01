@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Positions | CareerGrid</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <div class="career-page">
+        <nav class="navbar">
+            <h2 class="logo">CareerGrid</h2>
+            <a href="/career">Back to Careers</a>
+        </nav>
+
+        <div class="simulation-header">
+            <h1>{{ career_name }} Positions</h1>
+            <p>Choose a position to see available companies</p>
+        </div>
+
+        <div class="career-grid">
+            {% for position_id, position in positions.items() %}
+            <div class="career-card">
+                <h3>{{ position.title }}</h3>
+                <p>{{ position.companies|length }} companies offering this role</p>
+                <a href="/positions/{{ career_id }}/{{ position_id }}">View Companies</a>
+            </div>
+            {% else %}
+            <p>No positions available yet for this career.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+</body>
+</html>
