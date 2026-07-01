@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Companies | CareerGrid</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <div class="career-page">
+        <nav class="navbar">
+            <h2 class="logo">CareerGrid</h2>
+            <a href="/positions/{{ career_id }}">Back to Positions</a>
+        </nav>
+
+        <div class="simulation-header">
+            <h1>{{ position_title }}</h1>
+            <p>Choose a company to start your practice task</p>
+        </div>
+
+        <div class="career-grid">
+            {% for company in companies %}
+            <div class="career-card">
+                <h3>{{ company.name }}</h3>
+                <p>{{ company.location }} position</p>
+                <a href="/simulation/{{ career_id }}/{{ position_id }}/{{ company.id }}/1">Start Task</a>
+            </div>
+            {% else %}
+            <p>No companies available yet for this position.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+</body>
+</html>
