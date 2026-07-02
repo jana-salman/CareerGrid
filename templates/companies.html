@@ -14,19 +14,26 @@
         </nav>
 
         <div class="simulation-header">
-            <h1>{{ position_title }}</h1>
-            <p>Choose a company to start your practice task</p>
+            <h1>{{ position_title }} Openings</h1>
+            <p>Real listings pulled live from Adzuna (United States)</p>
         </div>
 
-        <div class="career-grid">
-            {% for company in companies %}
-            <div class="career-card">
-                <h3>{{ company.name }}</h3>
-                <p>{{ company.location }} position</p>
-                <a href="/simulation/{{ career_id }}/{{ position_id }}/{{ company.id }}/1">Start Task</a>
+        <div class="job-list">
+            {% for job in jobs %}
+            <div class="job-card">
+                <div class="job-card-main">
+                    <h3>{{ job.title }}</h3>
+                    <p class="job-company">{{ job.company.display_name }}</p>
+                    <p class="job-location">{{ job.location.display_name }}</p>
+                    <p class="job-description">{{ job.description[:180] }}...</p>
+                </div>
+                <div class="job-card-side">
+                    <span class="job-status">Open</span>
+                    <a href="/simulation/{{ career_id }}/{{ position_id }}/{{ job.company.display_name.replace(' ', '-') }}/1" class="main-btn">Practice for this role</a>
+                </div>
             </div>
             {% else %}
-            <p>No companies available yet for this position.</p>
+            <p>No live listings found right now. Try again shortly.</p>
             {% endfor %}
         </div>
     </div>
