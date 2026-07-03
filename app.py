@@ -1,6 +1,39 @@
-from flask import Flask, render_template, redirect, url_for
+from flask import Flask, render_template, redirect, url_for, session, request
+import requests
+import os
+from dotenv import load_dotenv
+from routes.auth import auth_bp
+
+load_dotenv()
 
 app = Flask(__name__)
+
+app.config["SECRET_KEY"] = os.getenv(
+    "SECRET_KEY",
+    "careergrid-development-key"
+)
+
+app.register_blueprint(auth_bp)
+
+ADZUNA_APP_ID = os.getenv("ADZUNA_APP_ID")
+ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY")
+
+
+# Pages that users are allowed to open WITHOUT logging in
+PUBLIC_ROUTES = {
+    "home",
+    "auth.login",
+    "auth.register",
+    "auth.logout",
+    "static"
+}
+
+
+@app.before_request
+def protect_pages():
+    if request.endpoint not in PUBLIC_ROUTES and "user_email" not in session:
+        return redirect(url_for("auth.login"))
+
 
 SIMULATION_DATA = {
     "software-developer": {
@@ -25,6 +58,7 @@ SIMULATION_DATA = {
     }
 }
 
+
 POSITIONS_DATA = {
     "software-developer": {
         "backend-developer": {
@@ -44,26 +78,50 @@ POSITIONS_DATA = {
     }
 }
 
+
+def fetch_adzuna_jobs(job_title, location="", results=5):
+    if not ADZUNA_APP_ID or not ADZUNA_APP_KEY:
+        return []
+
+    url = "https://api.adzuna.com/v1/api/jobs/us/search/1"
+
+    params = {
+        "app_id": ADZUNA_APP_ID,
+        "app_key": ADZUNA_APP_KEY,
+        "what": job_title,
+        "where": location,
+        "results_per_page": results,
+        "content-type": "application/json"
+    }
+
+    try:
+        response = requests.get(url, params=params, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        return data.get("results", [])
+    except requests.exceptions.RequestException as e:
+        print("Adzuna API error:", e)
+        return []
+
+
 @app.route("/")
 def home():
     return render_template("home.html")
 
-@app.route("/login")
-def login():
-    return render_template("login.html")
-
-@app.route("/register")
-def register():
-    return render_template("register.html")
 
 @app.route("/career")
 def career():
-    return render_template("career.html")
+    return render_template(
+        "career.html",
+        user_name=session.get("user_name")
+    )
+
 
 @app.route("/positions/<career_id>")
 def positions(career_id):
     career_name = career_id.replace("-", " ").title()
     position_data = POSITIONS_DATA.get(career_id, {})
+
     return render_template(
         "positions.html",
         career_id=career_id,
@@ -71,40 +129,57 @@ def positions(career_id):
         positions=position_data
     )
 
+
 @app.route("/positions/<career_id>/<position_id>")
 def companies(career_id, position_id):
     career_name = career_id.replace("-", " ").title()
+
     position_data = POSITIONS_DATA.get(career_id, {}).get(position_id, {})
+    position_title = position_data.get("title", "")
+    local_companies = position_data.get("companies", [])
+
+    jobs = fetch_adzuna_jobs(position_title)
+
     return render_template(
         "companies.html",
         career_id=career_id,
         career_name=career_name,
         position_id=position_id,
-        position_title=position_data.get("title", ""),
-        companies=position_data.get("companies", [])
+        position_title=position_title,
+        jobs=jobs,
+        local_companies=local_companies
     )
 
-@app.route("/simulation/<career_id>")
-def simulation(career_id):
-    return redirect(url_for("simulation_step", career_id=career_id, step=1))
 
-@app.route("/simulation/<career_id>/<int:step>")
-def simulation_step(career_id, step):
+@app.route("/simulation/<career_id>/<position_id>/<company_id>/<int:step>")
+def simulation_step(career_id, position_id, company_id, step):
     career_name = career_id.replace("-", " ").title()
     total_steps = 5
     email = SIMULATION_DATA.get(career_id)
+
+    position_data = POSITIONS_DATA.get(career_id, {}).get(position_id, {})
+    position_title = position_data.get("title", "")
+
+    company_name = company_id.replace("-", " ")
+
     return render_template(
         "simulation.html",
         career_id=career_id,
         career_name=career_name,
+        position_id=position_id,
+        position_title=position_title,
+        company_id=company_id,
+        company_name=company_name,
         step=step,
         total_steps=total_steps,
         email=email
     )
 
+
 @app.route("/roadmap")
 def roadmap():
     return render_template("roadmap.html")
+
 
 if __name__ == "__main__":
     app.run(debug=True)

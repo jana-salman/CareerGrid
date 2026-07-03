@@ -12,10 +12,31 @@
             <h1>Create Account</h1>
             <p>Sign up to explore careers through simulations.</p>
 
-            <form action="/career" method="get">
-                <input type="text" placeholder="Full name" required>
-                <input type="email" placeholder="Email address" required>
-                <input type="password" placeholder="Password" required>
+            <form action="{{ url_for('auth.register') }}" method="POST">
+                <input
+                    type="text"
+                    name="full_name"
+                    placeholder="Full name"
+                    required
+                >
+
+                <input
+                    type="email"
+                    name="email"
+                    placeholder="Email address"
+                    required
+                >
+
+                <input
+                    type="password"
+                    name="password"
+                    placeholder="Password"
+                    required
+                >
+
+                {% if error %}
+                    <p class="error-message">{{ error }}</p>
+                {% endif %}
 
                 <button type="submit">Sign Up</button>
             </form>
