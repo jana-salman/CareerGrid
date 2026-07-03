@@ -77,6 +77,25 @@ POSITIONS_DATA = {
         }
     }
 }
+def fetch_adzuna_jobs(job_title, location="", results=5):
+    url = "https://api.adzuna.com/v1/api/jobs/us/search/1"
+    params = {
+        "app_id": ADZUNA_APP_ID,
+        "app_key": ADZUNA_APP_KEY,
+        "what": job_title,
+        "where": location,
+        "results_per_page": results,
+        "content-type": "application/json"
+    }
+
+    try:
+        response = requests.get(url, params=params, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        return data.get("results", [])
+    except requests.exceptions.RequestException as e:
+        print("Adzuna API error:", e)
+        return []
 
 
 def fetch_adzuna_jobs(job_title, location="", results=5):
