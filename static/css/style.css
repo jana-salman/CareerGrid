@@ -299,7 +299,6 @@ body {
     border: none;
     cursor: pointer;
 }
-
 .job-list {
     display: flex;
     flex-direction: column;
