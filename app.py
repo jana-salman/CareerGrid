@@ -1,11 +1,18 @@
-from flask import Flask, render_template, redirect, url_for
+from flask import Flask, render_template, redirect, url_for, session
 import requests
 import os
 from dotenv import load_dotenv
+from routes.auth import auth_bp
 
 load_dotenv()
 
 app = Flask(__name__)
+#Flask needs this key to store login information safely inside the session.
+app.config["SECRET_KEY"] = os.getenv(
+    "SECRET_KEY",
+    "careergrid-development-key"
+)
+app.register_blueprint(auth_bp)
 
 ADZUNA_APP_ID = os.getenv("ADZUNA_APP_ID")
 ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY")
@@ -75,17 +82,16 @@ def fetch_adzuna_jobs(job_title, location="", results=5):
 def home():
     return render_template("home.html")
 
-@app.route("/login")
-def login():
-    return render_template("login.html")
-
-@app.route("/register")
-def register():
-    return render_template("register.html")
 
 @app.route("/career")
 def career():
-    return render_template("career.html")
+    if "user_email" not in session:
+        return redirect(url_for("auth.login"))
+
+    return render_template(
+        "career.html",
+        user_name=session.get("user_name")
+    )
 
 @app.route("/positions/<career_id>")
 def positions(career_id):
