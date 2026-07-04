@@ -262,7 +262,60 @@ BACKEND_SCENARIO = {
     "career_id": "software-developer",
     "position_id": "backend-developer",
     "title": "Checkout API Investigation",
+    "evaluation": {
+        1: {
+            "skill": "Problem Investigation",
+            "keywords": [
+                "payload",
+                "request",
+                "cart",
+                "logs",
+                "reproduce",
+                "backend"
+            ]
+        },
 
+        2: {
+            "skill": "Error Analysis",
+            "keywords": [
+                "product_id",
+                "missing",
+                "keyerror",
+                "payload",
+                "cart item"
+            ]
+        },
+
+        3: {
+            "skill": "Technical Decision Making",
+            "correct_answer": "option_b"
+        },
+
+        4: {
+            "skill": "Input Validation",
+            "keywords": [
+                "get",
+                "product_id",
+                "validate",
+                "missing",
+                "400",
+                "error"
+            ]
+        },
+
+        5: {
+            "skill": "Technical Communication",
+            "keywords": [
+                "500",
+                "product_id",
+                "validation",
+                "400",
+                "test",
+                "payload"
+            ]
+        }
+    },
+   
     "steps": {
         1: {
             "sender": "Alex Carter, Backend Team Lead",
@@ -394,6 +447,85 @@ BACKEND_SCENARIO = {
     }
 }
 
+# =========================================================
+# BACKEND SIMULATION ANALYSIS
+# =========================================================
+
+def analyze_backend_answers(answers):
+    """
+    Analyze the five Backend simulation answers.
+
+    Each simulation step is worth 20 points,
+    giving a maximum total score of 100.
+    """
+
+    evaluation = BACKEND_SCENARIO["evaluation"]
+
+    total_score = 0
+    step_results = []
+    strengths = []
+    skills_to_improve = []
+
+    for step_number, criteria in evaluation.items():
+        answer = str(
+            answers.get(f"step_{step_number}", "")
+        ).strip()
+
+        skill = criteria["skill"]
+        step_score = 0
+        matched_keywords = []
+
+        # Step 3 is a multiple-choice question.
+        if "correct_answer" in criteria:
+            if answer == criteria["correct_answer"]:
+                step_score = 20
+
+        # Steps 1, 2, 4, and 5 are evaluated using keywords.
+        else:
+            keywords = criteria.get("keywords", [])
+            normalized_answer = answer.lower()
+
+            matched_keywords = [
+                keyword
+                for keyword in keywords
+                if keyword.lower() in normalized_answer
+            ]
+
+            if keywords:
+                step_score = round(
+                    len(matched_keywords) / len(keywords) * 20
+                )
+
+        total_score += step_score
+
+        if step_score >= 14:
+            strengths.append(skill)
+        else:
+            skills_to_improve.append(skill)
+
+        step_results.append({
+            "step": step_number,
+            "skill": skill,
+            "score": step_score,
+            "maximum_score": 20,
+            "matched_keywords": matched_keywords
+        })
+
+    if total_score >= 80:
+        performance_level = "Strong"
+    elif total_score >= 60:
+        performance_level = "Developing"
+    else:
+        performance_level = "Needs Practice"
+        
+        return {
+        "score": total_score,
+        "maximum_score": 100,
+        "performance_level": performance_level,
+        "strengths": strengths,
+        "skills_to_improve": skills_to_improve,
+        "step_results": step_results
+}
 # =========================================================
 # POSITION AND COMPANY DATA
 # =========================================================
@@ -729,6 +861,12 @@ def simulation_step(career_id, position_id, company_id, step):
                 )
 
             # Step 5 is the final step.
+            if scenario == BACKEND_SCENARIO:
+                simulation_result = analyze_backend_answers(answers)
+
+                session["scenario_id"] = BACKEND_SCENARIO["scenario_id"]
+                session["simulation_result"] = simulation_result
+
             return redirect(
                 url_for("roadmap")
             )
@@ -761,7 +899,8 @@ def simulation_step(career_id, position_id, company_id, step):
 def roadmap():
     return render_template(
         "roadmap.html",
-        answers=session.get("simulation_answers", {})
+        answers=session.get("simulation_answers", {}),
+        result=session.get("simulation_result")
     )
 
 

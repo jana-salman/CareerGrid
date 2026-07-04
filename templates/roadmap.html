@@ -1,27 +1,397 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <title>Your Roadmap | CareerGrid</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Your Results | CareerGrid</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
 </head>
+
 <body>
 
     <div class="career-page">
+
+        <!-- NAVIGATION -->
         <nav class="navbar">
-            <h2 class="logo">CareerGrid</h2>
-            <a href="/career">Back to Careers</a>
+
+            <h2 class="logo">
+                CareerGrid
+            </h2>
+
+            <a href="{{ url_for('career') }}">
+                Back to Careers
+            </a>
+
         </nav>
 
+
+        <!-- PAGE HEADING -->
         <div class="simulation-header">
+
             <h1>Your Results</h1>
-            <p>Here's how you did, and what to work on next</p>
+
+            <p>
+                Here's how you did, and what to work on next
+            </p>
+
         </div>
 
-        <div class="simulation-card">
-            <p>Your personalized roadmap will appear here once the analysis feature is complete.</p>
-        </div>
+
+        {% if result %}
+
+            <!-- CHOOSE THE RESULT COLOR -->
+            {% if result.score >= 80 %}
+
+                {% set performance_class = "strong-performance" %}
+
+            {% elif result.score >= 60 %}
+
+                {% set performance_class = "developing-performance" %}
+
+            {% else %}
+
+                {% set performance_class = "practice-performance" %}
+
+            {% endif %}
+
+
+            <!-- COMPLETE RESULTS DASHBOARD -->
+            <main class="results-dashboard {{ performance_class }}">
+
+                <!-- SCORE OVERVIEW -->
+                <section class="results-overview">
+
+                    <div
+                        class="score-ring"
+                        style="--score: {{ result.score }};"
+                    >
+
+                        <div class="score-ring-inner">
+
+                            <span class="score-value">
+                                {{ result.score }}
+                            </span>
+
+                            <span class="score-maximum">
+                                / {{ result.maximum_score }}
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="performance-summary">
+
+                        <span class="performance-label">
+                            Performance Level
+                        </span>
+
+                        <h2>
+                            {{ result.performance_level }}
+                        </h2>
+
+
+                        {% if result.score >= 80 %}
+
+                            <p>
+                                Excellent work. You demonstrated strong Backend
+                                Developer problem-solving skills throughout this
+                                workplace scenario.
+                            </p>
+
+                        {% elif result.score >= 60 %}
+
+                            <p>
+                                You have a good foundation. Improving the
+                                highlighted skills will help you solve similar
+                                backend problems more confidently.
+                            </p>
+
+                        {% else %}
+
+                            <p>
+                                This simulation identified several skills to
+                                strengthen. Use the recommendations below to
+                                guide your next learning steps.
+                            </p>
+
+                        {% endif %}
+
+                    </div>
+
+                </section>
+
+
+                <!-- STRENGTHS AND IMPROVEMENTS -->
+                <section class="skill-summary-grid">
+
+                    <!-- STRENGTHS CARD -->
+                    <article class="skill-card strengths-card">
+
+                        <div class="skill-card-heading">
+
+                            <span class="skill-icon">
+                                ✓
+                            </span>
+
+                            <div>
+
+                                <span class="card-eyebrow">
+                                    What Went Well
+                                </span>
+
+                                <h3>
+                                    Your Strengths
+                                </h3>
+
+                            </div>
+
+                        </div>
+
+
+                        {% if result.strengths %}
+
+                            <div class="skill-tags">
+
+                                {% for skill in result.strengths %}
+
+                                    <span class="skill-tag">
+                                        {{ skill }}
+                                    </span>
+
+                                {% endfor %}
+
+                            </div>
+
+                        {% else %}
+
+                            <p class="empty-message">
+                                No strong areas were identified yet. Try
+                                providing more detailed and technical answers
+                                during your next attempt.
+                            </p>
+
+                        {% endif %}
+
+                    </article>
+
+
+                    <!-- IMPROVEMENT CARD -->
+                    <article class="skill-card improvement-card">
+
+                        <div class="skill-card-heading">
+
+                            <span class="skill-icon">
+                                ↗
+                            </span>
+
+                            <div>
+
+                                <span class="card-eyebrow">
+                                    Your Next Focus
+                                </span>
+
+                                <h3>
+                                    Skills to Improve
+                                </h3>
+
+                            </div>
+
+                        </div>
+
+
+                        {% if result.skills_to_improve %}
+
+                            <div class="skill-tags">
+
+                                {% for skill in result.skills_to_improve %}
+
+                                    <span class="skill-tag">
+                                        {{ skill }}
+                                    </span>
+
+                                {% endfor %}
+
+                            </div>
+
+                        {% else %}
+
+                            <p class="empty-message">
+                                Excellent work. No major skill gaps were
+                                identified.
+                            </p>
+
+                        {% endif %}
+
+                    </article>
+
+                </section>
+
+
+                <!-- PERFORMANCE BREAKDOWN -->
+                <section class="performance-breakdown">
+
+                    <div class="section-heading">
+
+                        <div>
+
+                            <span class="section-eyebrow">
+                                Detailed Evaluation
+                            </span>
+
+                            <h3>
+                                Performance Breakdown
+                            </h3>
+
+                        </div>
+
+
+                        <span class="overall-score-badge">
+                            {{ result.score }}% overall
+                        </span>
+
+                    </div>
+
+
+                    <div class="breakdown-list">
+
+                        {% for step_result in result.step_results %}
+
+                            <article class="breakdown-row">
+
+                                <div class="step-number">
+                                    {{ step_result.step }}
+                                </div>
+
+
+                                <div class="step-details">
+
+                                    <div class="step-heading">
+
+                                        <div>
+
+                                            <span class="step-label">
+                                                Step {{ step_result.step }}
+                                            </span>
+
+                                            <h4>
+                                                {{ step_result.skill }}
+                                            </h4>
+
+                                        </div>
+
+
+                                        <span class="step-score">
+
+                                            {{ step_result.score }}
+                                            /
+                                            {{ step_result.maximum_score }}
+
+                                        </span>
+
+                                    </div>
+
+
+                                    <div class="progress-track">
+
+                                        <div
+                                            class="progress-fill"
+                                            style="width: {{
+                                                (
+                                                    step_result.score
+                                                    /
+                                                    step_result.maximum_score
+                                                    *
+                                                    100
+                                                ) | round
+                                            }}%;"
+                                        ></div>
+
+                                    </div>
+
+                                </div>
+
+                            </article>
+
+                        {% endfor %}
+
+                    </div>
+
+                </section>
+
+
+                <!-- BUTTONS -->
+                <div class="results-actions">
+
+                    <a
+                        href="{{ url_for('career') }}"
+                        class="secondary-result-button"
+                    >
+                        Explore Other Careers
+                    </a>
+
+
+                    <a
+                        href="{{ url_for(
+                            'simulation_step',
+                            career_id='software-developer',
+                            position_id='backend-developer',
+                            company_id='technova',
+                            step=1,
+                            reset=1
+                        ) }}"
+                        class="primary-result-button"
+                    >
+                        Practice Again
+                    </a>
+
+                </div>
+
+            </main>
+
+
+        {% else %}
+
+            <!-- NO RESULT AVAILABLE -->
+            <main class="empty-results-state">
+
+                <div class="empty-results-icon">
+                    ◇
+                </div>
+
+                <h2>
+                    No Results Available Yet
+                </h2>
+
+                <p>
+                    Complete the Backend Developer simulation to receive
+                    your personalized performance analysis.
+                </p>
+
+                <a
+                    href="{{ url_for('career') }}"
+                    class="primary-result-button"
+                >
+                    Choose a Career
+                </a>
+
+            </main>
+
+        {% endif %}
+
     </div>
 
 </body>
+
 </html>
