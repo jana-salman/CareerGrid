@@ -1,46 +1,478 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
     <title>Simulation | CareerGrid</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
 </head>
+
 <body>
 
     <div class="simulation-page">
+
         <nav class="navbar">
             <h2 class="logo">CareerGrid</h2>
-            <a href="/career">Back to Careers</a>
+
+            <a href="{{ url_for('career') }}">
+                Back to Careers
+            </a>
         </nav>
 
         <div class="simulation-header">
-            <h1>{{ position_title }} at {{ company_name }}</h1>
+
+        <span class="simulation-label">
+            Career Simulation
+        </span>
+
+        <h1>
+            {{ position_title }}
+            <span>at {{ company_name }}</span>
+        </h1>
+
+        <div class="progress-information">
             <p>Step {{ step }} of {{ total_steps }}</p>
+
+            <p>
+                {{ ((step / total_steps) * 100) | int }}% complete
+            </p>
         </div>
+
+        <div class="progress-track">
+            <div
+                class="progress-fill"
+                style="width: {{ (step / total_steps) * 100 }}%;"
+            ></div>
+        </div>
+
+    </div>
 
         <div class="simulation-card">
 
+            <!-- STEP 1 -->
             {% if step == 1 %}
-                <h3>📧 New Message</h3>
+
+                <div class="task-heading">
+
+                <span class="task-icon">📧</span>
+
+                <div>
+                    <h3>New Message</h3>
+
+                    <p>
+                        Review the message from your team lead and explain
+                        how you would begin investigating the problem.
+                    </p>
+                </div>
+
+            </div>
 
                 <div class="email-box">
-                    <p><strong>From:</strong> {{ email.sender }}</p>
-                    <p><strong>Subject:</strong> {{ email.subject }}</p>
-                    <p class="email-body">{{ email.body }}</p>
-                </div>
-            {% else %}
-                <p>Task {{ step }} is coming soon.</p>
-            {% endif %}
+                    <p>
+                        <strong>From:</strong>
+                        {{ email.sender }}
+                    </p>
 
-            {% if step < total_steps %}
-            <a href="/simulation/{{ career_id }}/{{ position_id }}/{{ company_id }}/{{ step + 1 }}" class="main-btn">
-                Continue
-            </a>
+                    <p>
+                        <strong>Subject:</strong>
+                        {{ email.subject }}
+                    </p>
+
+                    <p class="email-body">
+                        {{ email.body }}
+                    </p>
+                </div>
+
+                <form method="POST">
+
+                    <div class="simulation-question">
+
+                        <label for="answer">
+                            <strong>
+                                What would you do first to investigate and
+                                solve this problem?
+                            </strong>
+                        </label>
+
+                        <textarea
+                        id="answer"
+                        name="answer"
+                        rows="7"
+                        placeholder="Explain the steps you would take..."
+                        required
+                    >{{ saved_answer }}</textarea>
+
+                    </div>
+
+                    {% if error %}
+                        <p class="error-message">
+                            {{ error }}
+                        </p>
+                    {% endif %}
+
+                    <div class="simulation-actions">
+                    <button type="submit" class="main-btn">
+                        Submit and Continue
+                    </button>
+                </div>
+
+                </form>
+
+            <!-- STEP 2 -->
+            {% elif step == 2 %}
+
+                <div class="task-heading">
+
+                    <span class="task-icon">🧩</span>
+
+                    <div>
+                        <h3>{{ step_two_task.title }}</h3>
+
+                        <p>
+                            {{ step_two_task.instructions }}
+                        </p>
+                    </div>
+
+                </div>
+
+                <div class="code-box">
+                    <pre>{{ step_two_task.log }}</pre>
+                </div>
+
+                <form method="POST">
+
+                    <div class="simulation-question">
+
+                        <label for="answer">
+                            <strong>
+                                {{ step_two_task.question }}
+                            </strong>
+                        </label>
+
+                        <textarea
+                        id="answer"
+                        name="answer"
+                        rows="7"
+                        placeholder="Explain the steps you would take..."
+                        required
+                        >{{ saved_answer }}</textarea>
+
+                    </div>
+
+                    {% if error %}
+                        <p class="error-message">
+                            {{ error }}
+                        </p>
+                    {% endif %}
+
+                    <div class="simulation-actions">
+
+                        <a
+                            href="{{ url_for(
+                                'simulation_step',
+                                career_id=career_id,
+                                position_id=position_id,
+                                company_id=company_id,
+                                step=step - 1
+                            ) }}"
+                            class="secondary-btn"
+                        >
+                            ← Previous Step
+                        </a>
+
+                        <button type="submit" class="main-btn">
+                            Submit and Continue
+                        </button>
+
+                    </div>
+
+                </form>
+
+            <!-- STEP 3 -->
+            {% elif step == 3 %}
+
+                <div class="task-heading">
+
+                    <span class="task-icon">🛠️</span>
+
+                    <div>
+                        <h3>{{ step_three_task.title }}</h3>
+
+                        <p>
+                            {{ step_three_task.instructions }}
+                        </p>
+                    </div>
+
+                </div>
+
+                <div class="code-box">
+                    <pre>{{ step_three_task.code }}</pre>
+                </div>
+
+                <form method="POST">
+
+                    <div class="simulation-question">
+
+                        <h4 class="question-title">
+                            {{ step_three_task.question }}
+                        </h4>
+
+                        <div class="simulation-options">
+
+                            {% for option in step_three_task.options %}
+
+                                <label class="simulation-option">
+
+                                    <input
+                                    type="radio"
+                                    name="answer"
+                                    value="{{ option.value }}"
+                                    {% if saved_answer == option.value %}checked{% endif %}
+                                    required
+                                >
+
+                                    <span class="option-content">
+
+                                        <span class="option-number">
+                                            {{ loop.index }}
+                                        </span>
+
+                                        <span class="option-text">
+                                            {{ option.label }}
+                                        </span>
+
+                                    </span>
+
+                                </label>
+
+                            {% endfor %}
+
+                        </div>
+
+                    </div>
+
+                    {% if error %}
+                        <p class="error-message">
+                            {{ error }}
+                        </p>
+                    {% endif %}
+
+                    <div class="simulation-actions">
+
+                    <a
+                        href="{{ url_for(
+                            'simulation_step',
+                            career_id=career_id,
+                            position_id=position_id,
+                            company_id=company_id,
+                            step=step - 1
+                        ) }}"
+                        class="secondary-btn"
+                    >
+                        ← Previous Step
+                    </a>
+
+                    <button type="submit" class="main-btn">
+                        Submit and Continue
+                    </button>
+
+                </div>
+
+                </form>
+
+            <!-- STEP 4 -->
+            {% elif step == 4 %}
+
+                <div class="task-heading">
+
+                    <span class="task-icon">💻</span>
+
+                    <div>
+                        <h3>{{ step_four_task.title }}</h3>
+
+                        <p>
+                            {{ step_four_task.instructions }}
+                        </p>
+                    </div>
+
+                </div>
+
+                <div class="code-box">
+                    <pre>{{ step_four_task.code }}</pre>
+                </div>
+
+                <form method="POST">
+
+                    <div class="simulation-question">
+
+                        <label for="answer">
+                            <strong>
+                                {{ step_four_task.question }}
+                            </strong>
+                        </label>
+
+                        <textarea
+                            id="answer"
+                            name="answer"
+                            rows="7"
+                            placeholder="{{ step_four_task.placeholder }}"
+                            required
+                        >{{ saved_answer }}</textarea>
+
+                    </div>
+
+                    {% if error %}
+                        <p class="error-message">
+                            {{ error }}
+                        </p>
+                    {% endif %}
+
+                    <div class="simulation-actions">
+
+                        <a
+                            href="{{ url_for(
+                                'simulation_step',
+                                career_id=career_id,
+                                position_id=position_id,
+                                company_id=company_id,
+                                step=step - 1
+                            ) }}"
+                            class="secondary-btn"
+                        >
+                            ← Previous Step
+                        </a>
+
+                        <button type="submit" class="main-btn">
+                            Submit and Continue
+                        </button>
+
+                    </div>
+
+                </form>
+
+            <!-- STEP 5 -->
+            {% elif step == 5 %}
+
+                <div class="task-heading">
+
+                    <span class="task-icon">💬</span>
+
+                    <div>
+                        <h3>{{ step_five_task.title }}</h3>
+
+                        <p>
+                            {{ step_five_task.instructions }}
+                        </p>
+                    </div>
+
+                </div>
+
+                <div class="email-box">
+
+                    <p>
+                        <strong>Team Lead Request</strong>
+                    </p>
+
+                    <p>
+                        {{ step_five_task.message }}
+                    </p>
+
+                </div>
+
+                <form method="POST">
+
+                    <div class="simulation-question">
+
+                        <label for="answer">
+                            <strong>
+                                {{ step_five_task.question }}
+                            </strong>
+                        </label>
+
+                        <textarea
+                            id="answer"
+                            name="answer"
+                            rows="7"
+                            placeholder="{{ step_five_task.placeholder }}"
+                            required
+                        >{{ saved_answer }}</textarea>
+
+                    </div>
+
+                    {% if error %}
+                        <p class="error-message">
+                            {{ error }}
+                        </p>
+                    {% endif %}
+
+                    <div class="simulation-actions">
+
+                        <a
+                            href="{{ url_for(
+                                'simulation_step',
+                                career_id=career_id,
+                                position_id=position_id,
+                                company_id=company_id,
+                                step=step - 1
+                            ) }}"
+                            class="secondary-btn"
+                        >
+                            ← Previous Step
+                        </a>
+
+                        <button type="submit" class="main-btn">
+                            Finish Simulation
+                        </button>
+
+                    </div>
+
+                </form>
+
+            <!-- INVALID STEP -->
             {% else %}
-            <a href="/roadmap" class="main-btn">Finish Simulation</a>
+
+                <div class="task-heading">
+
+                    <span class="task-icon">🚧</span>
+
+                    <div>
+                        <h3>Task Unavailable</h3>
+                        <p>This simulation step is not available.</p>
+                    </div>
+
+                </div>
+
+                <div class="simulation-actions">
+
+                    <a
+                        href="{{ url_for(
+                            'simulation_step',
+                            career_id=career_id,
+                            position_id=position_id,
+                            company_id=company_id,
+                            step=1
+                        ) }}"
+                        class="main-btn"
+                    >
+                        Return to Step 1
+                    </a>
+
+                </div>
+
             {% endif %}
 
         </div>
+
     </div>
 
 </body>
