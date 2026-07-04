@@ -1,65 +1,155 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Companies | CareerGrid</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
 </head>
+
 <body>
 
     <div class="career-page">
+
         <nav class="navbar">
             <h2 class="logo">CareerGrid</h2>
-            <a href="/positions/{{ career_id }}">Back to Positions</a>
+
+            <a
+                href="{{ url_for(
+                    'positions',
+                    career_id=career_id
+                ) }}"
+            >
+                Back to Positions
+            </a>
         </nav>
 
         <div class="simulation-header">
             <h1>{{ position_title }} Openings</h1>
-            <p>Real listings pulled live from Adzuna (United States)</p>
+
+            <p>
+                Real listings pulled live from Adzuna
+                (United States)
+            </p>
         </div>
 
         <div class="job-list">
-            {% for job in jobs %}
-            <div class="job-card">
-                <div class="job-card-main">
-                    <h3>{{ job.title }}</h3>
-                    <p class="job-company">{{ job.company.display_name }}</p>
-                    <p class="job-location">{{ job.location.display_name }}</p>
-                    <p class="job-description">{{ job.description[:180] }}...</p>
-                </div>
 
-                <div class="job-card-side">
-                    <span class="job-status">Open</span>
-                    <a href="/simulation/{{ career_id }}/{{ position_id }}/{{ job.company.display_name.replace(' ', '-') }}/1" class="main-btn">
-                        Practice for this role
-                    </a>
-                </div>
-            </div>
-            {% else %}
-                {% for company in local_companies %}
+            {% for job in jobs %}
+
                 <div class="job-card">
+
                     <div class="job-card-main">
-                        <h3>{{ position_title }}</h3>
-                        <p class="job-company">{{ company.name }}</p>
-                        <p class="job-location">{{ company.location }}</p>
-                        <p class="job-description">
-                            Practice a simulated task for this role while live listings are unavailable.
+
+                        <h3>{{ job.title }}</h3>
+
+                        <p class="job-company">
+                            {{ job.company.display_name }}
                         </p>
+
+                        <p class="job-location">
+                            {{ job.location.display_name }}
+                        </p>
+
+                        <p class="job-description">
+                            {{ job.description[:180] }}...
+                        </p>
+
                     </div>
 
                     <div class="job-card-side">
-                        <span class="job-status">Demo</span>
-                        <a href="/simulation/{{ career_id }}/{{ position_id }}/{{ company.id }}/1" class="main-btn">
+
+                        <span class="job-status">
+                            Open
+                        </span>
+
+                        <a
+                            href="{{ url_for(
+                                'simulation_step',
+                                career_id=career_id,
+                                position_id=position_id,
+                                company_id=job.company.display_name.replace(' ', '-'),
+                                step=1,
+                                reset=1
+                            ) }}"
+                            class="main-btn"
+                        >
                             Practice for this role
                         </a>
+
                     </div>
+
                 </div>
+
+            {% else %}
+
+                {% for company in local_companies %}
+
+                    <div class="job-card">
+
+                        <div class="job-card-main">
+
+                            <h3>{{ position_title }}</h3>
+
+                            <p class="job-company">
+                                {{ company.name }}
+                            </p>
+
+                            <p class="job-location">
+                                {{ company.location }}
+                            </p>
+
+                            <p class="job-description">
+                                Practice a simulated task for this role
+                                while live listings are unavailable.
+                            </p>
+
+                        </div>
+
+                        <div class="job-card-side">
+
+                            <span class="job-status">
+                                Demo
+                            </span>
+
+                            <a
+                                href="{{ url_for(
+                                    'simulation_step',
+                                    career_id=career_id,
+                                    position_id=position_id,
+                                    company_id=company.id,
+                                    step=1,
+                                    reset=1
+                                ) }}"
+                                class="main-btn"
+                            >
+                                Practice for this role
+                            </a>
+
+                        </div>
+
+                    </div>
+
                 {% else %}
-                <p>No companies available yet for this position.</p>
+
+                    <p>
+                        No companies available yet for this position.
+                    </p>
+
                 {% endfor %}
+
             {% endfor %}
+
         </div>
+
     </div>
 
 </body>
+
 </html>
