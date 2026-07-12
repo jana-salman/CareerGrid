@@ -5,7 +5,7 @@ import requests
 from dotenv import load_dotenv
 
 from routes.auth import auth_bp
-
+from services.simulation_result_service import save_simulation_result
 
 # ---------------------------------------------------------
 # Load environment variables
@@ -864,8 +864,19 @@ def simulation_step(career_id, position_id, company_id, step):
             if scenario == BACKEND_SCENARIO:
                 simulation_result = analyze_backend_answers(answers)
 
+                result_id = save_simulation_result(
+                    user_id=session.get("user_id"),
+                    career_id=career_id,
+                    position_id=position_id,
+                    company_id=company_id,
+                    scenario_id=BACKEND_SCENARIO["scenario_id"],
+                    answers=answers,
+                    result=simulation_result
+                )
+
                 session["scenario_id"] = BACKEND_SCENARIO["scenario_id"]
                 session["simulation_result"] = simulation_result
+                session["simulation_result_id"] = result_id
 
             return redirect(
                 url_for("roadmap")
