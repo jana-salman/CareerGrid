@@ -1,3 +1,5 @@
 flask
 requests
 python-dotenv
+firebase-admin==7.5.0
+python-dotenv

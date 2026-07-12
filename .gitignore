@@ -5,3 +5,9 @@ venv/
 instance/
 *.db
 .DS_Store
+# Private configuration
+.env
+
+# Firebase private credentials
+firebase-service-account.json
+*firebase-adminsdk*.json
