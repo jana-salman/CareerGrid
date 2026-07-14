@@ -7,6 +7,15 @@ from dotenv import load_dotenv
 from routes.auth import auth_bp
 from services.simulation_result_service import save_simulation_result
 
+from services.simulation_generator import (
+    generate_backend_inbox_task,
+)
+
+from services.simulation_storage import (
+    create_backend_simulation_attempt,
+    get_backend_inbox_task,
+)
+
 # ---------------------------------------------------------
 # Load environment variables
 # ---------------------------------------------------------
@@ -803,6 +812,23 @@ def simulation_step(career_id, position_id, company_id, step):
 
         session.pop("scenario_id", None)
         session.pop("simulation_result", None)
+        session.pop("simulation_result_id", None)
+
+        # Remove the previous AI-generated attempt.
+        # A new attempt will be generated after the redirect.
+        session.pop("simulation_attempt_id", None)
+
+    # Remove ?reset=1 from the address after clearing the attempt.
+    if restart_requested:
+        return redirect(
+            url_for(
+                "simulation_step",
+                career_id=career_id,
+                position_id=position_id,
+                company_id=company_id,
+                step=1
+            )
+        )
 
         # Remove ?reset=1 from the address after clearing the answers.
         if restart_requested:
@@ -815,7 +841,67 @@ def simulation_step(career_id, position_id, company_id, step):
                     step=1
                 )
             )
+        # The new AI-generated inbox is currently used only
+    # for the Backend Developer position.
+    is_backend_simulation = (
+        career_id == BACKEND_SCENARIO["career_id"]
+        and position_id == BACKEND_SCENARIO["position_id"]
+    )
 
+    generated_inbox_task = None
+    ai_generation_error = None
+
+    if is_backend_simulation:
+        user_id = session.get("user_id")
+
+        if not user_id:
+            return redirect(
+                url_for("login")
+            )
+
+        attempt_id = session.get("simulation_attempt_id")
+
+        # First try to retrieve an already generated inbox.
+        if attempt_id:
+            generated_inbox_task = get_backend_inbox_task(
+                user_id=user_id,
+                attempt_id=attempt_id,
+            )
+
+        # Generate only when no saved inbox exists.
+        if generated_inbox_task is None:
+            try:
+                complete_inbox_task = generate_backend_inbox_task(
+                    company_name=company_name
+                )
+
+                attempt_id = create_backend_simulation_attempt(
+                    user_id=user_id,
+                    career_id=career_id,
+                    position_id=position_id,
+                    company_id=company_id,
+                    generated_inbox_task=complete_inbox_task,
+                )
+
+                # Store only the small Firebase ID in the Flask session.
+                session["simulation_attempt_id"] = attempt_id
+
+                # Read the public version back from Firebase.
+                generated_inbox_task = get_backend_inbox_task(
+                    user_id=user_id,
+                    attempt_id=attempt_id,
+                )
+
+            except Exception:
+                app.logger.exception(
+                    "Gemini inbox generation or Firebase saving failed."
+                )
+
+                ai_generation_error = (
+                    "We could not create the interactive inbox right now. "
+                    "Please try starting the simulation again."
+                )
+        
     # These variables must exist for both GET and POST requests.
     error = None
 
@@ -899,7 +985,10 @@ def simulation_step(career_id, position_id, company_id, step):
         step_four_task=step_four_task,
         step_five_task=step_five_task,
         saved_answer=saved_answer,
-        error=error
+        error=error,
+        generated_inbox_task=generated_inbox_task,
+        simulation_attempt_id=session.get("simulation_attempt_id"),
+        ai_generation_error=ai_generation_error,
     )
 
 # =========================================================

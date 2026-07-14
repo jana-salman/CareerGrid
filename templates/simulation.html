@@ -60,74 +60,542 @@
         <div class="simulation-card">
 
             <!-- STEP 1 -->
-            {% if step == 1 %}
+{% if step == 1 %}
 
-                <div class="task-heading">
+    {% if ai_generation_error %}
 
-                <span class="task-icon">📧</span>
+        <div class="ai-task-error">
+            <h3>We could not prepare your inbox</h3>
 
-                <div>
-                    <h3>New Message</h3>
+            <p>
+                {{ ai_generation_error }}
+            </p>
 
-                    <p>
-                        Review the message from your team lead and explain
-                        how you would begin investigating the problem.
-                    </p>
-                </div>
+            <a
+                href="{{ url_for(
+                    'simulation_step',
+                    career_id=career_id,
+                    position_id=position_id,
+                    company_id=company_id,
+                    step=1,
+                    reset=1
+                ) }}"
+                class="main-btn"
+            >
+                Try Again
+            </a>
+        </div>
 
+    {% elif generated_inbox_task %}
+
+        {% set first_email = generated_inbox_task.emails[0] %}
+
+        <div class="workday-heading">
+            <div>
+                <span class="workday-label">
+                    9:00 AM · Morning Task
+                </span>
+
+                <h3>{{ generated_inbox_task.title }}</h3>
+
+                <p>
+                    {{ generated_inbox_task.introduction }}
+                </p>
             </div>
 
-                <div class="email-box">
-                    <p>
-                        <strong>From:</strong>
-                        {{ email.sender }}
-                    </p>
+            <div class="workday-position">
+                <span>{{ generated_inbox_task.position_name }}</span>
+                <strong>{{ generated_inbox_task.company_name }}</strong>
+            </div>
+        </div>
 
-                    <p>
-                        <strong>Subject:</strong>
-                        {{ email.subject }}
-                    </p>
+        <form
+            method="POST"
+            id="inbox-task-form"
+            class="inbox-task-form"
+        >
 
-                    <p class="email-body">
-                        {{ email.body }}
-                    </p>
-                </div>
+            <!--
+                Flask still expects one field called "answer".
 
-                <form method="POST">
+                JavaScript will place all inbox interactions into this
+                hidden input as a JSON string before submission.
+            -->
+            <input
+                type="hidden"
+                id="answer"
+                name="answer"
+                value=""
+            >
 
-                    <div class="simulation-question">
+            <div class="careergrid-mail">
 
-                        <label for="answer">
+                <!-- Mail application sidebar -->
+                <aside class="mail-navigation">
+
+                    <div class="mail-app-title">
+                        <span class="mail-app-icon">✉</span>
+
+                        <div>
+                            <strong>CareerGrid</strong>
+                            <span>Mail</span>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="compose-button"
+                    >
+                        ＋ Compose
+                    </button>
+
+                    <nav class="mail-folders">
+                        <button
+                            type="button"
+                            class="mail-folder active"
+                        >
+                            <span>📥</span>
+                            Inbox
                             <strong>
-                                What would you do first to investigate and
-                                solve this problem?
+                                {{ generated_inbox_task.emails | length }}
                             </strong>
-                        </label>
+                        </button>
 
-                        <textarea
-                        id="answer"
-                        name="answer"
-                        rows="7"
-                        placeholder="Explain the steps you would take..."
-                        required
-                    >{{ saved_answer }}</textarea>
+                        <button type="button" class="mail-folder">
+                            <span>📤</span>
+                            Sent
+                        </button>
+
+                        <button type="button" class="mail-folder">
+                            <span>📝</span>
+                            Drafts
+                        </button>
+
+                        <button type="button" class="mail-folder">
+                            <span>🗂️</span>
+                            Archive
+                        </button>
+                    </nav>
+                </aside>
+
+                <!-- Inbox email list -->
+                <section class="mail-message-list">
+
+                    <div class="mail-list-header">
+                        <div>
+                            <h4>Inbox</h4>
+
+                            <span>
+                                {{ generated_inbox_task.emails | length }}
+                                messages
+                            </span>
+                        </div>
+
+                        <span class="mail-filter">
+                            Filter
+                        </span>
+                    </div>
+
+                    <div class="mail-items">
+
+                        {% for inbox_email in generated_inbox_task.emails %}
+
+                            <button
+                                type="button"
+                                class="mail-item
+                                {% if loop.first %}active{% endif %}"
+                                data-email-id="{{ inbox_email.id }}"
+                            >
+                                <div class="mail-item-heading">
+
+                                    <strong>
+                                        {{ inbox_email.sender_name }}
+                                    </strong>
+
+                                    <span>
+                                        {{ inbox_email.timestamp }}
+                                    </span>
+
+                                </div>
+
+                                <div class="mail-item-role">
+                                    {{ inbox_email.sender_role }}
+                                </div>
+
+                                <div class="mail-item-subject">
+                                    {{ inbox_email.subject }}
+                                </div>
+
+                                <div class="mail-item-preview">
+                                    {{ inbox_email.body | truncate(75) }}
+                                </div>
+
+                                {% if inbox_email.has_attachment %}
+                                    <span class="attachment-indicator">
+                                        📎 Attachment
+                                    </span>
+                                {% endif %}
+                            </button>
+
+                        {% endfor %}
+
+                    </div>
+                </section>
+
+                <!-- Email reading pane -->
+                <section class="mail-reading-pane">
+
+                    <div class="reading-pane-header">
+
+                        <div>
+                            <h4 id="active-email-subject">
+                                {{ first_email.subject }}
+                            </h4>
+
+                            <span id="active-email-time">
+                                {{ first_email.timestamp }}
+                            </span>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="more-options-button"
+                            aria-label="More email options"
+                        >
+                            ···
+                        </button>
 
                     </div>
 
-                    {% if error %}
-                        <p class="error-message">
-                            {{ error }}
-                        </p>
-                    {% endif %}
+                    <div class="email-sender-details">
 
-                    <div class="simulation-actions">
-                    <button type="submit" class="main-btn">
-                        Submit and Continue
-                    </button>
+                        <div
+                            class="sender-avatar"
+                            id="active-email-avatar"
+                        >
+                            {{ first_email.sender_name[0] }}
+                        </div>
+
+                        <div>
+                            <strong id="active-email-sender">
+                                {{ first_email.sender_name }}
+                            </strong>
+
+                            <span id="active-email-role">
+                                {{ first_email.sender_role }}
+                            </span>
+                        </div>
+
+                    </div>
+
+                    <div
+                        class="reading-pane-body"
+                        id="active-email-body"
+                    >
+                        {{ first_email.body }}
+                    </div>
+
+                    <div
+                        id="active-email-attachment"
+                        class="email-extra-information"
+                        {% if not first_email.has_attachment %}
+                            hidden
+                        {% endif %}
+                    >
+                        <span>📎</span>
+
+                        <span id="active-attachment-name">
+                            {{ first_email.attachment_name or "" }}
+                        </span>
+                    </div>
+
+                    <div
+                        id="active-email-ticket"
+                        class="linked-ticket"
+                        {% if not first_email.linked_ticket_id %}
+                            hidden
+                        {% endif %}
+                    >
+                        <span>🔗 Related ticket</span>
+
+                        <strong id="active-ticket-id">
+                            {{ first_email.linked_ticket_id or "" }}
+                        </strong>
+                    </div>
+
+                </section>
+
+            </div>
+
+            <!-- Priority activity -->
+            <section class="inbox-activity-card">
+
+                <div class="activity-card-heading">
+                    <div>
+                        <span class="activity-step-number">1</span>
+
+                        <div>
+                            <h4>Prioritize your inbox</h4>
+
+                            <p>
+                                Arrange the emails from most urgent to
+                                least urgent. The email at the top is
+                                your highest priority.
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
-                </form>
+                <ol
+                    class="priority-list"
+                    id="priority-list"
+                >
 
+                    {% for inbox_email in generated_inbox_task.emails %}
+
+                        <li
+                            class="priority-item"
+                            draggable="true"
+                            data-email-id="{{ inbox_email.id }}"
+                        >
+                            <span
+                                class="priority-rank"
+                                aria-hidden="true"
+                            >
+                                {{ loop.index }}
+                            </span>
+
+                            <span
+                                class="drag-handle"
+                                title="Drag to reorder"
+                            >
+                                ⋮⋮
+                            </span>
+
+                            <div class="priority-email-information">
+                                <strong>
+                                    {{ inbox_email.subject }}
+                                </strong>
+
+                                <span>
+                                    {{ inbox_email.sender_name }}
+                                </span>
+                            </div>
+
+                            <div class="priority-controls">
+                                <button
+                                    type="button"
+                                    class="move-priority-up"
+                                    aria-label="Move email up"
+                                >
+                                    ↑
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="move-priority-down"
+                                    aria-label="Move email down"
+                                >
+                                    ↓
+                                </button>
+                            </div>
+                        </li>
+
+                    {% endfor %}
+
+                </ol>
+
+            </section>
+
+            <!-- First action activity -->
+            <section class="inbox-activity-card">
+
+                <div class="activity-card-heading">
+                    <div>
+                        <span class="activity-step-number">2</span>
+
+                        <div>
+                            <h4>Choose your first action</h4>
+
+                            <p>
+                                Select what you would do after reviewing
+                                the inbox.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="first-action-options">
+
+                    {% for action in
+                        generated_inbox_task.available_first_actions %}
+
+                        <label class="first-action-option">
+
+                            <input
+                                type="radio"
+                                name="selected_action"
+                                value="{{ action }}"
+                                required
+                            >
+
+                            <span class="custom-radio"></span>
+
+                            <span>{{ action }}</span>
+
+                        </label>
+
+                    {% endfor %}
+
+                </div>
+
+            </section>
+
+            <!-- Reply activity -->
+            <section class="inbox-activity-card">
+
+                <div class="activity-card-heading">
+                    <div>
+                        <span class="activity-step-number">3</span>
+
+                        <div>
+                            <h4>Write your response</h4>
+
+                            <p>
+                                {{ generated_inbox_task.reply_instruction }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="reply-composer">
+
+                    <div class="reply-composer-header">
+                        <strong>New Reply</strong>
+                        <span>Professional workplace message</span>
+                    </div>
+
+                    <textarea
+                        id="inbox-reply"
+                        rows="7"
+                        placeholder="Write your professional response here..."
+                        required
+                    ></textarea>
+
+                    <p
+                        class="reply-validation-message"
+                        id="reply-validation-message"
+                        hidden
+                    >
+                        Please write a meaningful professional reply.
+                    </p>
+
+                </div>
+
+            </section>
+
+            {% if error %}
+                <p class="error-message">
+                    {{ error }}
+                </p>
+            {% endif %}
+
+            <div class="simulation-actions">
+                <button
+                    type="submit"
+                    class="main-btn"
+                >
+                    Complete Inbox Task
+                </button>
+            </div>
+
+        </form>
+
+        <!-- Public AI-generated data used by inbox.js -->
+        <script
+            type="application/json"
+            id="generated-inbox-data"
+        >{{ generated_inbox_task.emails | tojson }}</script>
+
+        <!-- Previous response, used when returning to Step 1 -->
+        <script
+            type="application/json"
+            id="saved-inbox-answer"
+        >{{ saved_answer | tojson }}</script>
+
+    {% else %}
+
+        <!-- Existing Step 1 remains available for other positions -->
+
+        <div class="task-heading">
+
+            <span class="task-icon">📧</span>
+
+            <div>
+                <h3>New Message</h3>
+
+                <p>
+                    Review the message from your team lead and explain
+                    how you would begin investigating the problem.
+                </p>
+            </div>
+
+        </div>
+
+        <div class="email-box">
+
+            <p>
+                <strong>From:</strong>
+                {{ email.sender }}
+            </p>
+
+            <p>
+                <strong>Subject:</strong>
+                {{ email.subject }}
+            </p>
+
+            <p class="email-body">
+                {{ email.body }}
+            </p>
+
+        </div>
+
+        <form method="POST">
+
+            <div class="simulation-question">
+
+                <label for="answer">
+                    <strong>
+                        What would you do first to investigate and
+                        solve this problem?
+                    </strong>
+                </label>
+
+                <textarea
+                    id="answer"
+                    name="answer"
+                    rows="7"
+                    placeholder="Explain the steps you would take..."
+                    required
+                >{{ saved_answer }}</textarea>
+
+            </div>
+
+            {% if error %}
+                <p class="error-message">
+                    {{ error }}
+                </p>
+            {% endif %}
+
+            <div class="simulation-actions">
+                <button type="submit" class="main-btn">
+                    Submit and Continue
+                </button>
+            </div>
+
+        </form>
+
+    {% endif %}
             <!-- STEP 2 -->
             {% elif step == 2 %}
 
@@ -474,6 +942,9 @@
         </div>
 
     </div>
-
+<script
+    src="{{ url_for('static', filename='js/inbox.js') }}?v=1"
+    defer
+></script>
 </body>
 </html>
