@@ -21,7 +21,7 @@
     href="{{ url_for(
         'static',
         filename='css/simulation/inbox.css'
-    ) }}?v=1"
+    ) }}?v=2"
     >
 
 </head>
@@ -66,7 +66,13 @@
 
     </div>
 
-        <div class="simulation-card">
+        <div
+        class="simulation-card
+        {% if step == 1 and generated_inbox_task %}
+            simulation-card--inbox
+        {% endif %}
+        "
+    >
 
             <!-- STEP 1 -->
 {% if step == 1 %}
