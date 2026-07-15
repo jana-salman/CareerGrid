@@ -22,6 +22,11 @@ from services.simulation_storage import (
     get_backend_inbox_task,
 )
 
+from services.incident_response_service import (
+    IncidentResponseValidationError,
+    validate_incident_response,
+)
+
 # ---------------------------------------------------------
 # Load environment variables
 # ---------------------------------------------------------
@@ -987,6 +992,61 @@ def simulation_step(career_id, position_id, company_id, step):
                         step=2,
                     )
                 )
+            
+                    # The Backend incident investigation submits structured JSON.
+        elif is_backend_simulation and step == 2:
+            try:
+                validated_response = (
+                    validate_incident_response(
+                        raw_answer=answer,
+                    )
+                )
+
+                save_simulation_step_response(
+                    user_id=session.get("user_id"),
+                    attempt_id=session.get(
+                        "simulation_attempt_id"
+                    ),
+                    step=2,
+                    response=validated_response,
+                )
+
+            except (
+                IncidentResponseValidationError
+            ) as validation_error:
+                app.logger.warning(
+                    "Incident response validation failed: %s",
+                    validation_error,
+                )
+
+                error = str(validation_error)
+
+            except Exception:
+                app.logger.exception(
+                    "Failed to save incident response."
+                )
+
+                error = (
+                    "We could not save your investigation "
+                    "right now. Please try again."
+                )
+
+            if not error:
+                answers["step_2"] = json.dumps(
+                    validated_response
+                )
+
+                session["simulation_answers"] = answers
+
+                return redirect(
+                    url_for(
+                        "simulation_step",
+                        career_id=career_id,
+                        position_id=position_id,
+                        company_id=company_id,
+                        step=3,
+                    )
+                )
 
         # Existing behavior for Frontend and Backend Steps 2–5.
         else:
@@ -1062,6 +1122,7 @@ def simulation_step(career_id, position_id, company_id, step):
         saved_answer=saved_answer,
         generated_inbox_task=generated_inbox_task,
         ai_generation_error=ai_generation_error,
+        is_backend_simulation=is_backend_simulation,
     )
 
 
