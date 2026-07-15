@@ -627,3 +627,27 @@
         overflow: hidden;
     }
 }
+
+/* Unavailable controls */
+
+.compose-button:disabled,
+.mail-folder:disabled,
+.more-options-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.compose-button:disabled:hover,
+.mail-folder:disabled:hover,
+.more-options-button:disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.mail-folder:disabled {
+    color: #98a2b3;
+}
+
+.compose-button:disabled {
+    background: #98a2b3;
+}
