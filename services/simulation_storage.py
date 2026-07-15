@@ -5,6 +5,7 @@ from typing import Any
 from services.firebase_service import get_database_reference
 
 
+
 def _current_utc_time() -> str:
     """Return the current UTC time in a Firebase-safe string format."""
     return datetime.now(timezone.utc).isoformat()
@@ -174,3 +175,67 @@ def get_backend_inbox_task(
         return None
 
     return inbox_task
+
+def save_simulation_step_response(
+    *,
+    user_id: str,
+    attempt_id: str,
+    step: int,
+    response: dict[str, Any],
+) -> None:
+    """
+    Save one validated simulation response in Firebase.
+
+    The response is stored under the existing simulation attempt.
+    """
+
+    if not user_id:
+        raise ValueError(
+            "A logged-in user ID is required."
+        )
+
+    if not attempt_id:
+        raise ValueError(
+            "A simulation attempt ID is required."
+        )
+
+    if step < 1 or step > 5:
+        raise ValueError(
+            "Simulation step must be between 1 and 5."
+        )
+
+    if not isinstance(response, dict):
+        raise ValueError(
+            "Simulation response must be a dictionary."
+        )
+
+    attempt_reference = get_database_reference(
+        f"users/{user_id}/simulation_attempts/{attempt_id}"
+    )
+
+    existing_attempt = attempt_reference.get()
+
+    if not isinstance(existing_attempt, dict):
+        raise RuntimeError(
+            "The simulation attempt could not be found."
+        )
+
+    if existing_attempt.get("status") != "in_progress":
+        raise RuntimeError(
+            "This simulation attempt is no longer active."
+        )
+
+    submitted_at = _current_utc_time()
+
+    stored_response = deepcopy(response)
+    stored_response["submitted_at"] = submitted_at
+
+    next_step = min(step + 1, 5)
+
+    attempt_reference.update(
+        {
+            f"responses/step_{step}": stored_response,
+            "current_step": next_step,
+            "updated_at": submitted_at,
+        }
+    )
