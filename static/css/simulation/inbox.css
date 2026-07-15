@@ -581,3 +581,49 @@
 [hidden] {
     display: none !important;
 }
+
+/* Wider card only for the AI inbox task */
+
+.simulation-page .simulation-card--inbox {
+    width: calc(100% - 40px);
+    max-width: 1180px;
+    padding: 32px;
+}
+
+.simulation-card--inbox .careergrid-mail {
+    width: 100%;
+    grid-template-columns:
+        180px
+        310px
+        minmax(0, 1fr);
+}
+
+.simulation-card--inbox .mail-reading-pane {
+    min-width: 0;
+}
+
+.simulation-card--inbox .reading-pane-header h4,
+.simulation-card--inbox .reading-pane-body {
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 950px) {
+    .simulation-page .simulation-card--inbox {
+        padding: 22px;
+    }
+
+    .simulation-card--inbox .careergrid-mail {
+        grid-template-columns:
+            155px
+            280px
+            minmax(300px, 1fr);
+        overflow-x: auto;
+    }
+}
+
+@media (max-width: 760px) {
+    .simulation-card--inbox .careergrid-mail {
+        display: block;
+        overflow: hidden;
+    }
+}
