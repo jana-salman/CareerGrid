@@ -53,11 +53,14 @@
                     </div>
 
                     <button
-                        type="button"
-                        class="compose-button"
-                    >
-                        ＋ Compose
-                    </button>
+                    type="button"
+                    class="compose-button"
+                    disabled
+                    aria-disabled="true"
+                    title="Compose is unavailable during this simulation task"
+                >
+                    ＋ Compose
+                </button>
 
                     <nav class="mail-folders">
                         <button
@@ -71,20 +74,36 @@
                             </strong>
                         </button>
 
-                        <button type="button" class="mail-folder">
-                            <span>📤</span>
-                            Sent
-                        </button>
+                        <button
+                        type="button"
+                        class="mail-folder"
+                        disabled
+                        aria-disabled="true"
+                    >
+                        <span>📤</span>
+                        Sent
+                    </button>
 
-                        <button type="button" class="mail-folder">
-                            <span>📝</span>
-                            Drafts
-                        </button>
+                        <button
+                        type="button"
+                        class="mail-folder"
+                        disabled
+                        aria-disabled="true"
+                    >
+                        <span>📝</span>
+                        Drafts
+                    </button>
 
-                        <button type="button" class="mail-folder">
-                            <span>🗂️</span>
-                            Archive
-                        </button>
+                        <button
+                        type="button"
+                        class="mail-folder"
+                        disabled
+                        aria-disabled="true"
+                    >
+                        <span>🗂️</span>
+                        Archive
+                    </button>
+
                     </nav>
                 </aside>
 
@@ -168,12 +187,14 @@
                         </div>
 
                         <button
-                            type="button"
-                            class="more-options-button"
-                            aria-label="More email options"
-                        >
-                            ···
-                        </button>
+                        type="button"
+                        class="more-options-button"
+                        disabled
+                        aria-disabled="true"
+                        title="More options are unavailable during this task"
+                    >
+                        ···
+                    </button>
 
                     </div>
 
