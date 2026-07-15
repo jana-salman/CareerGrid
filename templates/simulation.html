@@ -19,15 +19,13 @@
 
 <body>
 
-    <div class="simulation-page">
-
-        <nav class="navbar">
-            <h2 class="logo">CareerGrid</h2>
-
-            <a href="{{ url_for('career') }}">
-                Back to Careers
-            </a>
-        </nav>
+    <div
+    class="simulation-page
+    {% if step == 1 and generated_inbox_task %}
+        simulation-page--workspace
+    {% endif %}
+    "
+    >
 
         <div class="simulation-header">
 
@@ -57,7 +55,13 @@
 
     </div>
 
-        <div class="simulation-card">
+        <div
+    class="simulation-card
+    {% if step == 1 and generated_inbox_task %}
+        simulation-card--workspace
+    {% endif %}
+    "
+    >
 
             <!-- STEP 1 -->
             {% if step == 1 %}
