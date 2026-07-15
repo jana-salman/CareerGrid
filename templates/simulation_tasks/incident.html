@@ -1,0 +1,322 @@
+<div class="incident-workspace">
+
+    <div class="incident-heading">
+
+        <div>
+            <span class="incident-label">
+                10:15 AM · Production Investigation
+            </span>
+
+            <h3>
+                {{ step_two_task.title }}
+            </h3>
+
+            <p>
+                {{ step_two_task.instructions }}
+            </p>
+        </div>
+
+        <div class="incident-status">
+            <span class="incident-status-dot"></span>
+
+            <div>
+                <span>Incident status</span>
+                <strong>Under investigation</strong>
+            </div>
+        </div>
+
+    </div>
+
+    <form
+        method="POST"
+        id="incident-task-form"
+    >
+
+        <input
+            type="hidden"
+            id="answer"
+            name="answer"
+            data-saved-answer="{{ saved_answer | e }}"
+        >
+
+        <div class="incident-console">
+
+            <aside class="incident-sidebar">
+
+                <div class="incident-sidebar-heading">
+                    <span>INC-2048</span>
+                    <strong>Checkout API failure</strong>
+                </div>
+
+                <div class="incident-detail">
+                    <span>Service</span>
+                    <strong>Checkout API</strong>
+                </div>
+
+                <div class="incident-detail">
+                    <span>Environment</span>
+                    <strong>Production</strong>
+                </div>
+
+                <div class="incident-detail">
+                    <span>Severity</span>
+                    <strong class="severity-high">
+                        High
+                    </strong>
+                </div>
+
+                <div class="incident-detail">
+                    <span>Endpoint</span>
+                    <strong>POST /api/checkout</strong>
+                </div>
+
+                <div class="incident-detail">
+                    <span>Assigned to</span>
+                    <strong>You</strong>
+                </div>
+
+            </aside>
+
+            <main class="incident-main-panel">
+
+                <section class="incident-panel">
+
+                    <div class="incident-panel-heading">
+                        <div>
+                            <span class="panel-number">1</span>
+
+                            <div>
+                                <h4>Inspect the server log</h4>
+                                <p>
+                                    Review the captured production error.
+                                </p>
+                            </div>
+                        </div>
+
+                        <span class="log-badge">
+                            ERROR
+                        </span>
+                    </div>
+
+                    <div class="incident-log">
+                        <div class="incident-log-toolbar">
+                            <span>production-server.log</span>
+                            <span>10:42:18 UTC</span>
+                        </div>
+
+                        <pre>{{ step_two_task.log }}</pre>
+                    </div>
+
+                </section>
+
+                <section class="incident-panel">
+
+                    <div class="incident-panel-heading">
+                        <div>
+                            <span class="panel-number">2</span>
+
+                            <div>
+                                <h4>Compare request payloads</h4>
+                                <p>
+                                    Find the difference between the successful
+                                    and failed checkout requests.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="payload-comparison">
+
+                        <div class="payload-card payload-success">
+
+                            <div class="payload-heading">
+                                <strong>Successful request</strong>
+                                <span>200 OK</span>
+                            </div>
+
+                            <pre>{
+  "cart_items": [
+    {
+      "product_id": "PRD-102",
+      "quantity": 2
+    }
+  ]
+}</pre>
+
+                        </div>
+
+                        <div class="payload-card payload-failed">
+
+                            <div class="payload-heading">
+                                <strong>Failed request</strong>
+                                <span>500 ERROR</span>
+                            </div>
+
+                            <pre>{
+  "cart_items": [
+    {
+      "quantity": 2
+    }
+  ]
+}</pre>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+                <section class="incident-panel">
+
+                    <div class="incident-panel-heading">
+                        <div>
+                            <span class="panel-number">3</span>
+
+                            <div>
+                                <h4>Identify the root cause</h4>
+                                <p>
+                                    Select the explanation best supported by
+                                    the evidence.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="root-cause-options">
+
+                        <label class="root-cause-option">
+
+                            <input
+                                type="radio"
+                                name="selected_root_cause"
+                                value="database_connection"
+                                required
+                            >
+
+                            <span class="custom-radio"></span>
+
+                            <span>
+                                The checkout database connection timed out.
+                            </span>
+
+                        </label>
+
+                        <label class="root-cause-option">
+
+                            <input
+                                type="radio"
+                                name="selected_root_cause"
+                                value="missing_product_id"
+                                required
+                            >
+
+                            <span class="custom-radio"></span>
+
+                            <span>
+                                A cart item is missing
+                                <code>product_id</code>, and the service
+                                accesses it directly.
+                            </span>
+
+                        </label>
+
+                        <label class="root-cause-option">
+
+                            <input
+                                type="radio"
+                                name="selected_root_cause"
+                                value="invalid_quantity"
+                                required
+                            >
+
+                            <span class="custom-radio"></span>
+
+                            <span>
+                                The quantity value is too large for the API.
+                            </span>
+
+                        </label>
+
+                    </div>
+
+                </section>
+
+                <section class="incident-panel">
+
+                    <div class="incident-panel-heading">
+                        <div>
+                            <span class="panel-number">4</span>
+
+                            <div>
+                                <h4>Write your technical finding</h4>
+
+                                <p>
+                                    Explain the evidence and what should be
+                                    inspected next.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="incident-finding">
+
+                        <textarea
+                            id="incident-finding"
+                            rows="6"
+                            minlength="20"
+                            maxlength="1500"
+                            placeholder="Example: The failed payload is missing product_id. The checkout service accesses item['product_id'] directly, which raises a KeyError..."
+                            required
+                        ></textarea>
+
+                        <div class="finding-footer">
+                            <span>
+                                Write at least 20 characters.
+                            </span>
+
+                            <span id="finding-character-count">
+                                0 / 1500
+                            </span>
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </main>
+
+        </div>
+
+        {% if error %}
+            <p class="error-message">
+                {{ error }}
+            </p>
+        {% endif %}
+
+        <div class="simulation-actions">
+
+            <a
+                href="{{ url_for(
+                    'simulation_step',
+                    career_id=career_id,
+                    position_id=position_id,
+                    company_id=company_id,
+                    step=1
+                ) }}"
+                class="secondary-btn"
+            >
+                ← Previous Step
+            </a>
+
+            <button
+                type="submit"
+                class="main-btn"
+            >
+                Submit Investigation
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
