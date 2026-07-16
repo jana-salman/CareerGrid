@@ -1,35 +1,42 @@
-<div class="incident-workspace">
+<div class="guided-incident-workspace">
 
-    <div class="incident-heading">
+    <header class="guided-incident-header">
 
         <div>
-            <span class="incident-label">
-                10:15 AM · Production Investigation
+            <span class="guided-incident-eyebrow">
+                Production Incident · INC-2048
             </span>
 
             <h3>
-                {{ step_two_task.title }}
+                Investigate the checkout API failure
             </h3>
 
             <p>
-                {{ step_two_task.instructions }}
+                Follow the investigation steps in order.
+                Each completed action unlocks the next one.
             </p>
         </div>
 
-        <div class="incident-status">
-            <span class="incident-status-dot"></span>
+        <div
+            class="guided-incident-status"
+            id="guided-incident-status"
+        >
+            <span class="guided-status-dot"></span>
 
             <div>
-                <span>Incident status</span>
-                <strong>Under investigation</strong>
+                <small>Current status</small>
+
+                <strong id="guided-status-text">
+                    Investigation not started
+                </strong>
             </div>
         </div>
 
-    </div>
+    </header>
 
     <form
         method="POST"
-        id="incident-task-form"
+        id="guided-incident-form"
     >
 
         <input
@@ -39,102 +46,212 @@
             data-saved-answer="{{ saved_answer | e }}"
         >
 
-        <div class="incident-console">
+        <div class="guided-incident-layout">
 
-            <aside class="incident-sidebar">
+            <aside class="guided-incident-sidebar">
 
-                <div class="incident-sidebar-heading">
-                    <span>INC-2048</span>
-                    <strong>Checkout API failure</strong>
-                </div>
+                <div class="incident-summary-card">
 
-                <div class="incident-detail">
-                    <span>Service</span>
-                    <strong>Checkout API</strong>
-                </div>
+                    <span class="summary-label">
+                        Incident
+                    </span>
 
-                <div class="incident-detail">
-                    <span>Environment</span>
-                    <strong>Production</strong>
-                </div>
-
-                <div class="incident-detail">
-                    <span>Severity</span>
-                    <strong class="severity-high">
-                        High
+                    <strong>
+                        Checkout API failure
                     </strong>
+
                 </div>
 
-                <div class="incident-detail">
-                    <span>Endpoint</span>
-                    <strong>POST /api/checkout</strong>
-                </div>
+                <dl class="incident-summary-list">
 
-                <div class="incident-detail">
-                    <span>Assigned to</span>
-                    <strong>You</strong>
+                    <div>
+                        <dt>Service</dt>
+                        <dd>Checkout API</dd>
+                    </div>
+
+                    <div>
+                        <dt>Environment</dt>
+                        <dd>Production</dd>
+                    </div>
+
+                    <div>
+                        <dt>Endpoint</dt>
+                        <dd>POST /api/checkout</dd>
+                    </div>
+
+                    <div>
+                        <dt>Severity</dt>
+                        <dd>
+                            <span class="severity-badge">
+                                High
+                            </span>
+                        </dd>
+                    </div>
+
+                    <div>
+                        <dt>Assigned to</dt>
+                        <dd>You</dd>
+                    </div>
+
+                </dl>
+
+                <div class="guided-progress-card">
+
+                    <div class="guided-progress-heading">
+
+                        <span>
+                            Investigation progress
+                        </span>
+
+                        <strong id="guided-progress-value">
+                            0%
+                        </strong>
+
+                    </div>
+
+                    <div class="guided-progress-track">
+
+                        <div
+                            class="guided-progress-fill"
+                            id="guided-progress-fill"
+                        ></div>
+
+                    </div>
+
+                    <p id="guided-progress-description">
+                        Start by inspecting the server log.
+                    </p>
+
                 </div>
 
             </aside>
 
-            <main class="incident-main-panel">
+            <main class="guided-investigation-main">
 
-                <section class="incident-panel">
+                <!-- STEP 1 -->
+                <section
+                    class="guided-investigation-step active"
+                    id="investigation-step-log"
+                    data-step="1"
+                >
 
-                    <div class="incident-panel-heading">
+                    <div class="guided-step-heading">
+
+                        <span class="guided-step-number">
+                            1
+                        </span>
+
                         <div>
-                            <span class="panel-number">1</span>
+                            <h4>Inspect the server log</h4>
 
-                            <div>
-                                <h4>Inspect the server log</h4>
-                                <p>
-                                    Review the captured production error.
-                                </p>
-                            </div>
+                            <p>
+                                Open the production log and identify
+                                the reported backend error.
+                            </p>
                         </div>
 
-                        <span class="log-badge">
-                            ERROR
+                        <span
+                            class="guided-step-state"
+                            id="log-step-state"
+                        >
+                            Ready
                         </span>
+
                     </div>
 
-                    <div class="incident-log">
-                        <div class="incident-log-toolbar">
+                    <button
+                        type="button"
+                        class="guided-action-button"
+                        id="inspect-log-button"
+                    >
+                        Inspect Server Log
+                    </button>
+
+                    <div
+                        class="guided-result-panel log-result-panel"
+                        id="server-log-result"
+                        hidden
+                    >
+
+                        <div class="guided-result-toolbar">
                             <span>production-server.log</span>
                             <span>10:42:18 UTC</span>
                         </div>
 
                         <pre>{{ step_two_task.log }}</pre>
+
+                        <div class="guided-discovery">
+                            <span>Finding</span>
+
+                            <strong>
+                                The error is a
+                                <code>KeyError: product_id</code>.
+                            </strong>
+                        </div>
+
                     </div>
 
                 </section>
 
-                <section class="incident-panel">
+                <!-- STEP 2 -->
+                <section
+                    class="guided-investigation-step locked"
+                    id="investigation-step-payload"
+                    data-step="2"
+                >
 
-                    <div class="incident-panel-heading">
+                    <div class="guided-step-heading">
+
+                        <span class="guided-step-number">
+                            2
+                        </span>
+
                         <div>
-                            <span class="panel-number">2</span>
+                            <h4>Compare the requests</h4>
 
-                            <div>
-                                <h4>Compare request payloads</h4>
-                                <p>
-                                    Find the difference between the successful
-                                    and failed checkout requests.
-                                </p>
-                            </div>
+                            <p>
+                                Compare a successful checkout payload
+                                with the failed payload.
+                            </p>
                         </div>
+
+                        <span
+                            class="guided-step-state"
+                            id="payload-step-state"
+                        >
+                            Locked
+                        </span>
+
                     </div>
 
-                    <div class="payload-comparison">
+                    <button
+                        type="button"
+                        class="guided-action-button"
+                        id="compare-payloads-button"
+                        disabled
+                    >
+                        Compare Requests
+                    </button>
 
-                        <div class="payload-card payload-success">
+                    <div
+                        class="guided-result-panel"
+                        id="payload-comparison-result"
+                        hidden
+                    >
 
-                            <div class="payload-heading">
-                                <strong>Successful request</strong>
-                                <span>200 OK</span>
-                            </div>
+                        <div class="guided-payload-grid">
 
-                            <pre>{
+                            <article class="guided-payload-card success">
+
+                                <header>
+                                    <strong>
+                                        Successful request
+                                    </strong>
+
+                                    <span>201 Created</span>
+                                </header>
+
+                                <pre>{
   "cart_items": [
     {
       "product_id": "PRD-102",
@@ -143,16 +260,19 @@
   ]
 }</pre>
 
-                        </div>
+                            </article>
 
-                        <div class="payload-card payload-failed">
+                            <article class="guided-payload-card failed">
 
-                            <div class="payload-heading">
-                                <strong>Failed request</strong>
-                                <span>500 ERROR</span>
-                            </div>
+                                <header>
+                                    <strong>
+                                        Failed request
+                                    </strong>
 
-                            <pre>{
+                                    <span>500 Error</span>
+                                </header>
+
+                                <pre>{
   "cart_items": [
     {
       "quantity": 2
@@ -160,123 +280,366 @@
   ]
 }</pre>
 
+                            </article>
+
+                        </div>
+
+                        <div class="guided-discovery">
+                            <span>Difference found</span>
+
+                            <strong>
+                                The failed request is missing
+                                <code>product_id</code>.
+                            </strong>
                         </div>
 
                     </div>
 
                 </section>
 
-                <section class="incident-panel">
+                <!-- STEP 3 -->
+                <section
+                    class="guided-investigation-step locked"
+                    id="investigation-step-code"
+                    data-step="3"
+                >
 
-                    <div class="incident-panel-heading">
+                    <div class="guided-step-heading">
+
+                        <span class="guided-step-number">
+                            3
+                        </span>
+
                         <div>
-                            <span class="panel-number">3</span>
+                            <h4>Trace the failing code</h4>
 
-                            <div>
-                                <h4>Identify the root cause</h4>
-                                <p>
-                                    Select the explanation best supported by
-                                    the evidence.
-                                </p>
-                            </div>
+                            <p>
+                                Inspect how the checkout service reads
+                                the request payload.
+                            </p>
                         </div>
+
+                        <span
+                            class="guided-step-state"
+                            id="code-step-state"
+                        >
+                            Locked
+                        </span>
+
                     </div>
 
-                    <div class="root-cause-options">
+                    <button
+                        type="button"
+                        class="guided-action-button"
+                        id="trace-code-button"
+                        disabled
+                    >
+                        Trace Failing Code
+                    </button>
 
-                        <label class="root-cause-option">
+                    <div
+                        class="guided-result-panel"
+                        id="code-trace-result"
+                        hidden
+                    >
 
-                            <input
-                                type="radio"
-                                name="selected_root_cause"
-                                value="database_connection"
-                                required
-                            >
+                        <div class="guided-code-window">
 
-                            <span class="custom-radio"></span>
+                            <div class="guided-result-toolbar">
+                                <span>checkout_service.py</span>
+                                <span>Line 84</span>
+                            </div>
 
-                            <span>
-                                The checkout database connection timed out.
-                            </span>
+                            <pre><span>for item in cart_items:</span>
+<span class="unsafe-code-line">    product_id = item["product_id"]</span>
+<span>    create_order_item(product_id)</span></pre>
 
-                        </label>
+                        </div>
 
-                        <label class="root-cause-option">
+                        <div class="guided-discovery">
+                            <span>Risk identified</span>
 
-                            <input
-                                type="radio"
-                                name="selected_root_cause"
-                                value="missing_product_id"
-                                required
-                            >
-
-                            <span class="custom-radio"></span>
-
-                            <span>
-                                A cart item is missing
-                                <code>product_id</code>, and the service
-                                accesses it directly.
-                            </span>
-
-                        </label>
-
-                        <label class="root-cause-option">
-
-                            <input
-                                type="radio"
-                                name="selected_root_cause"
-                                value="invalid_quantity"
-                                required
-                            >
-
-                            <span class="custom-radio"></span>
-
-                            <span>
-                                The quantity value is too large for the API.
-                            </span>
-
-                        </label>
+                            <strong>
+                                Direct dictionary access raises an error
+                                when the field is missing.
+                            </strong>
+                        </div>
 
                     </div>
 
                 </section>
 
-                <section class="incident-panel">
+                <!-- STEP 4 -->
+                <!-- STEP 4 -->
+<section
+    class="guided-investigation-step locked"
+    id="investigation-step-diagnosis"
+    data-step="4"
+>
 
-                    <div class="incident-panel-heading">
+    <div class="guided-step-heading">
+
+        <span class="guided-step-number">
+            4
+        </span>
+
+        <div>
+            <h4>Build and test your diagnosis</h4>
+
+            <p>
+                Use the evidence you discovered to explain
+                the production failure.
+            </p>
+        </div>
+
+        <span
+            class="guided-step-state"
+            id="diagnosis-step-state"
+        >
+            Locked
+        </span>
+
+    </div>
+
+    <div class="diagnosis-builder">
+
+        <div class="diagnosis-builder-grid">
+
+            <label class="diagnosis-field">
+
+                <span>Missing or invalid field</span>
+
+                <select
+                    id="diagnosis-missing-field"
+                    disabled
+                >
+                    <option value="">
+                        Select a field
+                    </option>
+
+                    <option value="quantity">
+                        quantity
+                    </option>
+
+                    <option value="product_id">
+                        product_id
+                    </option>
+
+                    <option value="customer_id">
+                        customer_id
+                    </option>
+                </select>
+
+            </label>
+
+            <label class="diagnosis-field">
+
+                <span>Failure mechanism</span>
+
+                <select
+                    id="diagnosis-failure-mechanism"
+                    disabled
+                >
+                    <option value="">
+                        Select a mechanism
+                    </option>
+
+                    <option value="database_timeout">
+                        Database connection timeout
+                    </option>
+
+                    <option value="invalid_json">
+                        Invalid JSON parsing
+                    </option>
+
+                    <option value="unsafe_dictionary_access">
+                        Direct dictionary access without validation
+                    </option>
+                </select>
+
+            </label>
+
+            <label class="diagnosis-field">
+
+                <span>Current API result</span>
+
+                <select
+                    id="diagnosis-current-status"
+                    disabled
+                >
+                    <option value="">
+                        Select a status
+                    </option>
+
+                    <option value="400">
+                        HTTP 400
+                    </option>
+
+                    <option value="404">
+                        HTTP 404
+                    </option>
+
+                    <option value="500">
+                        HTTP 500
+                    </option>
+                </select>
+
+            </label>
+
+            <label class="diagnosis-field">
+
+                <span>Recommended action</span>
+
+                <select
+                    id="diagnosis-recommended-fix"
+                    disabled
+                >
+                    <option value="">
+                        Select an action
+                    </option>
+
+                    <option value="increase_timeout">
+                        Increase the database timeout
+                    </option>
+
+                    <option value="retry_request">
+                        Retry every failed request
+                    </option>
+
+                    <option value="validate_product_id">
+                        Validate product_id and return HTTP 400
+                    </option>
+                </select>
+
+            </label>
+
+        </div>
+
+        <button
+            type="button"
+            class="guided-action-button diagnosis-button"
+            id="test-diagnosis-button"
+            disabled
+        >
+            Test Diagnosis
+        </button>
+
+        <div
+            class="diagnosis-feedback"
+            id="diagnosis-feedback"
+            hidden
+        >
+
+            <div
+                class="diagnosis-feedback-icon"
+                id="diagnosis-feedback-icon"
+            >
+                !
+            </div>
+
+            <div>
+                <strong id="diagnosis-feedback-title">
+                    Diagnosis not confirmed
+                </strong>
+
+                <p id="diagnosis-feedback-text"></p>
+            </div>
+
+        </div>
+
+        <div class="diagnosis-help-actions">
+
+            <button
+                type="button"
+                class="diagnosis-help-button"
+                id="show-diagnosis-hint-button"
+                hidden
+            >
+                Show Hint
+            </button>
+
+            <button
+                type="button"
+                class="diagnosis-help-button guided"
+                id="apply-guided-diagnosis-button"
+                hidden
+            >
+                Apply Guided Diagnosis
+            </button>
+
+        </div>
+
+        <div
+            class="diagnosis-hint"
+            id="diagnosis-hint"
+            hidden
+        >
+            <strong>Hint</strong>
+
+            <p>
+                Compare the field that exists in the successful
+                request but is missing from the failed request.
+                Then connect it to the highlighted Python line.
+            </p>
+        </div>
+
+    </div>
+
+</section>
+
+
+                <!-- FINAL FINDING -->
+                <section
+                    class="guided-investigation-step locked"
+                    id="investigation-step-finding"
+                >
+
+                    <div class="guided-step-heading">
+
+                        <span class="guided-step-number">
+                            5
+                        </span>
+
                         <div>
-                            <span class="panel-number">4</span>
+                            <h4>Write your technical finding</h4>
 
-                            <div>
-                                <h4>Write your technical finding</h4>
-
-                                <p>
-                                    Explain the evidence and what should be
-                                    inspected next.
-                                </p>
-                            </div>
+                            <p>
+                                Summarize the root cause and recommend
+                                the next action.
+                            </p>
                         </div>
+
+                        <span
+                            class="guided-step-state"
+                            id="finding-step-state"
+                        >
+                            Locked
+                        </span>
+
                     </div>
 
-                    <div class="incident-finding">
+                    <div class="guided-finding-composer">
 
                         <textarea
                             id="incident-finding"
                             rows="6"
                             minlength="20"
                             maxlength="1500"
-                            placeholder="Example: The failed payload is missing product_id. The checkout service accesses item['product_id'] directly, which raises a KeyError..."
+                            placeholder="Complete the diagnosis to unlock this field..."
+                            disabled
                             required
                         ></textarea>
 
-                        <div class="finding-footer">
-                            <span>
-                                Write at least 20 characters.
+                        <div class="guided-finding-footer">
+
+                            <span id="finding-requirement-text">
+                                Run the diagnosis first.
                             </span>
 
                             <span id="finding-character-count">
                                 0 / 1500
                             </span>
+
                         </div>
 
                     </div>
@@ -311,8 +674,10 @@
             <button
                 type="submit"
                 class="main-btn"
+                id="submit-guided-investigation-button"
+                disabled
             >
-                Submit Investigation
+                Complete the Investigation First
             </button>
 
         </div>
