@@ -606,3 +606,84 @@
         padding: 16px;
     }
 }
+
+/* Guided completion support */
+
+.guided-fix-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+
+    margin-top: 16px;
+    padding: 16px 18px;
+
+    border: 1px solid #d7def2;
+    border-radius: 13px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #f5f7ff,
+            #eef3ff
+        );
+}
+
+.guided-fix-panel[hidden] {
+    display: none;
+}
+
+.guided-fix-panel strong {
+    color: #243b7a;
+    font-size: 13px;
+}
+
+.guided-fix-panel p {
+    margin: 5px 0 0;
+    color: #62708a;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.guided-fix-button {
+    flex-shrink: 0;
+
+    padding: 10px 14px;
+
+    border: 0;
+    border-radius: 9px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #5a70d8,
+            #3f55b8
+        );
+
+    color: #ffffff;
+    cursor: pointer;
+
+    font-size: 12px;
+    font-weight: 800;
+
+    box-shadow:
+        0 7px 16px rgba(63, 85, 184, 0.2);
+}
+
+.guided-fix-button:hover {
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 10px 20px rgba(63, 85, 184, 0.25);
+}
+
+@media (max-width: 650px) {
+    .guided-fix-panel {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .guided-fix-button {
+        width: 100%;
+    }
+}
