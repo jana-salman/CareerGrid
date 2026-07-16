@@ -1,28 +1,33 @@
-<div class="code-review-workspace">
+<div class="code-lab-workspace">
 
-    <div class="code-review-heading">
+    <div class="code-lab-heading">
 
         <div>
-            <span class="code-review-label">
-                11:05 AM · Pull Request Review
+            <span class="code-lab-label">
+                11:05 AM · Backend Code Lab
             </span>
 
             <h3>
-                Review the checkout API fix
+                Fix the checkout API
             </h3>
 
             <p>
-                Inspect the proposed backend change, identify the risky line,
-                choose the safest solution, and leave a professional review comment.
+                Update the backend code, run the automated tests,
+                and resolve the production failure before submitting.
             </p>
         </div>
 
-        <div class="pull-request-status">
-            <span class="review-status-dot"></span>
+        <div
+            class="code-lab-status"
+            id="code-lab-status"
+        >
+            <span class="code-lab-status-dot"></span>
 
             <div>
-                <span>Review status</span>
-                <strong>Changes requested</strong>
+                <span>Workspace status</span>
+                <strong id="code-lab-status-text">
+                    Tests not run
+                </strong>
             </div>
         </div>
 
@@ -30,7 +35,7 @@
 
     <form
         method="POST"
-        id="code-review-task-form"
+        id="code-lab-task-form"
     >
 
         <input
@@ -40,254 +45,220 @@
             data-saved-answer="{{ saved_answer | e }}"
         >
 
-        <div class="code-review-console">
+        <div class="code-lab-console">
 
-            <aside class="review-sidebar">
+            <aside class="code-lab-sidebar">
 
-                <div class="review-sidebar-heading">
-                    <span>PR #184</span>
-                    <strong>Prevent checkout crashes</strong>
+                <div class="code-lab-sidebar-heading">
+                    <span>ISSUE API-184</span>
+                    <strong>
+                        Missing product validation
+                    </strong>
                 </div>
 
-                <div class="review-detail">
+                <div class="code-lab-detail">
                     <span>Repository</span>
                     <strong>checkout-service</strong>
                 </div>
 
-                <div class="review-detail">
-                    <span>Branch</span>
-                    <strong>fix/cart-validation</strong>
-                </div>
-
-                <div class="review-detail">
-                    <span>Author</span>
-                    <strong>Jordan Lee</strong>
-                </div>
-
-                <div class="review-detail">
-                    <span>File changed</span>
+                <div class="code-lab-detail">
+                    <span>File</span>
                     <strong>checkout_service.py</strong>
                 </div>
 
-                <div class="review-detail">
-                    <span>Reviewers</span>
-                    <strong>You</strong>
+                <div class="code-lab-detail">
+                    <span>Environment</span>
+                    <strong>Production</strong>
+                </div>
+
+                <div class="code-lab-detail">
+                    <span>Failure</span>
+                    <strong>KeyError: product_id</strong>
+                </div>
+
+                <div class="code-lab-objective">
+
+                    <strong>Definition of done</strong>
+
+                    <ul>
+                        <li>Valid carts still succeed</li>
+                        <li>Missing product IDs return 400</li>
+                        <li>The API does not crash</li>
+                    </ul>
+
                 </div>
 
             </aside>
 
-            <main class="review-main-panel">
+            <main class="code-lab-main">
 
-                <section class="review-panel">
+                <section class="code-editor-panel">
 
-                    <div class="review-panel-heading">
+                    <div class="code-editor-toolbar">
 
-                        <div>
-                            <span class="review-step-number">1</span>
-
-                            <div>
-                                <h4>Inspect the proposed code</h4>
-
-                                <p>
-                                    Select the line that could still cause the API
-                                    to return a server error.
-                                </p>
-                            </div>
+                        <div class="editor-file-tab">
+                            <span>🐍</span>
+                            <strong>checkout_service.py</strong>
                         </div>
 
-                        <span class="file-badge">
-                            Python
-                        </span>
+                        <div class="editor-toolbar-actions">
 
-                    </div>
+                            <button
+                                type="button"
+                                id="reset-code-button"
+                                class="editor-utility-button"
+                            >
+                                Reset code
+                            </button>
 
-                    <div class="code-review-editor">
-
-                        <div class="editor-toolbar">
-                            <span>checkout_service.py</span>
-                            <span>4 lines</span>
-                        </div>
-
-                        <div class="review-code-lines">
-
-                            <label class="review-code-line">
-
-                                <input
-                                    type="radio"
-                                    name="selected_line"
-                                    value="line_1"
-                                    required
-                                >
-
-                                <span class="line-selection"></span>
-                                <span class="line-number">1</span>
-
-                                <code>
-                                    for item in cart_items:
-                                </code>
-
-                            </label>
-
-                            <label class="review-code-line">
-
-                                <input
-                                    type="radio"
-                                    name="selected_line"
-                                    value="line_2"
-                                    required
-                                >
-
-                                <span class="line-selection"></span>
-                                <span class="line-number">2</span>
-
-                                <code>
-                                    &nbsp;&nbsp;&nbsp;&nbsp;product_id = item["product_id"]
-                                </code>
-
-                            </label>
-
-                            <label class="review-code-line">
-
-                                <input
-                                    type="radio"
-                                    name="selected_line"
-                                    value="line_3"
-                                    required
-                                >
-
-                                <span class="line-selection"></span>
-                                <span class="line-number">3</span>
-
-                                <code>
-                                    &nbsp;&nbsp;&nbsp;&nbsp;create_order_item(product_id)
-                                </code>
-
-                            </label>
-
-                            <label class="review-code-line">
-
-                                <input
-                                    type="radio"
-                                    name="selected_line"
-                                    value="line_4"
-                                    required
-                                >
-
-                                <span class="line-selection"></span>
-                                <span class="line-number">4</span>
-
-                                <code>
-                                    return {"status": "created"}, 201
-                                </code>
-
-                            </label>
+                            <button
+                                type="button"
+                                id="show-hint-button"
+                                class="editor-utility-button"
+                            >
+                                Show hint
+                            </button>
 
                         </div>
 
                     </div>
 
-                </section>
-
-                <section class="review-panel">
-
-                    <div class="review-panel-heading">
-
-                        <div>
-                            <span class="review-step-number">2</span>
-
-                            <div>
-                                <h4>Choose the safest solution</h4>
-
-                                <p>
-                                    Select the change you would approve for the
-                                    checkout API.
-                                </p>
-                            </div>
-                        </div>
-
+                    <div
+                        class="code-hint"
+                        id="code-hint"
+                        hidden
+                    >
+                        Use a safe lookup such as
+                        <code>item.get("product_id")</code>,
+                        check whether the value exists, and return a
+                        clear client error.
                     </div>
 
-                    <div class="review-fix-options">
+                    <div class="code-editor-area">
 
-                        {% for option in step_three_task.options %}
-
-                            <label class="review-fix-option">
-
-                                <input
-                                    type="radio"
-                                    name="selected_fix"
-                                    value="{{ option.value }}"
-                                    required
-                                >
-
-                                <span class="custom-radio"></span>
-
-                                <span class="review-fix-content">
-
-                                    <strong>
-                                        Solution {{ loop.index }}
-                                    </strong>
-
-                                    <span>
-                                        {{ option.label }}
-                                    </span>
-
-                                </span>
-
-                            </label>
-
-                        {% endfor %}
-
-                    </div>
-
-                </section>
-
-                <section class="review-panel">
-
-                    <div class="review-panel-heading">
-
-                        <div>
-                            <span class="review-step-number">3</span>
-
-                            <div>
-                                <h4>Leave a review comment</h4>
-
-                                <p>
-                                    Explain the risk and the change you recommend
-                                    before this pull request is approved.
-                                </p>
-                            </div>
-                        </div>
-
-                    </div>
-
-                    <div class="review-comment-composer">
-
-                        <div class="review-comment-header">
-                            <strong>Review comment</strong>
-                            <span>Visible to the pull request author</span>
+                        <div
+                            class="editor-line-numbers"
+                            id="editor-line-numbers"
+                            aria-hidden="true"
+                        >
+                            1<br>
+                            2<br>
+                            3<br>
+                            4<br>
+                            5<br>
+                            6<br>
+                            7<br>
+                            8
                         </div>
 
                         <textarea
-                            id="review-comment"
-                            rows="7"
-                            minlength="20"
-                            maxlength="1500"
-                            placeholder="Example: Accessing item['product_id'] directly can raise a KeyError when the field is missing. Please validate the payload and return a clear 400 response..."
-                            required
-                        ></textarea>
+                            id="submitted-code"
+                            class="submitted-code"
+                            spellcheck="false"
+                            aria-label="Python code editor"
+                        >def create_order(cart_items):
+    order_items = []
 
-                        <div class="review-comment-footer">
+    for item in cart_items:
+        product_id = item["product_id"]
+        order_items.append(
+            create_order_item(product_id)
+        )
 
-                            <span>
-                                Write at least 20 characters.
-                            </span>
+    return {"status": "created"}, 201</textarea>
 
-                            <span id="review-comment-character-count">
-                                0 / 1500
-                            </span>
+                    </div>
 
+                </section>
+
+                <section class="test-runner-panel">
+
+                    <div class="test-runner-heading">
+
+                        <div>
+                            <h4>Automated tests</h4>
+
+                            <p>
+                                Run the test suite after changing the code.
+                            </p>
                         </div>
+
+                        <button
+                            type="button"
+                            id="run-tests-button"
+                            class="run-tests-button"
+                        >
+                            ▶ Run Tests
+                        </button>
+
+                    </div>
+
+                    <div class="test-case-list">
+
+                        <div
+                            class="test-case"
+                            data-test-id="valid_cart"
+                        >
+                            <span class="test-status-icon">○</span>
+
+                            <div>
+                                <strong>
+                                    Valid cart creates an order
+                                </strong>
+
+                                <span>
+                                    Expected response: 201
+                                </span>
+                            </div>
+                        </div>
+
+                        <div
+                            class="test-case"
+                            data-test-id="missing_product_id"
+                        >
+                            <span class="test-status-icon">○</span>
+
+                            <div>
+                                <strong>
+                                    Missing product_id returns 400
+                                </strong>
+
+                                <span>
+                                    Invalid payload must be rejected
+                                </span>
+                            </div>
+                        </div>
+
+                        <div
+                            class="test-case"
+                            data-test-id="no_server_crash"
+                        >
+                            <span class="test-status-icon">○</span>
+
+                            <div>
+                                <strong>
+                                    Invalid payload does not crash
+                                </strong>
+
+                                <span>
+                                    No unhandled KeyError
+                                </span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="test-terminal">
+
+                        <div class="terminal-toolbar">
+                            <span>TEST OUTPUT</span>
+
+                            <span id="test-run-counter">
+                                Runs: 0
+                            </span>
+                        </div>
+
+                        <pre id="test-output">Waiting for test run...</pre>
 
                     </div>
 
@@ -321,8 +292,10 @@
             <button
                 type="submit"
                 class="main-btn"
+                id="submit-code-lab-button"
+                disabled
             >
-                Submit Code Review
+                Pass the Tests to Continue
             </button>
 
         </div>

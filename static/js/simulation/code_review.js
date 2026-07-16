@@ -1,11 +1,12 @@
 (() => {
     "use strict";
 
-    function initializeCodeReviewTask() {
+    function initializeCodeLab() {
         const form = document.getElementById(
-            "code-review-task-form"
+            "code-lab-task-form"
         );
 
+        // Stop safely on simulation steps without the Code Lab.
         if (!form) {
             return;
         }
@@ -13,38 +14,430 @@
         const hiddenAnswer =
             document.getElementById("answer");
 
-        const reviewComment =
-            document.getElementById("review-comment");
+        const codeEditor =
+            document.getElementById("submitted-code");
 
-        const characterCount =
+        const lineNumbers =
+            document.getElementById("editor-line-numbers");
+
+        const resetButton =
+            document.getElementById("reset-code-button");
+
+        const hintButton =
+            document.getElementById("show-hint-button");
+
+        const hintBox =
+            document.getElementById("code-hint");
+
+        const runTestsButton =
+            document.getElementById("run-tests-button");
+
+        const testOutput =
+            document.getElementById("test-output");
+
+        const testRunCounter =
+            document.getElementById("test-run-counter");
+
+        const workspaceStatus =
+            document.getElementById("code-lab-status");
+
+        const workspaceStatusText =
             document.getElementById(
-                "review-comment-character-count"
+                "code-lab-status-text"
             );
 
-        if (!hiddenAnswer || !reviewComment) {
+        const submitButton =
+            document.getElementById(
+                "submit-code-lab-button"
+            );
+
+        if (
+            !hiddenAnswer ||
+            !codeEditor ||
+            !runTestsButton ||
+            !testOutput ||
+            !submitButton
+        ) {
             console.error(
-                "CareerGrid code review task could not start."
+                "CareerGrid Code Lab could not start because required elements are missing."
             );
 
             return;
         }
 
-        function updateCharacterCount() {
-            const currentLength =
-                reviewComment.value.length;
+        const initialCode = codeEditor.value;
 
-            if (characterCount) {
-                characterCount.textContent =
-                    `${currentLength} / 1500`;
+        const requiredTestIds = [
+            "valid_cart",
+            "missing_product_id",
+            "no_server_crash"
+        ];
+
+        let testRuns = 0;
+        let hintsUsed = 0;
+        let hintWasCounted = false;
+        let passedTests = [];
+        let lastTestedCode = null;
+
+        function updateLineNumbers() {
+            if (!lineNumbers) {
+                return;
+            }
+
+            const numberOfLines =
+                codeEditor.value.split("\n").length;
+
+            lineNumbers.innerHTML = Array.from(
+                { length: numberOfLines },
+                (_, index) => index + 1
+            ).join("<br>");
+        }
+
+        function updateRunCounter() {
+            if (testRunCounter) {
+                testRunCounter.textContent =
+                    `Runs: ${testRuns}`;
             }
         }
 
-        function restoreSavedAnswer() {
+        function updateWorkspaceStatus(
+            status,
+            message
+        ) {
+            if (!workspaceStatus) {
+                return;
+            }
+
+            workspaceStatus.classList.remove(
+                "tests-passed",
+                "tests-failed"
+            );
+
+            if (status === "passed") {
+                workspaceStatus.classList.add(
+                    "tests-passed"
+                );
+            }
+
+            if (status === "failed") {
+                workspaceStatus.classList.add(
+                    "tests-failed"
+                );
+            }
+
+            if (workspaceStatusText) {
+                workspaceStatusText.textContent =
+                    message;
+            }
+        }
+
+        function getTestElement(testId) {
+            return document.querySelector(
+                `.test-case[data-test-id="${testId}"]`
+            );
+        }
+
+        function setTestState(
+            testId,
+            state
+        ) {
+            const testElement =
+                getTestElement(testId);
+
+            if (!testElement) {
+                return;
+            }
+
+            const icon =
+                testElement.querySelector(
+                    ".test-status-icon"
+                );
+
+            testElement.classList.remove(
+                "running",
+                "passed",
+                "failed"
+            );
+
+            if (state === "running") {
+                testElement.classList.add("running");
+
+                if (icon) {
+                    icon.textContent = "…";
+                }
+            } else if (state === "passed") {
+                testElement.classList.add("passed");
+
+                if (icon) {
+                    icon.textContent = "✓";
+                }
+            } else if (state === "failed") {
+                testElement.classList.add("failed");
+
+                if (icon) {
+                    icon.textContent = "×";
+                }
+            } else if (icon) {
+                icon.textContent = "○";
+            }
+        }
+
+        function resetTestDisplay() {
+            requiredTestIds.forEach((testId) => {
+                setTestState(testId, "pending");
+            });
+
+            passedTests = [];
+            submitButton.disabled = true;
+        }
+
+        /*
+         * This is a controlled simulator. It does not execute
+         * arbitrary Python code on the Flask server.
+         *
+         * It checks whether the submitted solution contains the
+         * important validation behavior required by the task.
+         */
+        function analyzeSubmittedCode(code) {
+            const hasOrderCreation =
+                /create_order_item\s*\(\s*product_id\s*\)/.test(
+                    code
+                );
+
+            const hasSuccessResponse =
+                /return[\s\S]*,\s*201\b/.test(
+                    code
+                );
+
+            const usesSafeGet =
+                /item\s*\.\s*get\s*\(\s*["']product_id["']\s*\)/.test(
+                    code
+                );
+
+            const checksMissingValue =
+                /if\s+(?:not\s+product_id|product_id\s+is\s+None|product_id\s*==\s*None)\s*:/.test(
+                    code
+                );
+
+            const checksFieldBeforeAccess =
+                /if\s+["']product_id["']\s+not\s+in\s+item\s*:/.test(
+                    code
+                );
+
+            const returnsClientError =
+                /(?:,\s*400\b|["']status["']\s*:\s*400\b|status_code\s*=\s*400\b)/.test(
+                    code
+                );
+
+            const usesUnsafeDirectAccess =
+                /item\s*\[\s*["']product_id["']\s*\]/.test(
+                    code
+                );
+
+            const validCartPasses =
+                hasOrderCreation &&
+                hasSuccessResponse;
+
+            const missingProductIdPasses =
+                returnsClientError &&
+                (
+                    checksFieldBeforeAccess ||
+                    (
+                        usesSafeGet &&
+                        checksMissingValue
+                    )
+                );
+
+            const noServerCrashPasses =
+                !usesUnsafeDirectAccess ||
+                checksFieldBeforeAccess;
+
+            return {
+                valid_cart: validCartPasses,
+                missing_product_id:
+                    missingProductIdPasses,
+                no_server_crash:
+                    noServerCrashPasses
+            };
+        }
+
+        function buildTerminalOutput(results) {
+            const lines = [
+                "$ pytest tests/test_checkout_service.py -q",
+                ""
+            ];
+
+            const testDescriptions = {
+                valid_cart:
+                    "test_valid_cart_creates_order",
+                missing_product_id:
+                    "test_missing_product_id_returns_400",
+                no_server_crash:
+                    "test_invalid_payload_does_not_crash"
+            };
+
+            requiredTestIds.forEach((testId) => {
+                const passed = results[testId];
+
+                lines.push(
+                    `${passed ? "PASSED" : "FAILED"}  ${testDescriptions[testId]}`
+                );
+            });
+
+            const passedCount =
+                requiredTestIds.filter(
+                    (testId) => results[testId]
+                ).length;
+
+            lines.push("");
+            lines.push(
+                `${passedCount} passed, ${
+                    requiredTestIds.length - passedCount
+                } failed`
+            );
+
+            if (!results.valid_cart) {
+                lines.push("");
+                lines.push(
+                    "Check that valid cart items still call create_order_item(product_id) and return 201."
+                );
+            }
+
+            if (!results.missing_product_id) {
+                lines.push("");
+                lines.push(
+                    "The missing product_id case must return a clear 400 client response."
+                );
+            }
+
+            if (!results.no_server_crash) {
+                lines.push("");
+                lines.push(
+                    "Direct item['product_id'] access may still raise an unhandled KeyError."
+                );
+            }
+
+            if (passedCount === requiredTestIds.length) {
+                lines.push("");
+                lines.push(
+                    "All checks passed. The fix is ready for submission."
+                );
+            }
+
+            return lines.join("\n");
+        }
+
+        function runTests() {
+            const submittedCode =
+                codeEditor.value.trim();
+
+            testRuns += 1;
+            updateRunCounter();
+
+            submitButton.disabled = true;
+            runTestsButton.disabled = true;
+            runTestsButton.textContent =
+                "Running...";
+
+            updateWorkspaceStatus(
+                "pending",
+                "Running tests"
+            );
+
+            requiredTestIds.forEach((testId) => {
+                setTestState(testId, "running");
+            });
+
+            testOutput.textContent = [
+                "$ pytest tests/test_checkout_service.py -q",
+                "",
+                "Collecting tests...",
+                "Running checkout service checks..."
+            ].join("\n");
+
+            window.setTimeout(() => {
+                const results =
+                    analyzeSubmittedCode(
+                        submittedCode
+                    );
+
+                passedTests =
+                    requiredTestIds.filter(
+                        (testId) => results[testId]
+                    );
+
+                requiredTestIds.forEach((testId) => {
+                    setTestState(
+                        testId,
+                        results[testId]
+                            ? "passed"
+                            : "failed"
+                    );
+                });
+
+                testOutput.textContent =
+                    buildTerminalOutput(results);
+
+                lastTestedCode =
+                    codeEditor.value;
+
+                const allTestsPassed =
+                    passedTests.length ===
+                    requiredTestIds.length;
+
+                submitButton.disabled =
+                    !allTestsPassed;
+
+                if (allTestsPassed) {
+                    updateWorkspaceStatus(
+                        "passed",
+                        "All tests passed"
+                    );
+
+                    submitButton.textContent =
+                        "Submit Working Fix";
+                } else {
+                    updateWorkspaceStatus(
+                        "failed",
+                        "Tests need attention"
+                    );
+
+                    submitButton.textContent =
+                        "Pass the Tests to Continue";
+                }
+
+                runTestsButton.disabled = false;
+                runTestsButton.textContent =
+                    "▶ Run Tests";
+            }, 700);
+        }
+
+        function invalidatePreviousResults() {
+            if (
+                lastTestedCode === null ||
+                codeEditor.value === lastTestedCode
+            ) {
+                return;
+            }
+
+            resetTestDisplay();
+
+            updateWorkspaceStatus(
+                "pending",
+                "Code changed — rerun tests"
+            );
+
+            submitButton.textContent =
+                "Pass the Tests to Continue";
+        }
+
+        function restoreSavedResponse() {
             const savedValue =
                 hiddenAnswer.dataset.savedAnswer;
 
             if (!savedValue) {
-                updateCharacterCount();
+                updateLineNumbers();
+                updateRunCounter();
                 return;
             }
 
@@ -59,137 +452,224 @@
                     return;
                 }
 
-                const selectedLine =
-                    savedResponse.selected_line;
-
-                const selectedFix =
-                    savedResponse.selected_fix;
-
-                if (selectedLine) {
-                    const lineOption =
-                        form.querySelector(
-                            `input[name="selected_line"][value="${selectedLine}"]`
-                        );
-
-                    if (lineOption) {
-                        lineOption.checked = true;
-                    }
+                if (
+                    typeof savedResponse.submitted_code ===
+                    "string"
+                ) {
+                    codeEditor.value =
+                        savedResponse.submitted_code;
                 }
 
-                if (selectedFix) {
-                    const fixOption =
-                        form.querySelector(
-                            `input[name="selected_fix"][value="${selectedFix}"]`
-                        );
+                testRuns =
+                    Number(
+                        savedResponse.test_runs
+                    ) || 0;
 
-                    if (fixOption) {
-                        fixOption.checked = true;
-                    }
+                hintsUsed =
+                    Number(
+                        savedResponse.hints_used
+                    ) || 0;
+
+                hintWasCounted =
+                    hintsUsed > 0;
+
+                if (
+                    Array.isArray(
+                        savedResponse.passed_tests
+                    )
+                ) {
+                    passedTests =
+                        savedResponse.passed_tests.filter(
+                            (testId) =>
+                                requiredTestIds.includes(
+                                    testId
+                                )
+                        );
                 }
 
-                reviewComment.value =
-                    savedResponse.review_comment || "";
+                const allTestsPassed =
+                    passedTests.length ===
+                    requiredTestIds.length;
+
+                if (allTestsPassed) {
+                    requiredTestIds.forEach(
+                        (testId) => {
+                            setTestState(
+                                testId,
+                                "passed"
+                            );
+                        }
+                    );
+
+                    lastTestedCode =
+                        codeEditor.value;
+
+                    submitButton.disabled = false;
+                    submitButton.textContent =
+                        "Submit Working Fix";
+
+                    updateWorkspaceStatus(
+                        "passed",
+                        "All tests passed"
+                    );
+
+                    testOutput.textContent =
+                        "Saved successful test results restored.";
+                }
 
             } catch (error) {
-                /*
-                 * Ignore older answers that were saved before
-                 * Step 3 became interactive.
-                 */
+                console.warn(
+                    "Could not restore the saved Code Lab response."
+                );
             }
 
-            updateCharacterCount();
+            updateLineNumbers();
+            updateRunCounter();
         }
 
-        reviewComment.addEventListener(
+        /*
+         * Allow Tab indentation inside the code editor.
+         */
+        codeEditor.addEventListener(
+            "keydown",
+            (event) => {
+                if (event.key !== "Tab") {
+                    return;
+                }
+
+                event.preventDefault();
+
+                const start =
+                    codeEditor.selectionStart;
+
+                const end =
+                    codeEditor.selectionEnd;
+
+                codeEditor.value =
+                    codeEditor.value.substring(
+                        0,
+                        start
+                    ) +
+                    "    " +
+                    codeEditor.value.substring(end);
+
+                codeEditor.selectionStart =
+                    codeEditor.selectionEnd =
+                        start + 4;
+
+                updateLineNumbers();
+                invalidatePreviousResults();
+            }
+        );
+
+        codeEditor.addEventListener(
             "input",
             () => {
-                reviewComment.setCustomValidity("");
-                updateCharacterCount();
+                updateLineNumbers();
+                invalidatePreviousResults();
             }
+        );
+
+        codeEditor.addEventListener(
+            "scroll",
+            () => {
+                if (lineNumbers) {
+                    lineNumbers.scrollTop =
+                        codeEditor.scrollTop;
+                }
+            }
+        );
+
+        if (resetButton) {
+            resetButton.addEventListener(
+                "click",
+                () => {
+                    codeEditor.value =
+                        initialCode;
+
+                    lastTestedCode = null;
+
+                    resetTestDisplay();
+                    updateLineNumbers();
+
+                    testOutput.textContent =
+                        "Code reset. Run the tests again.";
+
+                    updateWorkspaceStatus(
+                        "pending",
+                        "Tests not run"
+                    );
+
+                    submitButton.textContent =
+                        "Pass the Tests to Continue";
+                }
+            );
+        }
+
+        if (hintButton && hintBox) {
+            hintButton.addEventListener(
+                "click",
+                () => {
+                    const willShow =
+                        hintBox.hidden;
+
+                    hintBox.hidden =
+                        !willShow;
+
+                    hintButton.textContent =
+                        willShow
+                            ? "Hide hint"
+                            : "Show hint";
+
+                    if (
+                        willShow &&
+                        !hintWasCounted
+                    ) {
+                        hintsUsed += 1;
+                        hintWasCounted = true;
+                    }
+                }
+            );
+        }
+
+        runTestsButton.addEventListener(
+            "click",
+            runTests
         );
 
         form.addEventListener(
             "submit",
             (event) => {
-                const selectedLine =
-                    form.querySelector(
-                        'input[name="selected_line"]:checked'
-                    );
+                const code =
+                    codeEditor.value.trim();
 
-                const selectedFix =
-                    form.querySelector(
-                        'input[name="selected_fix"]:checked'
-                    );
+                const allTestsPassed =
+                    passedTests.length ===
+                    requiredTestIds.length;
 
-                const comment =
-                    reviewComment.value.trim();
+                const codeMatchesLastTest =
+                    codeEditor.value ===
+                    lastTestedCode;
 
-                if (!selectedLine) {
+                if (
+                    !allTestsPassed ||
+                    !codeMatchesLastTest
+                ) {
                     event.preventDefault();
 
-                    const firstLine =
-                        form.querySelector(
-                            'input[name="selected_line"]'
-                        );
-
-                    if (firstLine) {
-                        firstLine.focus();
-                        firstLine.reportValidity();
-                    }
+                    testOutput.textContent +=
+                        "\n\nRun the tests successfully before submitting.";
 
                     return;
                 }
-
-                if (!selectedFix) {
-                    event.preventDefault();
-
-                    const firstFix =
-                        form.querySelector(
-                            'input[name="selected_fix"]'
-                        );
-
-                    if (firstFix) {
-                        firstFix.focus();
-                        firstFix.reportValidity();
-                    }
-
-                    return;
-                }
-
-                if (comment.length < 20) {
-                    event.preventDefault();
-
-                    reviewComment.setCustomValidity(
-                        "Please write a review comment of at least 20 characters."
-                    );
-
-                    reviewComment.reportValidity();
-                    reviewComment.focus();
-
-                    return;
-                }
-
-                if (comment.length > 1500) {
-                    event.preventDefault();
-
-                    reviewComment.setCustomValidity(
-                        "Your review comment must contain no more than 1500 characters."
-                    );
-
-                    reviewComment.reportValidity();
-                    reviewComment.focus();
-
-                    return;
-                }
-
-                reviewComment.setCustomValidity("");
 
                 const responseData = {
-                    task_type: "code_review",
-                    pull_request_id: "PR-184",
-                    selected_line: selectedLine.value,
-                    selected_fix: selectedFix.value,
-                    review_comment: comment
+                    task_type: "code_lab",
+                    issue_id: "API-184",
+                    submitted_code: code,
+                    test_runs: testRuns,
+                    passed_tests: passedTests,
+                    hints_used: hintsUsed
                 };
 
                 hiddenAnswer.value =
@@ -197,15 +677,17 @@
             }
         );
 
-        restoreSavedAnswer();
+        restoreSavedResponse();
     }
 
-    if (document.readyState === "loading") {
+    if (
+        document.readyState === "loading"
+    ) {
         document.addEventListener(
             "DOMContentLoaded",
-            initializeCodeReviewTask
+            initializeCodeLab
         );
     } else {
-        initializeCodeReviewTask();
+        initializeCodeLab();
     }
 })();
