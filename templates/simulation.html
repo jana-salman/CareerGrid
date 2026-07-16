@@ -32,6 +32,14 @@
     ) }}?v=1"
     >
 
+    <link
+    rel="stylesheet"
+    href="{{ url_for(
+        'static',
+        filename='css/simulation/code_review.css'
+    ) }}?v=1"
+    >
+
 </head>
 
 <body>
@@ -74,12 +82,14 @@
 
     </div>
 
-        <div
+    <div
     class="simulation-card
     {% if step == 1 and generated_inbox_task %}
         simulation-card--inbox
     {% elif step == 2 and is_backend_simulation %}
         simulation-card--incident
+    {% elif step == 3 and is_backend_simulation %}
+        simulation-card--code-review
     {% endif %}
     "
 >
@@ -271,97 +281,113 @@
 
     {% endif %}
 
+                
             <!-- STEP 3 -->
-            {% elif step == 3 %}
+{% elif step == 3 %}
 
-                <div class="task-heading">
+    {% if is_backend_simulation %}
 
-                    <span class="task-icon">🛠️</span>
+        {% include "simulation_tasks/code_review.html" %}
 
-                    <div>
-                        <h3>{{ step_three_task.title }}</h3>
+    {% else %}
 
-                        <p>
-                            {{ step_three_task.instructions }}
-                        </p>
-                    </div>
+        <div class="task-heading">
 
-                </div>
+            <span class="task-icon">🛠️</span>
 
-                <div class="code-box">
-                    <pre>{{ step_three_task.code }}</pre>
-                </div>
+            <div>
+                <h3>{{ step_three_task.title }}</h3>
 
-                <form method="POST">
+                <p>
+                    {{ step_three_task.instructions }}
+                </p>
+            </div>
 
-                    <div class="simulation-question">
+        </div>
 
-                        <h4 class="question-title">
-                            {{ step_three_task.question }}
-                        </h4>
+        <div class="code-box">
+            <pre>{{ step_three_task.code }}</pre>
+        </div>
 
-                        <div class="simulation-options">
+        <form method="POST">
 
-                            {% for option in step_three_task.options %}
+            <div class="simulation-question">
 
-                                <label class="simulation-option">
+                <h4 class="question-title">
+                    {{ step_three_task.question }}
+                </h4>
 
-                                    <input
-                                    type="radio"
-                                    name="answer"
-                                    value="{{ option.value }}"
-                                    {% if saved_answer == option.value %}checked{% endif %}
-                                    required
-                                >
+                <div class="simulation-options">
 
-                                    <span class="option-content">
+                    {% for option in step_three_task.options %}
 
-                                        <span class="option-number">
-                                            {{ loop.index }}
-                                        </span>
+                        <label class="simulation-option">
 
-                                        <span class="option-text">
-                                            {{ option.label }}
-                                        </span>
+                            <input
+                                type="radio"
+                                name="answer"
+                                value="{{ option.value }}"
+                                {% if saved_answer == option.value %}
+                                    checked
+                                {% endif %}
+                                required
+                            >
 
-                                    </span>
+                            <span class="option-content">
 
-                                </label>
+                                <span class="option-number">
+                                    {{ loop.index }}
+                                </span>
 
-                            {% endfor %}
+                                <span class="option-text">
+                                    {{ option.label }}
+                                </span>
 
-                        </div>
+                            </span>
 
-                    </div>
+                        </label>
 
-                    {% if error %}
-                        <p class="error-message">
-                            {{ error }}
-                        </p>
-                    {% endif %}
-
-                    <div class="simulation-actions">
-
-                    <a
-                        href="{{ url_for(
-                            'simulation_step',
-                            career_id=career_id,
-                            position_id=position_id,
-                            company_id=company_id,
-                            step=step - 1
-                        ) }}"
-                        class="secondary-btn"
-                    >
-                        ← Previous Step
-                    </a>
-
-                    <button type="submit" class="main-btn">
-                        Submit and Continue
-                    </button>
+                    {% endfor %}
 
                 </div>
 
-                </form>
+            </div>
+
+            {% if error %}
+                <p class="error-message">
+                    {{ error }}
+                </p>
+            {% endif %}
+
+            <div class="simulation-actions">
+
+                <a
+                    href="{{ url_for(
+                        'simulation_step',
+                        career_id=career_id,
+                        position_id=position_id,
+                        company_id=company_id,
+                        step=step - 1
+                    ) }}"
+                    class="secondary-btn"
+                >
+                    ← Previous Step
+                </a>
+
+                <button
+                    type="submit"
+                    class="main-btn"
+                >
+                    Submit and Continue
+                </button>
+
+            </div>
+
+        </form>
+
+    {% endif %}
+
+
 
             <!-- STEP 4 -->
             {% elif step == 4 %}
@@ -554,5 +580,22 @@
     ) }}?v=6"
     defer
 ></script>
+
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/incident.js'
+    ) }}?v=2"
+    defer
+></script>
+
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/code_review.js'
+    ) }}?v=1"
+    defer
+></script>
+
 </body>
 </html>
