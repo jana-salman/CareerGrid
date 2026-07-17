@@ -1,14 +1,12 @@
-firebase-service-account*.json__pycache__/
+__pycache__/
 *.pyc
 venv/
 .env
 instance/
 *.db
 .DS_Store
-# Private configuration
-.env
 
 # Firebase private credentials
 firebase-service-account.json
-*firebase-adminsdk*.json
 firebase-service-account*.json
+*firebase-adminsdk*.json

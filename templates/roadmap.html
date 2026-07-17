@@ -104,11 +104,13 @@
 
                         {% if result.score >= 80 %}
 
-                            <p>
-                                Excellent work. You demonstrated strong Backend
-                                Developer problem-solving skills throughout this
-                                workplace scenario.
-                            </p>
+                            {% if result.summary %}
+
+                                <p>
+                                    {{ result.summary }}
+                                </p>
+
+                            {% endif %}
 
                         {% elif result.score >= 60 %}
 
