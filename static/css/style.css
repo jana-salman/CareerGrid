@@ -1579,3 +1579,245 @@ body {
         border-top: 1px solid #e6e9ef;
     }
 }
+
+/* =========================================================
+   PERSONALIZED LEARNING ROADMAP
+   ========================================================= */
+
+.learning-roadmap {
+    margin-top: 32px;
+    padding: 40px;
+    background: #ffffff;
+    border: 1px solid #e3eaf6;
+    border-radius: 24px;
+    box-shadow: 0 14px 40px rgba(29, 55, 100, 0.08);
+}
+
+.roadmap-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #e7edf7;
+}
+
+.roadmap-heading h3 {
+    margin: 8px 0 0;
+    color: #13213a;
+    font-size: 30px;
+}
+
+.roadmap-duration {
+    flex-shrink: 0;
+    padding: 10px 18px;
+    color: #245bea;
+    background: #edf3ff;
+    border-radius: 999px;
+    font-weight: 700;
+}
+
+.roadmap-overview {
+    max-width: 900px;
+    margin: 24px 0 0;
+    color: #5d6d87;
+    font-size: 17px;
+    line-height: 1.7;
+}
+
+.roadmap-subsection {
+    margin-top: 38px;
+}
+
+.roadmap-subsection > h4 {
+    margin: 0 0 18px;
+    color: #17253d;
+    font-size: 22px;
+}
+
+.focus-area-grid,
+.resource-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.focus-area-card,
+.resource-card {
+    padding: 22px;
+    background: #f8faff;
+    border: 1px solid #e1e8f5;
+    border-radius: 16px;
+}
+
+.focus-area-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.focus-area-heading h5,
+.resource-card h5 {
+    margin: 0;
+    color: #17253d;
+    font-size: 18px;
+}
+
+.focus-area-card p,
+.resource-card p {
+    margin: 12px 0 0;
+    color: #66758d;
+    line-height: 1.55;
+}
+
+.priority-badge {
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.priority-high {
+    color: #b42318;
+    background: #feeceb;
+}
+
+.priority-medium {
+    color: #9a5b00;
+    background: #fff2d6;
+}
+
+.priority-low {
+    color: #087443;
+    background: #e1f7ec;
+}
+
+.roadmap-phase-list {
+    display: grid;
+    gap: 20px;
+}
+
+.roadmap-phase {
+    display: flex;
+    gap: 20px;
+    padding: 24px;
+    background: #fbfcff;
+    border: 1px solid #e1e8f5;
+    border-radius: 18px;
+}
+
+.phase-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+    color: #ffffff;
+    background: #2f63ef;
+    border-radius: 14px;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.phase-content {
+    width: 100%;
+}
+
+.phase-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.phase-heading h5 {
+    margin: 0;
+    color: #17253d;
+    font-size: 20px;
+}
+
+.phase-heading span {
+    color: #2f63ef;
+    font-weight: 700;
+}
+
+.phase-details-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 22px;
+    margin-top: 22px;
+}
+
+.phase-details-grid h6 {
+    margin: 0 0 10px;
+    color: #33435e;
+    font-size: 14px;
+    text-transform: uppercase;
+}
+
+.phase-details-grid ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #65748b;
+}
+
+.phase-details-grid li {
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+.resource-type {
+    display: inline-block;
+    margin-bottom: 10px;
+    color: #2f63ef;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.resource-search {
+    margin-top: 16px;
+    padding: 12px;
+    background: #edf3ff;
+    border-radius: 10px;
+}
+
+.resource-search span {
+    display: block;
+    margin-bottom: 6px;
+    color: #5d6d87;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.resource-search code {
+    color: #1c4bc0;
+    white-space: normal;
+}
+
+@media (max-width: 900px) {
+    .focus-area-grid,
+    .resource-grid,
+    .phase-details-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .roadmap-heading,
+    .phase-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 600px) {
+    .learning-roadmap {
+        padding: 24px 18px;
+    }
+
+    .roadmap-phase {
+        flex-direction: column;
+    }
+}

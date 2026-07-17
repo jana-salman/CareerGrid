@@ -5,12 +5,18 @@ import requests
 from dotenv import load_dotenv
 
 from routes.auth import auth_bp
-from services.simulation_result_service import save_simulation_result
 
 from services.simulation_generator import (
     generate_backend_inbox_task,
 )
-
+from services.roadmap_service import (
+    RoadmapGenerationError,
+    generate_personalized_roadmap,
+)
+from services.evaluation_service import (
+    SimulationEvaluationError,
+    evaluate_simulation,
+)
 from services.inbox_response_service import (
     InboxResponseValidationError,
     validate_inbox_response,
@@ -20,6 +26,8 @@ from services.simulation_storage import (
     save_simulation_step_response,
     create_backend_simulation_attempt,
     get_backend_inbox_task,
+    save_simulation_evaluation,
+    save_simulation_roadmap
 )
 
 from services.incident_response_service import (
@@ -474,85 +482,6 @@ BACKEND_SCENARIO = {
 }
 
 # =========================================================
-# BACKEND SIMULATION ANALYSIS
-# =========================================================
-
-def analyze_backend_answers(answers):
-    """
-    Analyze the five Backend simulation answers.
-
-    Each simulation step is worth 20 points,
-    giving a maximum total score of 100.
-    """
-
-    evaluation = BACKEND_SCENARIO["evaluation"]
-
-    total_score = 0
-    step_results = []
-    strengths = []
-    skills_to_improve = []
-
-    for step_number, criteria in evaluation.items():
-        answer = str(
-            answers.get(f"step_{step_number}", "")
-        ).strip()
-
-        skill = criteria["skill"]
-        step_score = 0
-        matched_keywords = []
-
-        # Step 3 is a multiple-choice question.
-        if "correct_answer" in criteria:
-            if answer == criteria["correct_answer"]:
-                step_score = 20
-
-        # Steps 1, 2, 4, and 5 are evaluated using keywords.
-        else:
-            keywords = criteria.get("keywords", [])
-            normalized_answer = answer.lower()
-
-            matched_keywords = [
-                keyword
-                for keyword in keywords
-                if keyword.lower() in normalized_answer
-            ]
-
-            if keywords:
-                step_score = round(
-                    len(matched_keywords) / len(keywords) * 20
-                )
-
-        total_score += step_score
-
-        if step_score >= 14:
-            strengths.append(skill)
-        else:
-            skills_to_improve.append(skill)
-
-        step_results.append({
-            "step": step_number,
-            "skill": skill,
-            "score": step_score,
-            "maximum_score": 20,
-            "matched_keywords": matched_keywords
-        })
-
-    if total_score >= 80:
-        performance_level = "Strong"
-    elif total_score >= 60:
-        performance_level = "Developing"
-    else:
-        performance_level = "Needs Practice"
-        
-        return {
-        "score": total_score,
-        "maximum_score": 100,
-        "performance_level": performance_level,
-        "strengths": strengths,
-        "skills_to_improve": skills_to_improve,
-        "step_results": step_results
-}
-# =========================================================
 # POSITION AND COMPANY DATA
 # =========================================================
 
@@ -701,7 +630,90 @@ def companies(career_id, position_id):
         local_companies=local_companies
     )
 
+def prepare_answers_for_evaluation(answers):
+    """
+    Convert JSON answer strings back into dictionaries when possible.
+    """
 
+    prepared_answers = {}
+
+    for key, value in answers.items():
+        if isinstance(value, str):
+            try:
+                prepared_answers[key] = json.loads(value)
+            except json.JSONDecodeError:
+                prepared_answers[key] = value
+        else:
+            prepared_answers[key] = value
+
+    return prepared_answers
+
+def prepare_evaluation_for_results_page(evaluation):
+    """
+    Convert Gemini evaluation fields into the format expected
+    by the current roadmap template.
+    """
+
+    if not isinstance(evaluation, dict):
+        return None
+
+    score = evaluation.get(
+        "overall_score",
+        0,
+    )
+
+    if score >= 80:
+        performance_level = "Strong"
+    elif score >= 60:
+        performance_level = "Developing"
+    else:
+        performance_level = "Needs Practice"
+
+    step_results = []
+
+    for step_feedback in evaluation.get(
+        "step_feedback",
+        [],
+    ):
+        step_results.append({
+            "step": step_feedback.get("step"),
+            "skill": (
+                f"Simulation Step "
+                f"{step_feedback.get('step')}"
+            ),
+            "score": step_feedback.get(
+                "score",
+                0,
+            ),
+            "maximum_score": 100,
+            "feedback": step_feedback.get(
+                "feedback",
+                "",
+            ),
+        })
+
+    return {
+        "score": score,
+        "maximum_score": 100,
+        "performance_level": performance_level,
+        "summary": evaluation.get(
+            "summary",
+            "",
+        ),
+        "strengths": evaluation.get(
+            "strengths",
+            [],
+        ),
+        "skills_to_improve": evaluation.get(
+            "areas_for_improvement",
+            [],
+        ),
+        "recommended_skills": evaluation.get(
+            "recommended_skills",
+            [],
+        ),
+        "step_results": step_results,
+    }
 # =========================================================
 # SIMULATION ROUTE
 # =========================================================
@@ -830,6 +842,8 @@ def simulation_step(career_id, position_id, company_id, step):
         session.pop("scenario_id", None)
         session.pop("simulation_result", None)
         session.pop("simulation_result_id", None)
+        session.pop("evaluation_result", None)
+        session.pop("roadmap_result", None)
 
         # Remove the previous AI-generated attempt.
         # A new attempt will be generated after the redirect.
@@ -1126,35 +1140,142 @@ def simulation_step(career_id, position_id, company_id, step):
                     )
                 )
 
-            # Step 5 is the final step.
+           # Step 5 is the final simulation activity.
             if scenario == BACKEND_SCENARIO:
-                simulation_result = analyze_backend_answers(
-                    answers
-                )
+                try:
+                    prepared_answers = (
+                        prepare_answers_for_evaluation(
+                            answers
+                        )
+                    )
+                    # Steps 1-3 were saved when submitted.
+                    # Save the two remaining free-text responses in Firebase.
+                    for step_number in (4, 5):
+                        save_simulation_step_response(
+                            user_id=session.get("user_id"),
+                            attempt_id=session.get(
+                                "simulation_attempt_id"
+                            ),
+                            step=step_number,
+                            response={
+                                "answer": prepared_answers.get(
+                                    f"step_{step_number}",
+                                    "",
+                                )
+                            },
+                        )
 
-                result_id = save_simulation_result(
-                    user_id=session.get("user_id"),
-                    career_id=career_id,
-                    position_id=position_id,
-                    company_id=company_id,
-                    scenario_id=(
+                    simulation_data = {
+                        "career": {
+                            "id": career_id,
+                            "name": career_name,
+                        },
+                        "position": {
+                            "id": position_id,
+                            "title": position_title,
+                        },
+                        "company": {
+                            "id": company_id,
+                            "name": company_name,
+                        },
+                        "scenario": {
+                            "id": BACKEND_SCENARIO["scenario_id"],
+                            "title": BACKEND_SCENARIO["title"],
+                        },
+                        "tasks": {
+                            "step_1": generated_inbox_task,
+                            "step_2": step_two_task,
+                            "step_3": step_three_task,
+                            "step_4": step_four_task,
+                            "step_5": step_five_task,
+                        },
+                        "answers": prepared_answers,
+                    }
+
+                    evaluation = evaluate_simulation(
+                        simulation_data
+                    )
+
+                    roadmap = generate_personalized_roadmap(
+                        evaluation=evaluation,
+                        career_name=career_name,
+                        position_title=position_title,
+                        company_name=company_name,
+                    )
+
+                    save_simulation_evaluation(
+                        user_id=session.get("user_id"),
+                        attempt_id=session.get(
+                            "simulation_attempt_id"
+                        ),
+                        evaluation=evaluation,
+                    )
+
+                    save_simulation_roadmap(
+                        user_id=session.get("user_id"),
+                        attempt_id=session.get(
+                            "simulation_attempt_id"
+                        ),
+                        roadmap=roadmap,
+                    )
+
+                    session["scenario_id"] = (
                         BACKEND_SCENARIO["scenario_id"]
-                    ),
-                    answers=answers,
-                    result=simulation_result,
-                )
+                    )
 
-                session["scenario_id"] = (
-                    BACKEND_SCENARIO["scenario_id"]
-                )
+                    session["evaluation_result"] = evaluation
+                    session["roadmap_result"] = roadmap
+                    # Keep this temporarily for the current roadmap route.
+                    session["simulation_result"] = evaluation
 
-                session["simulation_result"] = (
-                    simulation_result
-                )
+                except RoadmapGenerationError as roadmap_error:
+                    app.logger.exception(
+                        "Personalized roadmap generation failed."
+                    )
 
-                session["simulation_result_id"] = (
-                    result_id
-                )
+                    error = str(roadmap_error)
+
+                except SimulationEvaluationError as evaluation_error:
+                    app.logger.exception(
+                        "Gemini simulation evaluation failed."
+                    )
+
+                    error = str(evaluation_error)
+
+                except Exception:
+                    app.logger.exception(
+                        "Failed to save the simulation evaluation."
+                    )
+
+                    error = (
+                        "We could not save your evaluation right now. "
+                        "Please try again."
+                    )
+
+                if error:
+                    return render_template(
+                        "simulation.html",
+                        career_id=career_id,
+                        position_id=position_id,
+                        company_id=company_id,
+                        career_name=career_name,
+                        company_name=company_name,
+                        position_data=position_data,
+                        position_title=position_title,
+                        step=step,
+                        total_steps=total_steps,
+                        scenario=scenario,
+                        email=email,
+                        step_two_task=step_two_task,
+                        step_three_task=step_three_task,
+                        step_four_task=step_four_task,
+                        step_five_task=step_five_task,
+                        error=error,
+                        saved_answer=saved_answer,
+                        generated_inbox_task=generated_inbox_task,
+                        ai_generation_error=ai_generation_error,
+                        is_backend_simulation=is_backend_simulation,
+                    )
 
             return redirect(
                 url_for("roadmap")
@@ -1195,10 +1316,23 @@ def simulation_step(career_id, position_id, company_id, step):
 
 @app.route("/roadmap")
 def roadmap():
+    evaluation = session.get(
+        "evaluation_result"
+    )
+
+    result = prepare_evaluation_for_results_page(
+        evaluation
+    )
+
     return render_template(
         "roadmap.html",
-        answers=session.get("simulation_answers", {}),
-        result=session.get("simulation_result")
+        answers=session.get(
+            "simulation_answers",
+            {},
+        ),
+        evaluation=evaluation,
+        result=result,
+        roadmap=session.get("roadmap_result"),
     )
 
 

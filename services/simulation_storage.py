@@ -239,3 +239,102 @@ def save_simulation_step_response(
             "updated_at": submitted_at,
         }
     )
+
+def save_simulation_evaluation(
+    *,
+    user_id: str,
+    attempt_id: str,
+    evaluation: dict[str, Any],
+) -> None:
+    """
+    Save Gemini's evaluation and mark the simulation as complete.
+    """
+
+    if not user_id:
+        raise ValueError(
+            "A logged-in user ID is required."
+        )
+
+    if not attempt_id:
+        raise ValueError(
+            "A simulation attempt ID is required."
+        )
+
+    if not isinstance(evaluation, dict):
+        raise ValueError(
+            "Evaluation must be a dictionary."
+        )
+
+    attempt_reference = get_database_reference(
+        f"users/{user_id}/simulation_attempts/{attempt_id}"
+    )
+
+    existing_attempt = attempt_reference.get()
+
+    if not isinstance(existing_attempt, dict):
+        raise RuntimeError(
+            "The simulation attempt could not be found."
+        )
+
+    completed_at = _current_utc_time()
+
+    attempt_reference.update({
+        "evaluation": deepcopy(evaluation),
+        "status": "completed",
+        "current_step": 5,
+        "completed_at": completed_at,
+        "updated_at": completed_at,
+    })
+
+def save_simulation_roadmap(
+    *,
+    user_id: str,
+    attempt_id: str,
+    roadmap: dict[str, Any],
+) -> None:
+    """
+    Save the personalized roadmap inside the completed
+    Firebase simulation attempt.
+    """
+
+    if not user_id:
+        raise ValueError(
+            "A logged-in user ID is required."
+        )
+
+    if not attempt_id:
+        raise ValueError(
+            "A simulation attempt ID is required."
+        )
+
+    if not isinstance(roadmap, dict):
+        raise ValueError(
+            "Roadmap must be a dictionary."
+        )
+
+    attempt_reference = get_database_reference(
+        f"users/{user_id}/simulation_attempts/{attempt_id}"
+    )
+
+    existing_attempt = attempt_reference.get()
+
+    if not isinstance(existing_attempt, dict):
+        raise RuntimeError(
+            "The simulation attempt could not be found."
+        )
+
+    if not isinstance(
+        existing_attempt.get("evaluation"),
+        dict,
+    ):
+        raise RuntimeError(
+            "The simulation must be evaluated before "
+            "a roadmap can be saved."
+        )
+
+    updated_at = _current_utc_time()
+
+    attempt_reference.update({
+        "roadmap": deepcopy(roadmap),
+        "updated_at": updated_at,
+    })

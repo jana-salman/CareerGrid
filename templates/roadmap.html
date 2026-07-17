@@ -104,11 +104,13 @@
 
                         {% if result.score >= 80 %}
 
-                            <p>
-                                Excellent work. You demonstrated strong Backend
-                                Developer problem-solving skills throughout this
-                                workplace scenario.
-                            </p>
+                            {% if result.summary %}
+
+                                <p>
+                                    {{ result.summary }}
+                                </p>
+
+                            {% endif %}
 
                         {% elif result.score >= 60 %}
 
@@ -330,7 +332,249 @@
 
                 </section>
 
+                {% if roadmap %}
 
+                    <!-- PERSONALIZED LEARNING ROADMAP -->
+                    <section class="learning-roadmap">
+
+                        <div class="roadmap-heading">
+
+                            <div>
+
+                                <span class="section-eyebrow">
+                                    Personalized Learning Plan
+                                </span>
+
+                                <h3>
+                                    {{ roadmap.title }}
+                                </h3>
+
+                            </div>
+
+                            <span class="roadmap-duration">
+                                {{ roadmap.duration_weeks }} weeks
+                            </span>
+
+                        </div>
+
+                        <p class="roadmap-overview">
+                            {{ roadmap.overview }}
+                        </p>
+
+
+                        <!-- FOCUS AREAS -->
+                        <div class="roadmap-subsection">
+
+                            <h4>
+                                Priority Focus Areas
+                            </h4>
+
+                            <div class="focus-area-grid">
+
+                                {% for focus in roadmap.focus_areas %}
+
+                                    <article class="focus-area-card">
+
+                                        <div class="focus-area-heading">
+
+                                            <h5>
+                                                {{ focus.skill }}
+                                            </h5>
+
+                                            <span
+                                                class="priority-badge
+                                                priority-{{ focus.priority }}"
+                                            >
+                                                {{ focus.priority }}
+                                            </span>
+
+                                        </div>
+
+                                        <p>
+                                            {{ focus.reason }}
+                                        </p>
+
+                                    </article>
+
+                                {% endfor %}
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- ROADMAP PHASES -->
+                        <div class="roadmap-subsection">
+
+                            <h4>
+                                Your Learning Phases
+                            </h4>
+
+                            <div class="roadmap-phase-list">
+
+                                {% for phase in roadmap.phases %}
+
+                                    <article class="roadmap-phase">
+
+                                        <div class="phase-number">
+                                            {{ phase.phase }}
+                                        </div>
+
+                                        <div class="phase-content">
+
+                                            <div class="phase-heading">
+
+                                                <h5>
+                                                    {{ phase.title }}
+                                                </h5>
+
+                                                <span>
+                                                    {{ phase.duration_weeks }}
+                                                    {% if phase.duration_weeks == 1 %}
+                                                        week
+                                                    {% else %}
+                                                        weeks
+                                                    {% endif %}
+                                                </span>
+
+                                            </div>
+
+
+                                            <div class="phase-details-grid">
+
+                                                <div>
+
+                                                    <h6>
+                                                        Goals
+                                                    </h6>
+
+                                                    <ul>
+
+                                                        {% for goal in phase.goals %}
+
+                                                            <li>
+                                                                {{ goal }}
+                                                            </li>
+
+                                                        {% endfor %}
+
+                                                    </ul>
+
+                                                </div>
+
+
+                                                <div>
+
+                                                    <h6>
+                                                        Activities
+                                                    </h6>
+
+                                                    <ul>
+
+                                                        {% for activity in phase.activities %}
+
+                                                            <li>
+                                                                {{ activity }}
+                                                            </li>
+
+                                                        {% endfor %}
+
+                                                    </ul>
+
+                                                </div>
+
+
+                                                <div>
+
+                                                    <h6>
+                                                        Success Criteria
+                                                    </h6>
+
+                                                    <ul>
+
+                                                        {% for criterion in
+                                                            phase.success_criteria %}
+
+                                                            <li>
+                                                                {{ criterion }}
+                                                            </li>
+
+                                                        {% endfor %}
+
+                                                    </ul>
+
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+                                    </article>
+
+                                {% endfor %}
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- RECOMMENDED RESOURCES -->
+                        {% if roadmap.recommended_resources %}
+
+                            <div class="roadmap-subsection">
+
+                                <h4>
+                                    Recommended Resources
+                                </h4>
+
+                                <div class="resource-grid">
+
+                                    {% for resource in
+                                        roadmap.recommended_resources %}
+
+                                        <article class="resource-card">
+
+                                            <span class="resource-type">
+                                                {{ resource.type }}
+                                            </span>
+
+                                            <h5>
+                                                {{ resource.title }}
+                                            </h5>
+
+                                            <p>
+                                                {{ resource.purpose }}
+                                            </p>
+
+                                            {% if resource.search_query %}
+
+                                                <div class="resource-search">
+
+                                                    <span>
+                                                        Suggested search:
+                                                    </span>
+
+                                                    <code>
+                                                        {{ resource.search_query }}
+                                                    </code>
+
+                                                </div>
+
+                                            {% endif %}
+
+                                        </article>
+
+                                    {% endfor %}
+
+                                </div>
+
+                            </div>
+
+                        {% endif %}
+
+                    </section>
+
+                {% endif %}
                 <!-- BUTTONS -->
                 <div class="results-actions">
 
