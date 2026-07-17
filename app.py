@@ -1,11 +1,37 @@
 from flask import Flask, render_template, redirect, url_for, session, request
 import os
-
+import json
 import requests
 from dotenv import load_dotenv
 
 from routes.auth import auth_bp
 from services.simulation_result_service import save_simulation_result
+
+from services.simulation_generator import (
+    generate_backend_inbox_task,
+)
+
+from services.inbox_response_service import (
+    InboxResponseValidationError,
+    validate_inbox_response,
+)
+
+from services.simulation_storage import (
+    save_simulation_step_response,
+    create_backend_simulation_attempt,
+    get_backend_inbox_task,
+)
+
+from services.incident_response_service import (
+    IncidentResponseValidationError,
+    validate_incident_response,
+)
+
+from services.code_lab_response_service import (
+    CodeLabResponseValidationError,
+    validate_code_lab_response,
+)
+
 
 # ---------------------------------------------------------
 # Load environment variables
@@ -803,6 +829,23 @@ def simulation_step(career_id, position_id, company_id, step):
 
         session.pop("scenario_id", None)
         session.pop("simulation_result", None)
+        session.pop("simulation_result_id", None)
+
+        # Remove the previous AI-generated attempt.
+        # A new attempt will be generated after the redirect.
+        session.pop("simulation_attempt_id", None)
+
+    # Remove ?reset=1 from the address after clearing the attempt.
+    if restart_requested:
+        return redirect(
+            url_for(
+                "simulation_step",
+                career_id=career_id,
+                position_id=position_id,
+                company_id=company_id,
+                step=1
+            )
+        )
 
         # Remove ?reset=1 from the address after clearing the answers.
         if restart_requested:
@@ -815,7 +858,67 @@ def simulation_step(career_id, position_id, company_id, step):
                     step=1
                 )
             )
+        # The new AI-generated inbox is currently used only
+    # for the Backend Developer position.
+    is_backend_simulation = (
+        career_id == BACKEND_SCENARIO["career_id"]
+        and position_id == BACKEND_SCENARIO["position_id"]
+    )
 
+    generated_inbox_task = None
+    ai_generation_error = None
+
+    if is_backend_simulation:
+        user_id = session.get("user_id")
+
+        if not user_id:
+            return redirect(
+                url_for("login")
+            )
+
+        attempt_id = session.get("simulation_attempt_id")
+
+        # First try to retrieve an already generated inbox.
+        if attempt_id:
+            generated_inbox_task = get_backend_inbox_task(
+                user_id=user_id,
+                attempt_id=attempt_id,
+            )
+
+        # Generate only when no saved inbox exists.
+        if generated_inbox_task is None:
+            try:
+                complete_inbox_task = generate_backend_inbox_task(
+                    company_name=company_name
+                )
+
+                attempt_id = create_backend_simulation_attempt(
+                    user_id=user_id,
+                    career_id=career_id,
+                    position_id=position_id,
+                    company_id=company_id,
+                    generated_inbox_task=complete_inbox_task,
+                )
+
+                # Store only the small Firebase ID in the Flask session.
+                session["simulation_attempt_id"] = attempt_id
+
+                # Read the public version back from Firebase.
+                generated_inbox_task = get_backend_inbox_task(
+                    user_id=user_id,
+                    attempt_id=attempt_id,
+                )
+
+            except Exception:
+                app.logger.exception(
+                    "Gemini inbox generation or Firebase saving failed."
+                )
+
+                ai_generation_error = (
+                    "We could not create the interactive inbox right now. "
+                    "Please try starting the simulation again."
+                )
+        
     # These variables must exist for both GET and POST requests.
     error = None
 
@@ -837,14 +940,177 @@ def simulation_step(career_id, position_id, company_id, step):
             ""
         ).strip()
 
-        # Keep the submitted value visible if validation fails.
+        # Keep the submitted value available if validation fails.
         saved_answer = answer
 
         if not answer:
-            error = "Please provide an answer before continuing."
+            error = "Please complete the task before continuing."
 
+        # The interactive Backend inbox submits structured JSON.
+        elif is_backend_simulation and step == 1:
+            try:
+                validated_response = validate_inbox_response(
+                    raw_answer=answer,
+                    generated_task=generated_inbox_task,
+                )
+
+                save_simulation_step_response(
+                    user_id=session.get("user_id"),
+                    attempt_id=session.get(
+                        "simulation_attempt_id"
+                    ),
+                    step=1,
+                    response=validated_response,
+                )
+
+            except InboxResponseValidationError as validation_error:
+                app.logger.warning(
+                    "Inbox response validation failed: %s",
+                    validation_error,
+                )
+
+                error = str(validation_error)
+
+            except Exception:
+                app.logger.exception(
+                    "Failed to save Backend inbox response."
+                )
+
+                error = (
+                    "We could not save your inbox response right now. "
+                    "Please try again."
+                )
+
+            if not error:
+                # Keep a session copy so Previous Step still works.
+                answers["step_1"] = json.dumps(
+                    validated_response
+                )
+
+                session["simulation_answers"] = answers
+
+                return redirect(
+                    url_for(
+                        "simulation_step",
+                        career_id=career_id,
+                        position_id=position_id,
+                        company_id=company_id,
+                        step=2,
+                    )
+                )
+            
+                    # The Backend incident investigation submits structured JSON.
+        elif is_backend_simulation and step == 2:
+            try:
+                validated_response = (
+                    validate_incident_response(
+                        raw_answer=answer,
+                    )
+                )
+
+                save_simulation_step_response(
+                    user_id=session.get("user_id"),
+                    attempt_id=session.get(
+                        "simulation_attempt_id"
+                    ),
+                    step=2,
+                    response=validated_response,
+                )
+
+            except (
+                IncidentResponseValidationError
+            ) as validation_error:
+                app.logger.warning(
+                    "Incident response validation failed: %s",
+                    validation_error,
+                )
+
+                error = str(validation_error)
+
+            except Exception:
+                app.logger.exception(
+                    "Failed to save incident response."
+                )
+
+                error = (
+                    "We could not save your investigation "
+                    "right now. Please try again."
+                )
+
+            if not error:
+                answers["step_2"] = json.dumps(
+                    validated_response
+                )
+
+                session["simulation_answers"] = answers
+
+                return redirect(
+                    url_for(
+                        "simulation_step",
+                        career_id=career_id,
+                        position_id=position_id,
+                        company_id=company_id,
+                        step=3,
+                    )
+                )
+
+                # Backend Step 3 submits a Code Lab response.
+        elif is_backend_simulation and step == 3:
+            try:
+                validated_response = (
+                    validate_code_lab_response(
+                        raw_answer=answer,
+                    )
+                )
+
+                save_simulation_step_response(
+                    user_id=session.get("user_id"),
+                    attempt_id=session.get(
+                        "simulation_attempt_id"
+                    ),
+                    step=3,
+                    response=validated_response,
+                )
+
+            except (
+                CodeLabResponseValidationError
+            ) as validation_error:
+                app.logger.warning(
+                    "Code Lab validation failed: %s",
+                    validation_error,
+                )
+
+                error = str(validation_error)
+
+            except Exception:
+                app.logger.exception(
+                    "Failed to save Code Lab response."
+                )
+
+                error = (
+                    "We could not save your code solution "
+                    "right now. Please try again."
+                )
+
+            if not error:
+                answers["step_3"] = json.dumps(
+                    validated_response
+                )
+
+                session["simulation_answers"] = answers
+
+                return redirect(
+                    url_for(
+                        "simulation_step",
+                        career_id=career_id,
+                        position_id=position_id,
+                        company_id=company_id,
+                        step=4,
+                    )
+                )
+        
+        # Existing behavior for Frontend and Backend Steps 2–5.
         else:
-            # Save the answer using step_1, step_2, and so on.
             answers[f"step_{step}"] = answer
             session["simulation_answers"] = answers
 
@@ -856,51 +1122,72 @@ def simulation_step(career_id, position_id, company_id, step):
                         career_id=career_id,
                         position_id=position_id,
                         company_id=company_id,
-                        step=step + 1
+                        step=step + 1,
                     )
                 )
 
             # Step 5 is the final step.
             if scenario == BACKEND_SCENARIO:
-                simulation_result = analyze_backend_answers(answers)
+                simulation_result = analyze_backend_answers(
+                    answers
+                )
 
                 result_id = save_simulation_result(
                     user_id=session.get("user_id"),
                     career_id=career_id,
                     position_id=position_id,
                     company_id=company_id,
-                    scenario_id=BACKEND_SCENARIO["scenario_id"],
+                    scenario_id=(
+                        BACKEND_SCENARIO["scenario_id"]
+                    ),
                     answers=answers,
-                    result=simulation_result
+                    result=simulation_result,
                 )
 
-                session["scenario_id"] = BACKEND_SCENARIO["scenario_id"]
-                session["simulation_result"] = simulation_result
-                session["simulation_result_id"] = result_id
+                session["scenario_id"] = (
+                    BACKEND_SCENARIO["scenario_id"]
+                )
+
+                session["simulation_result"] = (
+                    simulation_result
+                )
+
+                session["simulation_result_id"] = (
+                    result_id
+                )
 
             return redirect(
                 url_for("roadmap")
             )
 
-    # Display the current simulation page.
+
+    # Display the current simulation step.
     return render_template(
         "simulation.html",
         career_id=career_id,
-        career_name=career_name,
         position_id=position_id,
-        position_title=position_title,
         company_id=company_id,
+        career_name=career_name,
         company_name=company_name,
+        position_data=position_data,
+        position_title=position_title,
         step=step,
         total_steps=total_steps,
+        scenario=scenario,
         email=email,
         step_two_task=step_two_task,
         step_three_task=step_three_task,
         step_four_task=step_four_task,
         step_five_task=step_five_task,
+        error=error,
         saved_answer=saved_answer,
-        error=error
+        generated_inbox_task=generated_inbox_task,
+        ai_generation_error=ai_generation_error,
+        is_backend_simulation=is_backend_simulation,
     )
+
+
+
 
 # =========================================================
 # ROADMAP ROUTE
