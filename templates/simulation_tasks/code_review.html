@@ -1,0 +1,330 @@
+<div class="code-lab-workspace">
+
+    <div class="code-lab-heading">
+
+        <div>
+            <span class="code-lab-label">
+                11:05 AM · Backend Code Lab
+            </span>
+
+            <h3>
+                Fix the checkout API
+            </h3>
+
+            <p>
+                Update the backend code, run the automated tests,
+                and resolve the production failure before submitting.
+            </p>
+        </div>
+
+        <div
+            class="code-lab-status"
+            id="code-lab-status"
+        >
+            <span class="code-lab-status-dot"></span>
+
+            <div>
+                <span>Workspace status</span>
+                <strong id="code-lab-status-text">
+                    Tests not run
+                </strong>
+            </div>
+        </div>
+
+    </div>
+
+    <form
+        method="POST"
+        id="code-lab-task-form"
+    >
+
+        <input
+            type="hidden"
+            id="answer"
+            name="answer"
+            data-saved-answer="{{ saved_answer | e }}"
+        >
+
+        <div class="code-lab-console">
+
+            <aside class="code-lab-sidebar">
+
+                <div class="code-lab-sidebar-heading">
+                    <span>ISSUE API-184</span>
+                    <strong>
+                        Missing product validation
+                    </strong>
+                </div>
+
+                <div class="code-lab-detail">
+                    <span>Repository</span>
+                    <strong>checkout-service</strong>
+                </div>
+
+                <div class="code-lab-detail">
+                    <span>File</span>
+                    <strong>checkout_service.py</strong>
+                </div>
+
+                <div class="code-lab-detail">
+                    <span>Environment</span>
+                    <strong>Production</strong>
+                </div>
+
+                <div class="code-lab-detail">
+                    <span>Failure</span>
+                    <strong>KeyError: product_id</strong>
+                </div>
+
+                <div class="code-lab-objective">
+
+                    <strong>Definition of done</strong>
+
+                    <ul>
+                        <li>Valid carts still succeed</li>
+                        <li>Missing product IDs return 400</li>
+                        <li>The API does not crash</li>
+                    </ul>
+
+                </div>
+
+            </aside>
+
+            <main class="code-lab-main">
+
+                <section class="code-editor-panel">
+
+                    <div class="code-editor-toolbar">
+
+                        <div class="editor-file-tab">
+                            <span>🐍</span>
+                            <strong>checkout_service.py</strong>
+                        </div>
+
+                        <div class="editor-toolbar-actions">
+
+                            <button
+                                type="button"
+                                id="reset-code-button"
+                                class="editor-utility-button"
+                            >
+                                Reset code
+                            </button>
+
+                            <button
+                                type="button"
+                                id="show-hint-button"
+                                class="editor-utility-button"
+                            >
+                                Show hint
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                    <div
+                        class="code-hint"
+                        id="code-hint"
+                        hidden
+                    >
+                        Use a safe lookup such as
+                        <code>item.get("product_id")</code>,
+                        check whether the value exists, and return a
+                        clear client error.
+                    </div>
+
+                    <div class="code-editor-area">
+
+                        <div
+                            class="editor-line-numbers"
+                            id="editor-line-numbers"
+                            aria-hidden="true"
+                        >
+                            1<br>
+                            2<br>
+                            3<br>
+                            4<br>
+                            5<br>
+                            6<br>
+                            7<br>
+                            8
+                        </div>
+
+                        <textarea
+                            id="submitted-code"
+                            class="submitted-code"
+                            spellcheck="false"
+                            aria-label="Python code editor"
+                        >def create_order(cart_items):
+    order_items = []
+
+    for item in cart_items:
+        product_id = item["product_id"]
+        order_items.append(
+            create_order_item(product_id)
+        )
+
+    return {"status": "created"}, 201</textarea>
+
+                    </div>
+
+                </section>
+
+                <section class="test-runner-panel">
+
+                    <div class="test-runner-heading">
+
+                        <div>
+                            <h4>Automated tests</h4>
+
+                            <p>
+                                Run the test suite after changing the code.
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            id="run-tests-button"
+                            class="run-tests-button"
+                        >
+                            ▶ Run Tests
+                        </button>
+
+                    </div>
+
+                    <div class="test-case-list">
+
+                        <div
+                            class="test-case"
+                            data-test-id="valid_cart"
+                        >
+                            <span class="test-status-icon">○</span>
+
+                            <div>
+                                <strong>
+                                    Valid cart creates an order
+                                </strong>
+
+                                <span>
+                                    Expected response: 201
+                                </span>
+                            </div>
+                        </div>
+
+                        <div
+                            class="test-case"
+                            data-test-id="missing_product_id"
+                        >
+                            <span class="test-status-icon">○</span>
+
+                            <div>
+                                <strong>
+                                    Missing product_id returns 400
+                                </strong>
+
+                                <span>
+                                    Invalid payload must be rejected
+                                </span>
+                            </div>
+                        </div>
+
+                        <div
+                            class="test-case"
+                            data-test-id="no_server_crash"
+                        >
+                            <span class="test-status-icon">○</span>
+
+                            <div>
+                                <strong>
+                                    Invalid payload does not crash
+                                </strong>
+
+                                <span>
+                                    No unhandled KeyError
+                                </span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="test-terminal">
+
+                        <div class="terminal-toolbar">
+                            <span>TEST OUTPUT</span>
+
+                            <span id="test-run-counter">
+                                Runs: 0
+                            </span>
+                        </div>
+
+                        <pre id="test-output">Waiting for test run...</pre>
+
+                    </div>
+
+
+                    <div
+                    class="guided-fix-panel"
+                    id="guided-fix-panel"
+                    hidden
+                >
+                <div>
+                    <strong>Need help completing the task?</strong>
+
+                    <p>
+                            You have made several attempts. Apply a guided solution,
+                            review the changes, and run the tests again.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        id="apply-guided-fix-button"
+                        class="guided-fix-button"
+                    >
+                        Apply Guided Fix
+                    </button>
+                </div>
+
+                </section>
+
+            </main>
+
+        </div>
+
+        {% if error %}
+            <p class="error-message">
+                {{ error }}
+            </p>
+        {% endif %}
+
+        <div class="simulation-actions">
+
+            <a
+                href="{{ url_for(
+                    'simulation_step',
+                    career_id=career_id,
+                    position_id=position_id,
+                    company_id=company_id,
+                    step=2
+                ) }}"
+                class="secondary-btn"
+            >
+                ← Previous Step
+            </a>
+
+            <button
+                type="submit"
+                class="main-btn"
+                id="submit-code-lab-button"
+                disabled
+            >
+                Pass the Tests to Continue
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+
