@@ -9,6 +9,10 @@ from routes.auth import auth_bp
 from services.simulation_generator import (
     generate_backend_inbox_task,
 )
+from services.roadmap_service import (
+    RoadmapGenerationError,
+    generate_personalized_roadmap,
+)
 from services.evaluation_service import (
     SimulationEvaluationError,
     evaluate_simulation,
@@ -22,7 +26,8 @@ from services.simulation_storage import (
     save_simulation_step_response,
     create_backend_simulation_attempt,
     get_backend_inbox_task,
-    save_simulation_evaluation
+    save_simulation_evaluation,
+    save_simulation_roadmap
 )
 
 from services.incident_response_service import (
@@ -837,6 +842,8 @@ def simulation_step(career_id, position_id, company_id, step):
         session.pop("scenario_id", None)
         session.pop("simulation_result", None)
         session.pop("simulation_result_id", None)
+        session.pop("evaluation_result", None)
+        session.pop("roadmap_result", None)
 
         # Remove the previous AI-generated attempt.
         # A new attempt will be generated after the redirect.
@@ -1189,6 +1196,13 @@ def simulation_step(career_id, position_id, company_id, step):
                         simulation_data
                     )
 
+                    roadmap = generate_personalized_roadmap(
+                        evaluation=evaluation,
+                        career_name=career_name,
+                        position_title=position_title,
+                        company_name=company_name,
+                    )
+
                     save_simulation_evaluation(
                         user_id=session.get("user_id"),
                         attempt_id=session.get(
@@ -1197,14 +1211,29 @@ def simulation_step(career_id, position_id, company_id, step):
                         evaluation=evaluation,
                     )
 
+                    save_simulation_roadmap(
+                        user_id=session.get("user_id"),
+                        attempt_id=session.get(
+                            "simulation_attempt_id"
+                        ),
+                        roadmap=roadmap,
+                    )
+
                     session["scenario_id"] = (
                         BACKEND_SCENARIO["scenario_id"]
                     )
 
                     session["evaluation_result"] = evaluation
-
+                    session["roadmap_result"] = roadmap
                     # Keep this temporarily for the current roadmap route.
                     session["simulation_result"] = evaluation
+
+                except RoadmapGenerationError as roadmap_error:
+                    app.logger.exception(
+                        "Personalized roadmap generation failed."
+                    )
+
+                    error = str(roadmap_error)
 
                 except SimulationEvaluationError as evaluation_error:
                     app.logger.exception(
@@ -1303,6 +1332,7 @@ def roadmap():
         ),
         evaluation=evaluation,
         result=result,
+        roadmap=session.get("roadmap_result"),
     )
 
 
