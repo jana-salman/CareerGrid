@@ -48,6 +48,14 @@
     ) }}?v=1"
     >
 
+    <link
+    rel="stylesheet"
+    href="{{ url_for(
+        'static',
+        filename='css/simulation/team_chat.css'
+    ) }}?v=1"
+>
+
 </head>
 
 <body>
@@ -100,6 +108,8 @@
     simulation-card--code-review
     {% elif step == 4 and is_backend_simulation %}
         simulation-card--api-testing
+    {% elif step == 5 and is_backend_simulation %}
+    simulation-card--team-chat
     {% endif %}
     "
 >
@@ -480,84 +490,94 @@
 
                 {% endif %}
 
-
             <!-- STEP 5 -->
             {% elif step == 5 %}
 
-                <div class="task-heading">
+                {% if is_backend_simulation %}
 
-                    <span class="task-icon">💬</span>
+                    {% include "simulation_tasks/team_chat.html" %}
 
-                    <div>
-                        <h3>{{ step_five_task.title }}</h3>
+                {% else %}
+
+                    <div class="task-heading">
+
+                        <span class="task-icon">💬</span>
+
+                        <div>
+                            <h3>{{ step_five_task.title }}</h3>
+
+                            <p>
+                                {{ step_five_task.instructions }}
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <div class="email-box">
 
                         <p>
-                            {{ step_five_task.instructions }}
+                            <strong>Team Lead Request</strong>
                         </p>
-                    </div>
 
-                </div>
-
-                <div class="email-box">
-
-                    <p>
-                        <strong>Team Lead Request</strong>
-                    </p>
-
-                    <p>
-                        {{ step_five_task.message }}
-                    </p>
-
-                </div>
-
-                <form method="POST">
-
-                    <div class="simulation-question">
-
-                        <label for="answer">
-                            <strong>
-                                {{ step_five_task.question }}
-                            </strong>
-                        </label>
-
-                        <textarea
-                            id="answer"
-                            name="answer"
-                            rows="7"
-                            placeholder="{{ step_five_task.placeholder }}"
-                            required
-                        >{{ saved_answer }}</textarea>
-
-                    </div>
-
-                    {% if error %}
-                        <p class="error-message">
-                            {{ error }}
+                        <p>
+                            {{ step_five_task.message }}
                         </p>
-                    {% endif %}
-
-                    <div class="simulation-actions">
-
-                        <a
-                            href="{{ url_for(
-                                'simulation_step',
-                                career_id=career_id,
-                                position_id=position_id,
-                                company_id=company_id,
-                                step=step - 1
-                            ) }}"
-                            class="secondary-btn"
-                        >
-                            ← Previous Step
-                        </a>
-
-                        <button type="submit" class="main-btn">
-                            Finish Simulation
-                        </button>
 
                     </div>
 
-                </form>
+                    <form method="POST">
+
+                        <div class="simulation-question">
+
+                            <label for="answer">
+                                <strong>
+                                    {{ step_five_task.question }}
+                                </strong>
+                            </label>
+
+                            <textarea
+                                id="answer"
+                                name="answer"
+                                rows="7"
+                                placeholder="{{ step_five_task.placeholder }}"
+                                required
+                            >{{ saved_answer }}</textarea>
+
+                        </div>
+
+                        {% if error %}
+                            <p class="error-message">
+                                {{ error }}
+                            </p>
+                        {% endif %}
+
+                        <div class="simulation-actions">
+
+                            <a
+                                href="{{ url_for(
+                                    'simulation_step',
+                                    career_id=career_id,
+                                    position_id=position_id,
+                                    company_id=company_id,
+                                    step=step - 1
+                                ) }}"
+                                class="secondary-btn"
+                            >
+                                ← Previous Step
+                            </a>
+
+                            <button
+                                type="submit"
+                                class="main-btn"
+                            >
+                                Finish Simulation
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                {% endif %}
 
             <!-- INVALID STEP -->
             {% else %}
@@ -630,6 +650,14 @@
     src="{{ url_for(
         'static',
         filename='js/simulation/bug_ticket.js'
+    ) }}?v=1"
+    defer
+></script>
+
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/team_chat.js'
     ) }}?v=1"
     defer
 ></script>
