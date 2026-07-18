@@ -39,7 +39,15 @@ from services.code_lab_response_service import (
     CodeLabResponseValidationError,
     validate_code_lab_response,
 )
+from services.api_testing_response_service import (
+    ApiTestingResponseValidationError,
+    validate_api_testing_response,
+)
 
+from services.team_chat_response_service import (
+    TeamChatResponseValidationError,
+    validate_team_chat_response,
+)
 
 # ---------------------------------------------------------
 # Load environment variables
@@ -1062,17 +1070,17 @@ def simulation_step(career_id, position_id, company_id, step):
                     url_for(
                         "simulation_step",
                         career_id=career_id,
-                        position_id=position_id,
+                        position_id=position_id,    
                         company_id=company_id,
                         step=3,
                     )
                 )
 
-                # Backend Step 3 submits a Code Lab response.
-        elif is_backend_simulation and step == 3:
+                # Backend Step 4 submits structured API test results.
+        elif is_backend_simulation and step == 4:
             try:
                 validated_response = (
-                    validate_code_lab_response(
+                    validate_api_testing_response(
                         raw_answer=answer,
                     )
                 )
@@ -1082,15 +1090,15 @@ def simulation_step(career_id, position_id, company_id, step):
                     attempt_id=session.get(
                         "simulation_attempt_id"
                     ),
-                    step=3,
+                    step=4,
                     response=validated_response,
                 )
 
             except (
-                CodeLabResponseValidationError
+                ApiTestingResponseValidationError
             ) as validation_error:
                 app.logger.warning(
-                    "Code Lab validation failed: %s",
+                    "API testing validation failed: %s",
                     validation_error,
                 )
 
@@ -1098,16 +1106,16 @@ def simulation_step(career_id, position_id, company_id, step):
 
             except Exception:
                 app.logger.exception(
-                    "Failed to save Code Lab response."
+                    "Failed to save API testing response."
                 )
 
                 error = (
-                    "We could not save your code solution "
+                    "We could not save your API test results "
                     "right now. Please try again."
                 )
 
             if not error:
-                answers["step_3"] = json.dumps(
+                answers["step_4"] = json.dumps(
                     validated_response
                 )
 
@@ -1119,16 +1127,166 @@ def simulation_step(career_id, position_id, company_id, step):
                         career_id=career_id,
                         position_id=position_id,
                         company_id=company_id,
-                        step=4,
+                        step=5,
                     )
                 )
-        
-        # Existing behavior for Frontend and Backend Steps 2–5.
+                # Backend Step 5 submits a structured team-chat update.
+        elif is_backend_simulation and step == 5:
+            try:
+                validated_response = (
+                    validate_team_chat_response(
+                        raw_answer=answer,
+                    )
+                )
+
+                # Save the validated Step 5 response.
+                save_simulation_step_response(
+                    user_id=session.get("user_id"),
+                    attempt_id=session.get(
+                        "simulation_attempt_id"
+                    ),
+                    step=5,
+                    response=validated_response,
+                )
+
+                # Store a session copy for Previous Step and evaluation.
+                answers["step_5"] = json.dumps(
+                    validated_response
+                )
+
+                session["simulation_answers"] = answers
+
+                prepared_answers = (
+                    prepare_answers_for_evaluation(
+                        answers
+                    )
+                )
+
+                simulation_data = {
+                    "career": {
+                        "id": career_id,
+                        "name": career_name,
+                    },
+                    "position": {
+                        "id": position_id,
+                        "title": position_title,
+                    },
+                    "company": {
+                        "id": company_id,
+                        "name": company_name,
+                    },
+                    "scenario": {
+                        "id": BACKEND_SCENARIO[
+                            "scenario_id"
+                        ],
+                        "title": BACKEND_SCENARIO[
+                            "title"
+                        ],
+                    },
+                    "tasks": {
+                        "step_1": generated_inbox_task,
+                        "step_2": step_two_task,
+                        "step_3": step_three_task,
+                        "step_4": step_four_task,
+                        "step_5": step_five_task,
+                    },
+                    "answers": prepared_answers,
+                }
+
+                # Gemini evaluates all five simulation activities.
+                evaluation = evaluate_simulation(
+                    simulation_data
+                )
+
+                # Save the evaluation before generating the roadmap.
+                save_simulation_evaluation(
+                    user_id=session.get("user_id"),
+                    attempt_id=session.get(
+                        "simulation_attempt_id"
+                    ),
+                    evaluation=evaluation,
+                )
+
+                roadmap = generate_personalized_roadmap(
+                    evaluation=evaluation,
+                    career_name=career_name,
+                    position_title=position_title,
+                    company_name=company_name,
+                )
+
+                save_simulation_roadmap(
+                    user_id=session.get("user_id"),
+                    attempt_id=session.get(
+                        "simulation_attempt_id"
+                    ),
+                    roadmap=roadmap,
+                )
+
+                session["scenario_id"] = (
+                    BACKEND_SCENARIO["scenario_id"]
+                )
+
+                session["evaluation_result"] = evaluation
+                session["roadmap_result"] = roadmap
+
+                # Kept for compatibility with the current results route.
+                session["simulation_result"] = evaluation
+
+            except (
+                TeamChatResponseValidationError
+            ) as validation_error:
+                app.logger.warning(
+                    "Team-chat validation failed: %s",
+                    validation_error,
+                )
+
+                error = str(validation_error)
+
+            except (
+                SimulationEvaluationError
+            ) as evaluation_error:
+                app.logger.exception(
+                    "Gemini simulation evaluation failed."
+                )
+
+                error = str(evaluation_error)
+
+            except (
+                RoadmapGenerationError
+            ) as roadmap_error:
+                app.logger.exception(
+                    "Personalized roadmap generation failed."
+                )
+
+                error = str(roadmap_error)
+
+            except Exception:
+                app.logger.exception(
+                    "Failed to finish the simulation."
+                )
+
+                error = (
+                    "We could not finish your simulation "
+                    "right now. Please try again."
+                )
+
+            if not error:
+                result = prepare_evaluation_for_results_page(
+                    evaluation
+                )
+
+                return render_template(
+                    "roadmap.html",
+                    answers=prepared_answers,
+                    evaluation=evaluation,
+                    result=result,
+                    roadmap=roadmap,
+                )
+        # Frontend simulation behavior.
         else:
             answers[f"step_{step}"] = answer
             session["simulation_answers"] = answers
 
-            # Move to the next simulation step.
             if step < total_steps:
                 return redirect(
                     url_for(
@@ -1140,146 +1298,62 @@ def simulation_step(career_id, position_id, company_id, step):
                     )
                 )
 
-           # Step 5 is the final simulation activity.
-            if scenario == BACKEND_SCENARIO:
-                try:
-                    prepared_answers = (
-                        prepare_answers_for_evaluation(
-                            answers
-                        )
-                    )
-                    # Steps 1-3 were saved when submitted.
-                    # Save the two remaining free-text responses in Firebase.
-                    for step_number in (4, 5):
-                        save_simulation_step_response(
-                            user_id=session.get("user_id"),
-                            attempt_id=session.get(
-                                "simulation_attempt_id"
-                            ),
-                            step=step_number,
-                            response={
-                                "answer": prepared_answers.get(
-                                    f"step_{step_number}",
-                                    "",
-                                )
-                            },
-                        )
+            # All five steps are complete, so prepare the evaluation.
+            simulation_data = {
+                "career": {
+                    "id": career_id,
+                    "name": career_name,
+                },
+                "position": {
+                    "id": position_id,
+                    "title": position_title,
+                },
+                "company": {
+                    "id": company_id,
+                    "name": company_name,
+                },
+                "tasks": {
+                    "step_1": email,
+                    "step_2": step_two_task,
+                    "step_3": step_three_task,
+                    "step_4": step_four_task,
+                    "step_5": step_five_task,
+                },
+                "answers": prepare_answers_for_evaluation(answers),
+            }
 
-                    simulation_data = {
-                        "career": {
-                            "id": career_id,
-                            "name": career_name,
-                        },
-                        "position": {
-                            "id": position_id,
-                            "title": position_title,
-                        },
-                        "company": {
-                            "id": company_id,
-                            "name": company_name,
-                        },
-                        "scenario": {
-                            "id": BACKEND_SCENARIO["scenario_id"],
-                            "title": BACKEND_SCENARIO["title"],
-                        },
-                        "tasks": {
-                            "step_1": generated_inbox_task,
-                            "step_2": step_two_task,
-                            "step_3": step_three_task,
-                            "step_4": step_four_task,
-                            "step_5": step_five_task,
-                        },
-                        "answers": prepared_answers,
-                    }
+            try:
+                evaluation = evaluate_simulation(simulation_data)
 
-                    evaluation = evaluate_simulation(
-                        simulation_data
-                    )
+                roadmap_result = generate_personalized_roadmap(
+                    evaluation=evaluation,
+                    career_name=career_name,
+                    position_title=position_title,
+                    company_name=company_name,
+                )
 
-                    roadmap = generate_personalized_roadmap(
-                        evaluation=evaluation,
-                        career_name=career_name,
-                        position_title=position_title,
-                        company_name=company_name,
-                    )
+                return redirect(url_for("roadmap"))
 
-                    save_simulation_evaluation(
-                        user_id=session.get("user_id"),
-                        attempt_id=session.get(
-                            "simulation_attempt_id"
-                        ),
-                        evaluation=evaluation,
-                    )
+            except SimulationEvaluationError as evaluation_error:
+                app.logger.exception(
+                    "Gemini simulation evaluation failed."
+                )
+                error = str(evaluation_error)
 
-                    save_simulation_roadmap(
-                        user_id=session.get("user_id"),
-                        attempt_id=session.get(
-                            "simulation_attempt_id"
-                        ),
-                        roadmap=roadmap,
-                    )
+            except RoadmapGenerationError as roadmap_error:
+                app.logger.exception(
+                    "Personalized roadmap generation failed."
+                )
+                error = str(roadmap_error)
 
-                    session["scenario_id"] = (
-                        BACKEND_SCENARIO["scenario_id"]
-                    )
-
-                    session["evaluation_result"] = evaluation
-                    session["roadmap_result"] = roadmap
-                    # Keep this temporarily for the current roadmap route.
-                    session["simulation_result"] = evaluation
-
-                except RoadmapGenerationError as roadmap_error:
-                    app.logger.exception(
-                        "Personalized roadmap generation failed."
-                    )
-
-                    error = str(roadmap_error)
-
-                except SimulationEvaluationError as evaluation_error:
-                    app.logger.exception(
-                        "Gemini simulation evaluation failed."
-                    )
-
-                    error = str(evaluation_error)
-
-                except Exception:
-                    app.logger.exception(
-                        "Failed to save the simulation evaluation."
-                    )
-
-                    error = (
-                        "We could not save your evaluation right now. "
-                        "Please try again."
-                    )
-
-                if error:
-                    return render_template(
-                        "simulation.html",
-                        career_id=career_id,
-                        position_id=position_id,
-                        company_id=company_id,
-                        career_name=career_name,
-                        company_name=company_name,
-                        position_data=position_data,
-                        position_title=position_title,
-                        step=step,
-                        total_steps=total_steps,
-                        scenario=scenario,
-                        email=email,
-                        step_two_task=step_two_task,
-                        step_three_task=step_three_task,
-                        step_four_task=step_four_task,
-                        step_five_task=step_five_task,
-                        error=error,
-                        saved_answer=saved_answer,
-                        generated_inbox_task=generated_inbox_task,
-                        ai_generation_error=ai_generation_error,
-                        is_backend_simulation=is_backend_simulation,
-                    )
-
-            return redirect(
-                url_for("roadmap")
-            )
+            except Exception:
+                app.logger.exception(
+                    "Failed to finish the simulation."
+                )
+                error = (
+                    "We could not finish your simulation right now. "
+                    "Please try again."
+                )
 
 
     # Display the current simulation step.
