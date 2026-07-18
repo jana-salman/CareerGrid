@@ -39,7 +39,10 @@ from services.code_lab_response_service import (
     CodeLabResponseValidationError,
     validate_code_lab_response,
 )
-
+from services.api_testing_response_service import (
+    ApiTestingResponseValidationError,
+    validate_api_testing_response,
+)
 
 # ---------------------------------------------------------
 # Load environment variables
@@ -1062,17 +1065,17 @@ def simulation_step(career_id, position_id, company_id, step):
                     url_for(
                         "simulation_step",
                         career_id=career_id,
-                        position_id=position_id,
+                        position_id=position_id,    
                         company_id=company_id,
                         step=3,
                     )
                 )
 
-                # Backend Step 3 submits a Code Lab response.
-        elif is_backend_simulation and step == 3:
+                # Backend Step 4 submits structured API test results.
+        elif is_backend_simulation and step == 4:
             try:
                 validated_response = (
-                    validate_code_lab_response(
+                    validate_api_testing_response(
                         raw_answer=answer,
                     )
                 )
@@ -1082,15 +1085,15 @@ def simulation_step(career_id, position_id, company_id, step):
                     attempt_id=session.get(
                         "simulation_attempt_id"
                     ),
-                    step=3,
+                    step=4,
                     response=validated_response,
                 )
 
             except (
-                CodeLabResponseValidationError
+                ApiTestingResponseValidationError
             ) as validation_error:
                 app.logger.warning(
-                    "Code Lab validation failed: %s",
+                    "API testing validation failed: %s",
                     validation_error,
                 )
 
@@ -1098,16 +1101,16 @@ def simulation_step(career_id, position_id, company_id, step):
 
             except Exception:
                 app.logger.exception(
-                    "Failed to save Code Lab response."
+                    "Failed to save API testing response."
                 )
 
                 error = (
-                    "We could not save your code solution "
+                    "We could not save your API test results "
                     "right now. Please try again."
                 )
 
             if not error:
-                answers["step_3"] = json.dumps(
+                answers["step_4"] = json.dumps(
                     validated_response
                 )
 
@@ -1119,10 +1122,10 @@ def simulation_step(career_id, position_id, company_id, step):
                         career_id=career_id,
                         position_id=position_id,
                         company_id=company_id,
-                        step=4,
+                        step=5,
                     )
                 )
-        
+
         # Existing behavior for Frontend and Backend Steps 2–5.
         else:
             answers[f"step_{step}"] = answer
@@ -1150,7 +1153,7 @@ def simulation_step(career_id, position_id, company_id, step):
                     )
                     # Steps 1-3 were saved when submitted.
                     # Save the two remaining free-text responses in Firebase.
-                    for step_number in (4, 5):
+                    for step_number in (5,):
                         save_simulation_step_response(
                             user_id=session.get("user_id"),
                             attempt_id=session.get(
