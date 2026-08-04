@@ -176,6 +176,43 @@ def get_backend_inbox_task(
 
     return inbox_task
 
+def create_frontend_simulation_attempt(
+    *,
+    user_id: str,
+    career_id: str,
+    position_id: str,
+    company_id: str,
+    generated_inbox_task: dict[str, Any],
+) -> str:
+    """
+    Create a new Frontend Developer simulation attempt.
+
+    The Frontend inbox has the same structure as the Backend inbox,
+    so this reuses the shared attempt-creation logic. It returns the
+    unique Firebase simulation attempt ID.
+    """
+
+    return create_backend_simulation_attempt(
+        user_id=user_id,
+        career_id=career_id,
+        position_id=position_id,
+        company_id=company_id,
+        generated_inbox_task=generated_inbox_task,
+    )
+
+
+def get_frontend_inbox_task(
+    *,
+    user_id: str,
+    attempt_id: str,
+) -> dict[str, Any] | None:
+    """Retrieve the saved public inbox task for a frontend attempt."""
+
+    return get_backend_inbox_task(
+        user_id=user_id,
+        attempt_id=attempt_id,
+    )
+
 def save_simulation_step_response(
     *,
     user_id: str,
@@ -338,3 +375,52 @@ def save_simulation_roadmap(
         "roadmap": deepcopy(roadmap),
         "updated_at": updated_at,
     })
+def list_completed_simulation_attempts(
+    user_id: str,
+) -> list[dict[str, Any]]:
+    """
+    Return a user's completed simulation attempts, newest first.
+    """
+
+    if not user_id:
+        return []
+
+    attempts = get_database_reference(
+        f"users/{user_id}/simulation_attempts"
+    ).get()
+
+    if not isinstance(attempts, dict):
+        return []
+
+    summaries: list[dict[str, Any]] = []
+
+    for attempt_id, attempt in attempts.items():
+        if not isinstance(attempt, dict):
+            continue
+
+        if attempt.get("status") != "completed":
+            continue
+
+        evaluation = attempt.get("evaluation")
+        overall_score = 0
+
+        if isinstance(evaluation, dict):
+            overall_score = evaluation.get("overall_score", 0) or 0
+
+        summaries.append(
+            {
+                "attempt_id": attempt_id,
+                "career_id": attempt.get("career_id"),
+                "position_id": attempt.get("position_id"),
+                "company_id": attempt.get("company_id"),
+                "completed_at": attempt.get("completed_at"),
+                "overall_score": overall_score,
+            }
+        )
+
+    summaries.sort(
+        key=lambda item: item.get("completed_at") or "",
+        reverse=True,
+    )
+
+    return summaries

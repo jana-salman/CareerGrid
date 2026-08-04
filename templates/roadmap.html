@@ -22,17 +22,27 @@
     <div class="career-page">
 
         <!-- NAVIGATION -->
-        <nav class="navbar">
+        <<nav class="navbar">
 
-            <h2 class="logo">
-                CareerGrid
-            </h2>
+    <h2 class="logo">
+        CareerGrid
+    </h2>
 
-            <a href="{{ url_for('career') }}">
-                Back to Careers
-            </a>
+    <div>
+        <a href="{{ url_for('dashboard') }}">
+            {% if from_dashboard %}
+                Back to Dashboard
+            {% else %}
+                Dashboard
+            {% endif %}
+        </a>
 
-        </nav>
+        <a href="{{ url_for('career') }}">
+            Back to Careers
+        </a>
+    </div>
+
+</nav>
 
 
         <!-- PAGE HEADING -->

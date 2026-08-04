@@ -1,0 +1,361 @@
+<div class="task-heading">
+
+    <span class="task-icon">🔍</span>
+
+    <div>
+        <h3>Investigate the Buy Now Button in DevTools</h3>
+
+        <p>
+            The Buy Now button on the product page stopped opening the
+            checkout panel after the latest deployment, especially on
+            smaller screens. Inspect the evidence below, compare the
+            HTML id with the JavaScript selector, and confirm the root
+            cause before writing your finding.
+        </p>
+    </div>
+
+</div>
+
+<form
+    method="POST"
+    id="frontend-investigation-form"
+    class="fe-investigation"
+>
+
+    <!--
+        Flask still expects one field called "answer".
+        JavaScript places all investigation data into this hidden
+        input as a JSON string before submission.
+    -->
+    <input
+        type="hidden"
+        id="answer"
+        name="answer"
+        value=""
+        data-saved-answer="{{ saved_answer | e }}"
+    >
+
+    <p class="fe-issue-tag">
+        Issue <strong>FE-4021</strong> · Product page · Buy Now button
+    </p>
+
+    <!-- EVIDENCE -->
+    <section class="fe-evidence">
+
+        <h4 class="fe-section-title">Evidence</h4>
+
+        <p class="fe-section-hint">
+            Open each item to review it. You should inspect every
+            piece of evidence before confirming a diagnosis.
+        </p>
+
+        <div class="fe-evidence-list">
+
+            <article class="fe-evidence-item">
+                <button
+                    type="button"
+                    class="fe-evidence-toggle"
+                    data-evidence-id="console_error"
+                    aria-expanded="false"
+                >
+                    Browser console error
+                </button>
+                <div class="fe-evidence-body" hidden>
+<pre>Uncaught TypeError: Cannot read properties of null (reading 'addEventListener')
+    at product.js:42
+    const checkoutButton = document.querySelector('#checkout-btn');
+    checkoutButton.addEventListener('click', openCheckoutPanel);</pre>
+                </div>
+            </article>
+
+            <article class="fe-evidence-item">
+                <button
+                    type="button"
+                    class="fe-evidence-toggle"
+                    data-evidence-id="elements_html"
+                    aria-expanded="false"
+                >
+                    Elements panel (HTML)
+                </button>
+                <div class="fe-evidence-body" hidden>
+<pre>&lt;button id="buy-now-btn" class="buy-now"&gt;Buy Now&lt;/button&gt;
+&lt;section id="checkout-panel" class="checkout" hidden&gt;...&lt;/section&gt;</pre>
+                </div>
+            </article>
+
+            <article class="fe-evidence-item">
+                <button
+                    type="button"
+                    class="fe-evidence-toggle"
+                    data-evidence-id="js_selector"
+                    aria-expanded="false"
+                >
+                    Failing JavaScript selector
+                </button>
+                <div class="fe-evidence-body" hidden>
+<pre>// product.js
+const checkoutButton = document.querySelector('#checkout-btn');
+checkoutButton.addEventListener('click', openCheckoutPanel);</pre>
+                </div>
+            </article>
+
+            <article class="fe-evidence-item">
+                <button
+                    type="button"
+                    class="fe-evidence-toggle"
+                    data-evidence-id="event_listeners"
+                    aria-expanded="false"
+                >
+                    Event listener information
+                </button>
+                <div class="fe-evidence-body" hidden>
+<pre>Element: #buy-now-btn
+Registered click listeners: 0
+(The click handler was never attached.)</pre>
+                </div>
+            </article>
+
+            <article class="fe-evidence-item">
+                <button
+                    type="button"
+                    class="fe-evidence-toggle"
+                    data-evidence-id="mobile_repro"
+                    aria-expanded="false"
+                >
+                    Desktop and mobile reproduction
+                </button>
+                <div class="fe-evidence-body" hidden>
+<pre>Desktop (1440px): clicking Buy Now does nothing.
+Mobile (375px): clicking Buy Now does nothing.
+The checkout panel never opens on any screen size.</pre>
+                </div>
+            </article>
+
+        </div>
+    </section>
+
+    <!-- COMPARE IDS -->
+    <section class="fe-compare">
+
+        <h4 class="fe-section-title">Compare the identifiers</h4>
+
+        <div class="fe-compare-grid">
+
+            <div class="fe-field">
+                <label for="fe-html-id">
+                    HTML button id (from the Elements panel)
+                </label>
+                <select id="fe-html-id" class="fe-select">
+                    <option value="">Select…</option>
+                    <option value="buy-now-btn">buy-now-btn</option>
+                    <option value="checkout-btn">checkout-btn</option>
+                    <option value="checkout-panel">checkout-panel</option>
+                </select>
+            </div>
+
+            <div class="fe-field">
+                <label for="fe-js-selector">
+                    Selector used in product.js
+                </label>
+                <select id="fe-js-selector" class="fe-select">
+                    <option value="">Select…</option>
+                    <option value="#buy-now-btn">#buy-now-btn</option>
+                    <option value="#checkout-btn">#checkout-btn</option>
+                    <option value=".buy-now">.buy-now</option>
+                </select>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- INVESTIGATION ACTIONS -->
+    <section class="fe-actions-taken">
+
+        <h4 class="fe-section-title">Investigation actions</h4>
+
+        <p class="fe-section-hint">
+            Confirm the actions you performed during the investigation.
+        </p>
+
+        <label class="fe-check">
+            <input
+                type="checkbox"
+                class="fe-action-checkbox"
+                value="inspect_console"
+            >
+            Inspected the browser console error
+        </label>
+
+        <label class="fe-check">
+            <input
+                type="checkbox"
+                class="fe-action-checkbox"
+                value="compare_ids"
+            >
+            Compared the HTML id with the JavaScript selector
+        </label>
+
+        <label class="fe-check">
+            <input
+                type="checkbox"
+                class="fe-action-checkbox"
+                value="test_devices"
+            >
+            Reproduced the issue on desktop and mobile
+        </label>
+
+    </section>
+
+    <!-- DIAGNOSIS -->
+    <section class="fe-diagnosis">
+
+        <h4 class="fe-section-title">Diagnosis</h4>
+
+        <fieldset class="fe-choice-group">
+            <legend>Root cause</legend>
+
+            <label class="fe-radio">
+                <input type="radio" name="fe_root_cause"
+                    value="selector_id_mismatch">
+                The JavaScript selector does not match the button's
+                HTML id (id mismatch).
+            </label>
+
+            <label class="fe-radio">
+                <input type="radio" name="fe_root_cause"
+                    value="server_down">
+                The backend server is returning an error.
+            </label>
+
+            <label class="fe-radio">
+                <input type="radio" name="fe_root_cause"
+                    value="css_hidden">
+                A CSS rule is permanently hiding the button.
+            </label>
+        </fieldset>
+
+        <fieldset class="fe-choice-group">
+            <legend>Why does querySelector return null?</legend>
+
+            <label class="fe-radio">
+                <input type="radio" name="fe_null_reason"
+                    value="element_not_found">
+                No element matches the selector, so no element is found.
+            </label>
+
+            <label class="fe-radio">
+                <input type="radio" name="fe_null_reason"
+                    value="network_error">
+                The network request for the element failed.
+            </label>
+
+            <label class="fe-radio">
+                <input type="radio" name="fe_null_reason"
+                    value="syntax_error">
+                The JavaScript file has a syntax error.
+            </label>
+        </fieldset>
+
+        <fieldset class="fe-choice-group">
+            <legend>Why does the click handler fail?</legend>
+
+            <label class="fe-radio">
+                <input type="radio" name="fe_failure_mechanism"
+                    value="addeventlistener_on_null">
+                addEventListener is called on null because the element
+                was not found.
+            </label>
+
+            <label class="fe-radio">
+                <input type="radio" name="fe_failure_mechanism"
+                    value="wrong_event">
+                The wrong event name was used.
+            </label>
+
+            <label class="fe-radio">
+                <input type="radio" name="fe_failure_mechanism"
+                    value="handler_missing">
+                The handler function does not exist.
+            </label>
+        </fieldset>
+
+        <div class="fe-diagnosis-controls">
+            <button type="button" id="fe-run-diagnosis"
+                class="secondary-btn">
+                Run diagnosis
+            </button>
+
+            <button type="button" id="fe-investigation-hint"
+                class="fe-link-btn">
+                Show a hint
+            </button>
+
+            <button type="button" id="fe-guided-diagnosis"
+                class="fe-link-btn">
+                Use guided diagnosis
+            </button>
+        </div>
+
+        <p id="fe-investigation-hint-text" class="fe-hint" hidden>
+            Compare the id on the button element with the string passed
+            to querySelector. They are not the same value.
+        </p>
+
+        <p id="fe-diagnosis-status" class="fe-status" role="status">
+            Run the diagnosis after making your selections.
+        </p>
+    </section>
+
+    <!-- FINDING -->
+    <section class="fe-finding">
+
+        <h4 class="fe-section-title">Technical finding</h4>
+
+        <label for="fe-technical-finding" class="fe-field-label">
+            Explain the root cause in your own words.
+        </label>
+
+        <textarea
+            id="fe-technical-finding"
+            rows="5"
+            placeholder="The HTML button uses the id buy-now-btn, but product.js queries #checkout-btn, so querySelector returns null and addEventListener fails..."
+        ></textarea>
+
+        <p id="fe-finding-validation" class="fe-validation" hidden>
+            Please write a finding of at least 20 characters.
+        </p>
+    </section>
+
+    {% if error %}
+        <p class="error-message">
+            {{ error }}
+        </p>
+    {% endif %}
+
+    <div class="simulation-actions">
+
+        
+            href="{{ url_for(
+                'simulation_step',
+                career_id=career_id,
+                position_id=position_id,
+                company_id=company_id,
+                step=step - 1
+            ) }}"
+            class="secondary-btn"
+        >
+            ← Previous Step
+        </a>
+
+        <button
+            type="submit"
+            id="fe-investigation-submit"
+            class="main-btn"
+            disabled
+        >
+            Submit and Continue
+        </button>
+
+    </div>
+
+</form>

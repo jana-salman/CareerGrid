@@ -48,11 +48,19 @@
     ) }}?v=1"
     >
 
-    <link
+<link
     rel="stylesheet"
     href="{{ url_for(
         'static',
         filename='css/simulation/team_chat.css'
+    ) }}?v=1"
+>
+
+    <link
+    rel="stylesheet"
+    href="{{ url_for(
+        'static',
+        filename='css/simulation/frontend_simulation.css'
     ) }}?v=1"
 >
 
@@ -223,9 +231,13 @@
             
             {% elif step == 2 %}
 
-    {% if is_backend_simulation %}
+   {% if is_backend_simulation %}
 
         {% include "simulation_tasks/incident.html" %}
+
+    {% elif is_frontend_simulation %}
+
+        {% include "simulation_tasks/frontend_investigation.html" %}
 
     {% else %}
 
@@ -305,9 +317,13 @@
             <!-- STEP 3 -->
 {% elif step == 3 %}
 
-    {% if is_backend_simulation %}
+   {% if is_backend_simulation %}
 
         {% include "simulation_tasks/code_review.html" %}
+
+    {% elif is_frontend_simulation %}
+
+        {% include "simulation_tasks/frontend_code_lab.html" %}
 
     {% else %}
 
@@ -414,6 +430,10 @@
 
                     {% include "simulation_tasks/bug_ticket.html" %}
 
+                {% elif is_frontend_simulation %}
+
+                    {% include "simulation_tasks/frontend_browser_testing.html" %}
+
                 {% else %}
 
                     <!-- Keep the original Step 4 for other simulations -->
@@ -493,9 +513,13 @@
             <!-- STEP 5 -->
             {% elif step == 5 %}
 
-                {% if is_backend_simulation %}
+               {% if is_backend_simulation %}
 
                     {% include "simulation_tasks/team_chat.html" %}
+
+                {% elif is_frontend_simulation %}
+
+                    {% include "simulation_tasks/frontend_team_chat.html" %}
 
                 {% else %}
 
@@ -658,6 +682,38 @@
     src="{{ url_for(
         'static',
         filename='js/simulation/team_chat.js'
+    ) }}?v=1"
+    defer
+></script>
+
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/frontend_investigation.js'
+    ) }}?v=1"
+    defer
+></script>
+
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/frontend_code_lab.js'
+    ) }}?v=1"
+    defer
+></script>
+
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/frontend_browser_testing.js'
+    ) }}?v=1"
+    defer
+></script>
+
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/frontend_team_chat.js'
     ) }}?v=1"
     defer
 ></script>
