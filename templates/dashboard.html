@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Dashboard | CareerGrid</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        .history-header { text-align: center; margin: 32px auto 8px; }
+        .history-subtitle { color: #6b7280; text-align: center; margin-bottom: 28px; }
+        .history-list {
+            max-width: 760px; margin: 0 auto 48px;
+            display: flex; flex-direction: column; gap: 16px; padding: 0 16px;
+        }
+        .attempt-card {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 16px; text-decoration: none; color: inherit; background: #ffffff;
+            border: 1px solid #e5e7eb; border-radius: 14px; padding: 20px 24px;
+            transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+        }
+        .attempt-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 22px rgba(0,0,0,.08); border-color: #c7d2fe;
+        }
+        .attempt-role { font-size: 1.15rem; font-weight: 700; margin: 0 0 6px; color: #111827; }
+        .attempt-meta { margin: 2px 0; color: #4b5563; font-size: .95rem; }
+        .attempt-score-badge {
+            flex-shrink: 0; text-align: center; min-width: 96px;
+            padding: 14px 10px; border-radius: 12px; font-weight: 700;
+        }
+        .attempt-score-badge .score-number { display: block; font-size: 1.6rem; line-height: 1; }
+        .attempt-score-badge .score-status { display: block; font-size: .8rem; font-weight: 600; margin-top: 6px; }
+        .score-strong { background: #ecfdf5; color: #047857; }
+        .score-developing { background: #fffbeb; color: #b45309; }
+        .score-needs { background: #fef2f2; color: #b91c1c; }
+        .history-empty {
+            max-width: 560px; margin: 40px auto; text-align: center;
+            background: #ffffff; border: 1px dashed #d1d5db; border-radius: 14px;
+            padding: 40px 28px; color: #4b5563;
+        }
+        .history-empty a {
+            display: inline-block; margin-top: 18px; padding: 12px 22px;
+            background: #4f46e5; color: #ffffff; border-radius: 10px;
+            text-decoration: none; font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="career-page">
+
+        <nav class="navbar">
+            <h2 class="logo">CareerGrid</h2>
+            <div>
+                <a href="{{ url_for('career') }}">Careers</a>
+                <a href="{{ url_for('auth.logout') }}">Log out</a>
+            </div>
+        </nav>
+
+        <div class="history-header">
+            <h1>
+                {% if user_name %}{{ user_name }}'s Dashboard
+                {% else %}Your Dashboard{% endif %}
+            </h1>
+        </div>
+
+        <p class="history-subtitle">
+            Your simulation history. Click any attempt to reopen its detailed report.
+        </p>
+
+        {% if attempts %}
+            <div class="history-list">
+                {% for attempt in attempts %}
+                    {% if attempt.score >= 80 %}
+                        {% set score_class = "score-strong" %}
+                    {% elif attempt.score >= 60 %}
+                        {% set score_class = "score-developing" %}
+                    {% else %}
+                        {% set score_class = "score-needs" %}
+                    {% endif %}
+
+                    <a class="attempt-card"
+                       href="{{ url_for('dashboard_attempt', attempt_id=attempt.attempt_id) }}">
+                        <div class="attempt-info">
+                            <p class="attempt-role">
+                                {{ attempt.position_title }} &ndash; {{ attempt.company_name }}
+                            </p>
+                            <p class="attempt-meta">Completed: {{ attempt.completed_date }}</p>
+                            <p class="attempt-meta">Status: {{ attempt.status }}</p>
+                        </div>
+                        <div class="attempt-score-badge {{ score_class }}">
+                            <span class="score-number">{{ attempt.score }}%</span>
+                            <span class="score-status">{{ attempt.status }}</span>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="history-empty">
+                <p>
+                    You haven't completed any simulations yet.
+                    Finish a simulation and your results will appear here.
+                </p>
+                <a href="{{ url_for('career') }}">Start a simulation</a>
+            </div>
+        {% endif %}
+
+    </div>
+</body>
+</html>

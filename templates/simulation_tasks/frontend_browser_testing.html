@@ -1,0 +1,138 @@
+<div class="task-heading">
+
+    <span class="task-icon">🧪</span>
+
+    <div>
+        <h3>Test the Buy Now Button in the Browser</h3>
+
+        <p>
+            Before releasing the fix, verify the Buy Now button across
+            devices and inputs. Run all three required tests, review the
+            results, and make a release decision.
+        </p>
+    </div>
+
+</div>
+
+<form
+    method="POST"
+    id="frontend-browser-testing-form"
+    class="fe-browser-testing"
+>
+
+    <input
+        type="hidden"
+        id="answer"
+        name="answer"
+        value=""
+        data-saved-answer="{{ saved_answer | e }}"
+    >
+
+    <p class="fe-issue-tag">
+        Target: <strong>Buy Now button</strong> · Product page
+    </p>
+
+    <section class="fe-test-cards">
+
+        <article class="fe-test-card" data-test-id="desktop_mouse">
+            <div class="fe-test-card-head">
+                <h4>1 · Desktop mouse</h4>
+                <span class="fe-test-badge" data-state="pending">
+                    Not run
+                </span>
+            </div>
+            <p>
+                On a desktop viewport, clicking the Buy Now button opens
+                the checkout panel.
+            </p>
+            <button type="button" class="fe-run-test secondary-btn">
+                Run test
+            </button>
+            <p class="fe-test-outcome" role="status"></p>
+        </article>
+
+        <article class="fe-test-card" data-test-id="mobile_viewport">
+            <div class="fe-test-card-head">
+                <h4>2 · Mobile viewport</h4>
+                <span class="fe-test-badge" data-state="pending">
+                    Not run
+                </span>
+            </div>
+            <p>
+                On a 375px viewport, the button stays visible and usable
+                and does not break the layout.
+            </p>
+            <button type="button" class="fe-run-test secondary-btn">
+                Run test
+            </button>
+            <p class="fe-test-outcome" role="status"></p>
+        </article>
+
+        <article class="fe-test-card" data-test-id="keyboard_accessibility">
+            <div class="fe-test-card-head">
+                <h4>3 · Keyboard &amp; accessibility</h4>
+                <span class="fe-test-badge" data-state="pending">
+                    Not run
+                </span>
+            </div>
+            <p>
+                The button can be focused and activated with the
+                keyboard, and its accessibility state updates correctly.
+            </p>
+            <button type="button" class="fe-run-test secondary-btn">
+                Run test
+            </button>
+            <p class="fe-test-outcome" role="status"></p>
+        </article>
+
+    </section>
+
+    <section class="fe-release">
+
+        <h4 class="fe-section-title">Release decision</h4>
+
+        <p id="fe-testing-status" class="fe-status" role="status">
+            Run all three tests to enable the release decision.
+        </p>
+
+        <label class="fe-radio fe-release-option">
+            <input type="radio" name="fe_release_decision"
+                value="ready_for_release" disabled>
+            All required tests pass — ready for release.
+        </label>
+
+    </section>
+
+    {% if error %}
+        <p class="error-message">
+            {{ error }}
+        </p>
+    {% endif %}
+
+    <div class="simulation-actions">
+
+        
+            href="{{ url_for(
+                'simulation_step',
+                career_id=career_id,
+                position_id=position_id,
+                company_id=company_id,
+                step=step - 1
+            ) }}"
+            class="secondary-btn"
+        >
+            ← Previous Step
+        </a>
+
+        <button
+            type="submit"
+            id="fe-testing-submit"
+            class="main-btn"
+            disabled
+        >
+            Submit and Continue
+        </button>
+
+    </div>
+
+</form>

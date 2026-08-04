@@ -9,9 +9,13 @@
 
     <div class="career-page">
         <nav class="navbar">
-            <h2 class="logo">CareerGrid</h2>
-            <a href="/">Home</a>
-        </nav>
+    <h2 class="logo">CareerGrid</h2>
+
+    <div>
+        <a href="/">Home</a>
+        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+    </div>
+</nav>
 
         <div class="career-header">
             <h1>Choose a Career Path</h1>

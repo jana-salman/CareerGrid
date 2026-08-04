@@ -1,0 +1,396 @@
+/* =========================================================
+   Frontend Developer simulation — Steps 2 to 5
+   (Step 1 reuses the shared inbox.css)
+   ========================================================= */
+
+/* ---------- Shared ---------- */
+
+.fe-issue-tag {
+    display: inline-block;
+    background: #eef2ff;
+    color: #3730a3;
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    margin-bottom: 18px;
+}
+
+.fe-section-title {
+    margin: 22px 0 6px;
+    font-size: 1.05rem;
+    color: #111827;
+}
+
+.fe-section-hint {
+    margin: 0 0 12px;
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.fe-field {
+    margin-bottom: 16px;
+}
+
+.fe-field-label,
+.fe-field label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #1f2937;
+}
+
+.fe-select,
+.fe-investigation textarea,
+.fe-code-lab textarea,
+.fe-team-chat textarea,
+.fe-field textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-family: inherit;
+}
+
+.fe-select:focus,
+.fe-investigation textarea:focus,
+.fe-code-lab textarea:focus,
+.fe-team-chat textarea:focus,
+.fe-field textarea:focus {
+    outline: 2px solid #6366f1;
+    outline-offset: 1px;
+}
+
+.fe-check,
+.fe-radio {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    line-height: 1.4;
+}
+
+.fe-check:hover,
+.fe-radio:hover {
+    background: #f9fafb;
+}
+
+.fe-choice-group {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin: 0 0 14px;
+}
+
+.fe-choice-group legend {
+    font-weight: 600;
+    color: #1f2937;
+    padding: 0 6px;
+}
+
+.fe-link-btn {
+    background: none;
+    border: none;
+    color: #4f46e5;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 6px;
+}
+
+.fe-link-btn:hover {
+    text-decoration: underline;
+}
+
+.fe-hint {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #92400e;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin: 10px 0;
+    font-size: 0.9rem;
+}
+
+.fe-validation {
+    color: #b91c1c;
+    font-size: 0.85rem;
+    margin: 6px 0 0;
+}
+
+.fe-status {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #f3f4f6;
+    color: #374151;
+    font-size: 0.9rem;
+}
+
+.fe-status--ok {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.fe-status--bad {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.fe-investigation pre,
+.fe-code-lab pre,
+.fe-team-chat pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* ---------- Step 2: investigation ---------- */
+
+.fe-evidence-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.fe-evidence-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.fe-evidence-toggle {
+    width: 100%;
+    text-align: left;
+    background: #f9fafb;
+    border: none;
+    padding: 12px 14px;
+    font-weight: 600;
+    cursor: pointer;
+    color: #1f2937;
+}
+
+.fe-evidence-toggle:hover {
+    background: #f3f4f6;
+}
+
+.fe-evidence-body {
+    padding: 12px 14px;
+    background: #0f172a;
+    color: #e2e8f0;
+    font-size: 0.85rem;
+}
+
+.fe-evidence-body pre {
+    margin: 0;
+    color: #e2e8f0;
+}
+
+.fe-compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.fe-diagnosis-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-top: 8px;
+}
+
+/* ---------- Step 3: code lab ---------- */
+
+.fe-readonly-code {
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 0.85rem;
+    color: #374151;
+}
+
+.fe-editor-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.fe-editor-buttons {
+    display: flex;
+    gap: 6px;
+}
+
+.fe-code-editor {
+    font-family: "Courier New", monospace;
+    background: #0f172a;
+    color: #e2e8f0;
+    border: 1px solid #1e293b;
+    line-height: 1.5;
+}
+
+.fe-guided-fix {
+    margin-top: 10px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 10px 14px;
+}
+
+.fe-guided-fix summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: #4f46e5;
+}
+
+.fe-tests-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.fe-test-list {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.fe-test-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+}
+
+.fe-test-state {
+    font-weight: 700;
+    width: 20px;
+    text-align: center;
+}
+
+.fe-test-item--pass {
+    border-color: #a7f3d0;
+    background: #ecfdf5;
+}
+
+.fe-test-item--pass .fe-test-state {
+    color: #047857;
+}
+
+.fe-test-item--fail {
+    border-color: #fecaca;
+    background: #fef2f2;
+}
+
+.fe-test-item--fail .fe-test-state {
+    color: #b91c1c;
+}
+
+/* ---------- Step 4: browser testing ---------- */
+
+.fe-test-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.fe-test-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.fe-test-card--pass {
+    border-color: #a7f3d0;
+    background: #f0fdf4;
+}
+
+.fe-test-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.fe-test-card-head h4 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.fe-test-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.fe-test-badge[data-state="pass"] {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.fe-test-outcome {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #047857;
+}
+
+.fe-release-option {
+    margin-top: 10px;
+}
+
+/* ---------- Step 5: team chat ---------- */
+
+.fe-chat-context {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 18px;
+    font-size: 0.9rem;
+    color: #374151;
+}
+
+.fe-preview-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.fe-message-preview {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 0.88rem;
+    min-height: 60px;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 620px) {
+    .fe-compare-grid {
+        grid-template-columns: 1fr;
+    }
+}
