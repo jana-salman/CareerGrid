@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 
 FrontendChecklistItem = Literal[
@@ -22,7 +22,14 @@ class FrontendTeamChatRecipient(BaseModel):
 
 
 class FrontendTeamChatResponse(BaseModel):
-    """Validated Step 5 frontend team-chat submission."""
+    """
+    Validated Step 5 frontend team-chat submission.
+
+    The user may send an incomplete or imperfect update. The
+    checklist may be partially confirmed and the summaries may be
+    short. Nothing is forced to be correct; the final AI evaluation
+    judges the professionalism and completeness of the update.
+    """
 
     task_type: Literal["frontend_team_chat"]
 
@@ -39,27 +46,27 @@ class FrontendTeamChatResponse(BaseModel):
     ]
 
     checklist: list[FrontendChecklistItem] = Field(
-        min_length=6,
+        default_factory=list,
         max_length=6,
     )
 
     root_cause: str = Field(
-        min_length=25,
+        default="",
         max_length=500,
     )
 
     fix_summary: str = Field(
-        min_length=25,
+        default="",
         max_length=500,
     )
 
     testing_summary: str = Field(
-        min_length=25,
+        default="",
         max_length=500,
     )
 
     accessibility_summary: str = Field(
-        min_length=25,
+        default="",
         max_length=500,
     )
 
@@ -70,31 +77,10 @@ class FrontendTeamChatResponse(BaseModel):
     ]
 
     message: str = Field(
-        min_length=100,
+        default="",
         max_length=3000,
     )
 
-    preview_completed: Literal[True]
+    preview_completed: bool = False
 
-    all_required_items_confirmed: Literal[True]
-
-    @model_validator(mode="after")
-    def validate_complete_checklist(self):
-        required_items = {
-            "root_cause_identified",
-            "selector_fixed",
-            "dom_ready_handled",
-            "desktop_tested",
-            "mobile_tested",
-            "keyboard_tested",
-        }
-
-        submitted_items = set(self.checklist)
-
-        if submitted_items != required_items:
-            raise ValueError(
-                "Every required checklist item must be confirmed."
-            )
-
-        return self
-    
+    all_required_items_confirmed: bool = False

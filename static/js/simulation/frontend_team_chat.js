@@ -50,20 +50,8 @@
             document.getElementById("fe-message-preview");
         const statusText =
             document.getElementById("fe-team-chat-status");
-        const submitButton =
-            document.getElementById("fe-team-chat-submit");
 
-        if (
-            !hiddenAnswer ||
-            !statusSelect ||
-            !rootCause ||
-            !fixSummary ||
-            !testingSummary ||
-            !accessibilitySummary ||
-            !recommendationSelect ||
-            !previewButton ||
-            !submitButton
-        ) {
+        if (!hiddenAnswer || !form) {
             return;
         }
 
@@ -76,128 +64,69 @@
         };
 
         function getCheckedItems() {
-            return checklistBoxes
-                .filter((box) => box.checked)
-                .map((box) => box.value);
-        }
-
-        function summariesValid() {
-            return (
-                rootCause.value.trim().length >= 25 &&
-                fixSummary.value.trim().length >= 25 &&
-                testingSummary.value.trim().length >= 25 &&
-                accessibilitySummary.value.trim().length >= 25
+            return REQUIRED_CHECKLIST.filter((item) =>
+                checklistBoxes.some(
+                    (box) => box.value === item && box.checked
+                )
             );
         }
 
-        function checklistComplete() {
-            const checked = new Set(getCheckedItems());
-
-            return REQUIRED_CHECKLIST.every((item) =>
-                checked.has(item)
-            );
+        function issueStatus() {
+            return statusSelect && statusSelect.value
+                ? statusSelect.value
+                : "needs_further_testing";
         }
 
-        function formIsValid() {
-            return (
-                Boolean(STATUS_LABELS[statusSelect.value]) &&
-                Boolean(
-                    RECOMMENDATION_LABELS[
-                        recommendationSelect.value
-                    ]
-                ) &&
-                checklistComplete() &&
-                summariesValid()
-            );
+        function recommendation() {
+            return recommendationSelect &&
+                recommendationSelect.value
+                ? recommendationSelect.value
+                : "needs_more_testing";
+        }
+
+        function value(el) {
+            return el ? el.value.trim() : "";
         }
 
         function buildMessage() {
             return [
                 "Issue status: " +
-                    STATUS_LABELS[statusSelect.value],
+                    STATUS_LABELS[issueStatus()],
                 "",
                 "Root cause:",
-                rootCause.value.trim(),
+                value(rootCause) || "(not provided)",
                 "",
                 "Fix implemented:",
-                fixSummary.value.trim(),
+                value(fixSummary) || "(not provided)",
                 "",
                 "Browser testing completed:",
-                testingSummary.value.trim(),
+                value(testingSummary) || "(not provided)",
                 "",
                 "Accessibility and responsive design:",
-                accessibilitySummary.value.trim(),
+                value(accessibilitySummary) || "(not provided)",
                 "",
                 "Release recommendation: " +
-                    RECOMMENDATION_LABELS[
-                        recommendationSelect.value
-                    ],
+                    RECOMMENDATION_LABELS[recommendation()],
             ].join("\n");
         }
 
-        function updateSubmitState() {
-            submitButton.disabled = !(
-                state.previewCompleted && formIsValid()
-            );
-        }
+        if (previewButton) {
+            previewButton.addEventListener("click", () => {
+                if (previewArea) {
+                    previewArea.textContent = buildMessage();
+                }
 
-        previewButton.addEventListener("click", () => {
-            if (!formIsValid()) {
-                state.previewCompleted = false;
+                state.previewCompleted = true;
 
                 if (statusText) {
                     statusText.textContent =
-                        "Complete every field, confirm all six " +
-                        "checklist items, and write at least 25 " +
-                        "characters in each summary before " +
-                        "previewing.";
-                    statusText.classList.add("fe-status--bad");
-                    statusText.classList.remove("fe-status--ok");
+                        "Message previewed. You can send the " +
+                        "update or keep editing.";
+                    statusText.classList.add("fe-status--ok");
+                    statusText.classList.remove("fe-status--bad");
                 }
-
-                updateSubmitState();
-                return;
-            }
-
-            if (previewArea) {
-                previewArea.textContent = buildMessage();
-            }
-
-            state.previewCompleted = true;
-
-            if (statusText) {
-                statusText.textContent =
-                    "Message previewed. You can send the update.";
-                statusText.classList.add("fe-status--ok");
-                statusText.classList.remove("fe-status--bad");
-            }
-
-            updateSubmitState();
-        });
-
-        // Editing any field requires a fresh preview.
-        const watched = [
-            statusSelect,
-            rootCause,
-            fixSummary,
-            testingSummary,
-            accessibilitySummary,
-            recommendationSelect,
-        ];
-
-        watched.forEach((field) => {
-            field.addEventListener("input", () => {
-                state.previewCompleted = false;
-                updateSubmitState();
             });
-        });
-
-        checklistBoxes.forEach((box) => {
-            box.addEventListener("change", () => {
-                state.previewCompleted = false;
-                updateSubmitState();
-            });
-        });
+        }
 
         function restoreSavedAnswer() {
             const raw = (
@@ -224,14 +153,32 @@
                 return;
             }
 
-            statusSelect.value = saved.issue_status || "";
-            rootCause.value = saved.root_cause || "";
-            fixSummary.value = saved.fix_summary || "";
-            testingSummary.value = saved.testing_summary || "";
-            accessibilitySummary.value =
-                saved.accessibility_summary || "";
-            recommendationSelect.value =
-                saved.release_recommendation || "";
+            if (statusSelect) {
+                statusSelect.value = saved.issue_status || "";
+            }
+
+            if (rootCause) {
+                rootCause.value = saved.root_cause || "";
+            }
+
+            if (fixSummary) {
+                fixSummary.value = saved.fix_summary || "";
+            }
+
+            if (testingSummary) {
+                testingSummary.value =
+                    saved.testing_summary || "";
+            }
+
+            if (accessibilitySummary) {
+                accessibilitySummary.value =
+                    saved.accessibility_summary || "";
+            }
+
+            if (recommendationSelect) {
+                recommendationSelect.value =
+                    saved.release_recommendation || "";
+            }
 
             if (Array.isArray(saved.checklist)) {
                 checklistBoxes.forEach((box) => {
@@ -241,28 +188,17 @@
                 });
             }
 
-            if (formIsValid() && previewArea) {
+            if (previewArea) {
                 previewArea.textContent = buildMessage();
-                state.previewCompleted = Boolean(
-                    saved.preview_completed
-                );
             }
 
-            updateSubmitState();
+            state.previewCompleted = Boolean(
+                saved.preview_completed
+            );
         }
 
-        form.addEventListener("submit", (event) => {
-            if (!formIsValid()) {
-                event.preventDefault();
-                state.previewCompleted = false;
-                updateSubmitState();
-                return;
-            }
-
-            if (!state.previewCompleted && previewArea) {
-                previewArea.textContent = buildMessage();
-                state.previewCompleted = true;
-            }
+        form.addEventListener("submit", () => {
+            const checklist = getCheckedItems();
 
             const payload = {
                 task_type: "frontend_team_chat",
@@ -273,25 +209,25 @@
                     role: "Frontend Team Lead",
                 },
                 issue_id: "FE-4021",
-                issue_status: statusSelect.value,
-                checklist: REQUIRED_CHECKLIST.slice(),
-                root_cause: rootCause.value.trim(),
-                fix_summary: fixSummary.value.trim(),
-                testing_summary: testingSummary.value.trim(),
-                accessibility_summary:
-                    accessibilitySummary.value.trim(),
-                release_recommendation:
-                    recommendationSelect.value,
+                issue_status: issueStatus(),
+                checklist: checklist,
+                root_cause: value(rootCause),
+                fix_summary: value(fixSummary),
+                testing_summary: value(testingSummary),
+                accessibility_summary: value(
+                    accessibilitySummary
+                ),
+                release_recommendation: recommendation(),
                 message: buildMessage(),
-                preview_completed: true,
-                all_required_items_confirmed: true,
+                preview_completed: state.previewCompleted,
+                all_required_items_confirmed:
+                    checklist.length === REQUIRED_CHECKLIST.length,
             };
 
             hiddenAnswer.value = JSON.stringify(payload);
         });
 
         restoreSavedAnswer();
-        updateSubmitState();
     }
 
     if (document.readyState === "loading") {

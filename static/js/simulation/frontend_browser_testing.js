@@ -29,17 +29,8 @@
         const hiddenAnswer = document.getElementById("answer");
         const statusText =
             document.getElementById("fe-testing-status");
-        const releaseRadio = form.querySelector(
-            'input[name="fe_release_decision"]'
-        );
-        const submitButton =
-            document.getElementById("fe-testing-submit");
 
-        if (
-            !hiddenAnswer ||
-            !releaseRadio ||
-            !submitButton
-        ) {
+        if (!hiddenAnswer) {
             return;
         }
 
@@ -53,17 +44,13 @@
             testCount: 0,
         };
 
-        function allTestsPassed() {
-            return REQUIRED_TEST_IDS.every((testId) =>
-                passedTests.has(testId)
+        function releaseDecision() {
+            const selected = form.querySelector(
+                'input[name="fe_release_decision"]:checked'
             );
-        }
 
-        function updateSubmitState() {
-            const ready =
-                allTestsPassed() && releaseRadio.checked;
-
-            submitButton.disabled = !ready;
+            // Default keeps the user moving if nothing is chosen.
+            return selected ? selected.value : "needs_more_work";
         }
 
         function markCard(card, testId) {
@@ -98,24 +85,25 @@
                 passedTests.add(testId);
                 markCard(card, testId);
 
-                if (allTestsPassed()) {
-                    releaseRadio.disabled = false;
+                if (statusText) {
+                    const remaining = REQUIRED_TEST_IDS.filter(
+                        (id) => !passedTests.has(id)
+                    );
 
-                    if (statusText) {
-                        statusText.textContent =
-                            "All required tests passed. Select " +
-                            "the release decision to continue.";
-                        statusText.classList.add(
-                            "fe-status--ok"
-                        );
-                    }
+                    statusText.textContent =
+                        remaining.length === 0
+                            ? "All three tests passed. Choose a " +
+                              "release decision and continue."
+                            : "Test recorded. You can run the " +
+                              "remaining tests or continue.";
+
+                    statusText.classList.toggle(
+                        "fe-status--ok",
+                        remaining.length === 0
+                    );
                 }
-
-                updateSubmitState();
             });
         });
-
-        releaseRadio.addEventListener("change", updateSubmitState);
 
         function restoreSavedAnswer() {
             const raw = (
@@ -142,8 +130,7 @@
                 return;
             }
 
-            state.testCount =
-                saved.test_count || 0;
+            state.testCount = saved.test_count || 0;
 
             if (Array.isArray(saved.tests_run)) {
                 saved.tests_run.forEach((test) => {
@@ -168,30 +155,31 @@
                 });
             }
 
-            if (allTestsPassed()) {
-                releaseRadio.disabled = false;
+            if (saved.release_decision) {
+                const radio = form.querySelector(
+                    'input[name="fe_release_decision"]' +
+                        `[value="${saved.release_decision}"]`
+                );
 
-                if (
-                    saved.release_decision ===
-                    "ready_for_release"
-                ) {
-                    releaseRadio.checked = true;
+                if (radio) {
+                    radio.checked = true;
                 }
             }
-
-            updateSubmitState();
         }
 
-        form.addEventListener("submit", (event) => {
-            if (!allTestsPassed() || !releaseRadio.checked) {
-                event.preventDefault();
-                updateSubmitState();
-                return;
-            }
+        form.addEventListener("submit", () => {
+            const testsRun = Array.from(passedTests).map(
+                (testId) => ({
+                    test_id: testId,
+                    expected_outcome: "pass",
+                    actual_outcome: "pass",
+                    passed: true,
+                })
+            );
 
             const testCount = Math.max(
-                REQUIRED_TEST_IDS.length,
-                state.testCount
+                state.testCount,
+                testsRun.length
             );
 
             const payload = {
@@ -200,22 +188,17 @@
                     component: "buy_now_button",
                     page: "product_page",
                 },
-                tests_run: REQUIRED_TEST_IDS.map((testId) => ({
-                    test_id: testId,
-                    expected_outcome: "pass",
-                    actual_outcome: "pass",
-                    passed: true,
-                })),
+                tests_run: testsRun,
                 test_count: testCount,
-                all_tests_passed: true,
-                release_decision: "ready_for_release",
+                all_tests_passed:
+                    testsRun.length === REQUIRED_TEST_IDS.length,
+                release_decision: releaseDecision(),
             };
 
             hiddenAnswer.value = JSON.stringify(payload);
         });
 
         restoreSavedAnswer();
-        updateSubmitState();
     }
 
     if (document.readyState === "loading") {

@@ -34,19 +34,8 @@
             document.getElementById("fe-diagnosis-status");
         const findingInput =
             document.getElementById("fe-technical-finding");
-        const findingValidation =
-            document.getElementById("fe-finding-validation");
-        const submitButton =
-            document.getElementById("fe-investigation-submit");
 
-        if (
-            !hiddenAnswer ||
-            !htmlIdSelect ||
-            !jsSelectorSelect ||
-            !runButton ||
-            !findingInput ||
-            !submitButton
-        ) {
+        if (!hiddenAnswer || !form) {
             return;
         }
 
@@ -69,12 +58,16 @@
             diagnosisConfirmed: false,
         };
 
+        function selectValue(select) {
+            return select && select.value ? select.value : null;
+        }
+
         function getSelectedRadio(name) {
             const selected = form.querySelector(
                 `input[name="${name}"]:checked`
             );
 
-            return selected ? selected.value : "";
+            return selected ? selected.value : null;
         }
 
         function getSelectedActions() {
@@ -85,8 +78,9 @@
 
         function selectionsAreCorrect() {
             return (
-                htmlIdSelect.value === CORRECT.html_id &&
-                jsSelectorSelect.value === CORRECT.js_selector &&
+                selectValue(htmlIdSelect) === CORRECT.html_id &&
+                selectValue(jsSelectorSelect) ===
+                    CORRECT.js_selector &&
                 getSelectedRadio("fe_root_cause") ===
                     CORRECT.root_cause &&
                 getSelectedRadio("fe_null_reason") ===
@@ -96,20 +90,6 @@
             );
         }
 
-        function findingIsValid() {
-            return findingInput.value.trim().length >= 20;
-        }
-
-        function updateSubmitState() {
-            const ready =
-                state.diagnosisConfirmed &&
-                getSelectedActions().length === 3 &&
-                findingIsValid();
-
-            submitButton.disabled = !ready;
-        }
-
-        // Evidence open/close.
         evidenceToggles.forEach((toggle) => {
             toggle.addEventListener("click", () => {
                 const body = toggle.nextElementSibling;
@@ -117,9 +97,7 @@
                     "data-evidence-id"
                 );
 
-                const isHidden = body.hasAttribute("hidden");
-
-                if (isHidden) {
+                if (body.hasAttribute("hidden")) {
                     body.removeAttribute("hidden");
                     toggle.setAttribute("aria-expanded", "true");
                 } else {
@@ -133,10 +111,9 @@
             });
         });
 
-        // Hint.
         if (hintButton && hintText) {
             hintButton.addEventListener("click", () => {
-                if (state.hintsUsed < 10) {
+                if (state.hintsUsed < 100) {
                     state.hintsUsed += 1;
                 }
 
@@ -144,13 +121,17 @@
             });
         }
 
-        // Guided diagnosis fills the correct selections.
         if (guidedButton) {
             guidedButton.addEventListener("click", () => {
                 state.guidedDiagnosisUsed = true;
 
-                htmlIdSelect.value = CORRECT.html_id;
-                jsSelectorSelect.value = CORRECT.js_selector;
+                if (htmlIdSelect) {
+                    htmlIdSelect.value = CORRECT.html_id;
+                }
+
+                if (jsSelectorSelect) {
+                    jsSelectorSelect.value = CORRECT.js_selector;
+                }
 
                 const setRadio = (name, value) => {
                     const target = form.querySelector(
@@ -171,60 +152,46 @@
 
                 if (statusText) {
                     statusText.textContent =
-                        "Guided answers filled in. Run the " +
-                        "diagnosis to confirm.";
+                        "Guided answers filled in. You can run " +
+                        "the diagnosis or continue.";
                 }
             });
         }
 
-        // Run diagnosis.
-        runButton.addEventListener("click", () => {
-            state.diagnosisAttempts += 1;
-            state.diagnosticRuns = state.diagnosisAttempts;
+        if (runButton) {
+            runButton.addEventListener("click", () => {
+                state.diagnosisAttempts += 1;
+                state.diagnosticRuns = state.diagnosisAttempts;
 
-            if (selectionsAreCorrect()) {
-                state.diagnosisConfirmed = true;
+                if (selectionsAreCorrect()) {
+                    state.diagnosisConfirmed = true;
 
-                if (statusText) {
-                    statusText.textContent =
-                        "Diagnosis confirmed: the selector id " +
-                        "mismatch is the root cause.";
-                    statusText.classList.add("fe-status--ok");
-                    statusText.classList.remove("fe-status--bad");
-                }
-            } else {
-                state.incorrectDiagnosisAttempts += 1;
-
-                if (statusText) {
-                    statusText.textContent =
-                        "That combination is not correct yet. " +
-                        "Review the evidence and try again.";
-                    statusText.classList.add("fe-status--bad");
-                    statusText.classList.remove("fe-status--ok");
-                }
-            }
-
-            updateSubmitState();
-        });
-
-        // Finding + actions change submit readiness.
-        findingInput.addEventListener("input", () => {
-            if (findingValidation) {
-                if (findingIsValid()) {
-                    findingValidation.setAttribute("hidden", "");
+                    if (statusText) {
+                        statusText.textContent =
+                            "Diagnosis confirmed: the selector id " +
+                            "mismatch is the root cause.";
+                        statusText.classList.add("fe-status--ok");
+                        statusText.classList.remove(
+                            "fe-status--bad"
+                        );
+                    }
                 } else {
-                    findingValidation.removeAttribute("hidden");
+                    state.incorrectDiagnosisAttempts += 1;
+
+                    if (statusText) {
+                        statusText.textContent =
+                            "That is not the expected diagnosis. " +
+                            "You can keep investigating or " +
+                            "continue anyway.";
+                        statusText.classList.add("fe-status--bad");
+                        statusText.classList.remove(
+                            "fe-status--ok"
+                        );
+                    }
                 }
-            }
+            });
+        }
 
-            updateSubmitState();
-        });
-
-        actionCheckboxes.forEach((box) => {
-            box.addEventListener("change", updateSubmitState);
-        });
-
-        // Restore a previous answer when returning to this step.
         function restoreSavedAnswer() {
             const raw = (
                 hiddenAnswer.getAttribute("data-saved-answer") || ""
@@ -250,10 +217,15 @@
                 return;
             }
 
-            htmlIdSelect.value =
-                saved.selected_html_id || "";
-            jsSelectorSelect.value =
-                saved.selected_js_selector || "";
+            if (htmlIdSelect) {
+                htmlIdSelect.value =
+                    saved.selected_html_id || "";
+            }
+
+            if (jsSelectorSelect) {
+                jsSelectorSelect.value =
+                    saved.selected_js_selector || "";
+            }
 
             const setRadio = (name, value) => {
                 if (!value) {
@@ -285,7 +257,10 @@
                 });
             }
 
-            findingInput.value = saved.technical_finding || "";
+            if (findingInput) {
+                findingInput.value =
+                    saved.technical_finding || "";
+            }
 
             state.diagnosisAttempts =
                 saved.diagnosis_attempts || 0;
@@ -301,22 +276,10 @@
             state.diagnosisConfirmed = Boolean(
                 saved.diagnosis_confirmed
             );
-
-            updateSubmitState();
         }
 
-        // Build the JSON payload on submit.
-        form.addEventListener("submit", (event) => {
-            if (
-                !state.diagnosisConfirmed ||
-                getSelectedActions().length !== 3 ||
-                !findingIsValid()
-            ) {
-                event.preventDefault();
-                updateSubmitState();
-                return;
-            }
-
+        // Build the payload on submit. The user may be wrong.
+        form.addEventListener("submit", () => {
             if (
                 state.incorrectDiagnosisAttempts >
                 state.diagnosisAttempts
@@ -333,8 +296,9 @@
                 incorrect_diagnosis_attempts:
                     state.incorrectDiagnosisAttempts,
                 diagnostic_runs: state.diagnosticRuns,
-                selected_html_id: htmlIdSelect.value,
-                selected_js_selector: jsSelectorSelect.value,
+                selected_html_id: selectValue(htmlIdSelect),
+                selected_js_selector:
+                    selectValue(jsSelectorSelect),
                 selected_root_cause:
                     getSelectedRadio("fe_root_cause"),
                 selected_null_reason:
@@ -345,16 +309,16 @@
                 hints_used: state.hintsUsed,
                 guided_diagnosis_used:
                     state.guidedDiagnosisUsed,
-                diagnosis_confirmed: true,
-                technical_finding:
-                    findingInput.value.trim(),
+                diagnosis_confirmed: state.diagnosisConfirmed,
+                technical_finding: findingInput
+                    ? findingInput.value.trim()
+                    : "",
             };
 
             hiddenAnswer.value = JSON.stringify(payload);
         });
 
         restoreSavedAnswer();
-        updateSubmitState();
     }
 
     if (document.readyState === "loading") {
