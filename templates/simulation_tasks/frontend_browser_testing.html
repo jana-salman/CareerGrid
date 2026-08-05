@@ -92,13 +92,26 @@
         <h4 class="fe-section-title">Release decision</h4>
 
         <p id="fe-testing-status" class="fe-status" role="status">
-            Run all three tests to enable the release decision.
+            Run the tests, then choose a release decision. You can
+            continue even if a test fails.
         </p>
 
         <label class="fe-radio fe-release-option">
             <input type="radio" name="fe_release_decision"
-                value="ready_for_release" disabled>
+                value="ready_for_release">
             All required tests pass — ready for release.
+        </label>
+
+        <label class="fe-radio fe-release-option">
+            <input type="radio" name="fe_release_decision"
+                value="needs_more_work">
+            Some tests still fail — needs more work.
+        </label>
+
+        <label class="fe-radio fe-release-option">
+            <input type="radio" name="fe_release_decision"
+                value="do_not_release">
+            Do not release yet.
         </label>
 
     </section>
@@ -128,7 +141,6 @@
             type="submit"
             id="fe-testing-submit"
             class="main-btn"
-            disabled
         >
             Submit and Continue
         </button>

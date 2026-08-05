@@ -755,10 +755,100 @@ def prepare_answers_for_evaluation(answers):
 
     return prepared_answers
 
-def prepare_evaluation_for_results_page(evaluation):
+# Human-readable skill names for each simulation step, used on the
+# results page so the user sees which specific skill needs practice.
+FRONTEND_STEP_SKILLS = [
+    "Inbox Prioritization & Communication",
+    "DevTools Debugging",
+    "Fixing DOM & Event Code",
+    "Browser & Accessibility Testing",
+    "Technical Communication",
+]
+
+BACKEND_STEP_SKILLS = [
+    "Inbox Prioritization & Communication",
+    "Incident Investigation",
+    "Technical Decision Making",
+    "API Validation & Testing",
+    "Technical Communication",
+]
+
+# A step is considered "ready" at or above this score, otherwise the
+# user is told to practice that specific skill more.
+STEP_READY_THRESHOLD = 70
+
+
+def _step_skill_names(position_id=None, scenario_id=None):
+    """Return the list of step skill names for a simulation, or None."""
+
+    if (
+        position_id == "frontend-developer"
+        or scenario_id == "buy-now-button-fix"
+    ):
+        return FRONTEND_STEP_SKILLS
+
+    if (
+        position_id == "backend-developer"
+        or scenario_id == "checkout-api-investigation"
+    ):
+        return BACKEND_STEP_SKILLS
+
+    return None
+
+
+def _build_readiness(score):
+    """
+    Turn the overall score into a clear readiness verdict shown at
+    the top of the results page.
+    """
+
+    if score >= 80:
+        return {
+            "ready": True,
+            "label": "Ready to apply",
+            "headline": "You're ready to apply for this role.",
+            "advice": (
+                "Your performance shows you can handle this role's "
+                "core tasks. Keep the roadmap below as a refresher."
+            ),
+        }
+
+    if score >= 60:
+        return {
+            "ready": False,
+            "label": "Almost ready",
+            "headline": "Almost there — a little more practice.",
+            "advice": (
+                "You have a solid foundation. Focus on the skills "
+                "marked 'Needs practice' below, then you'll "
+                "be ready to apply."
+            ),
+        }
+
+    return {
+        "ready": False,
+        "label": "Needs more practice",
+        "headline": "Practice more before applying.",
+        "advice": (
+            "Work through the roadmap below, especially the skills "
+            "marked 'Needs practice', then retry the "
+            "simulation."
+        ),
+    }
+
+
+def prepare_evaluation_for_results_page(
+    evaluation,
+    skill_names=None,
+):
     """
     Convert Gemini evaluation fields into the format expected
     by the current roadmap template.
+
+    skill_names:
+        Optional list of five human-readable skill names, one per
+        simulation step. When provided, each step shows its real
+        skill name and a "ready" / "needs practice" status.
     """
 
     if not isinstance(evaluation, dict):
@@ -782,27 +872,46 @@ def prepare_evaluation_for_results_page(evaluation):
         "step_feedback",
         [],
     ):
+        step_number = step_feedback.get("step")
+        step_score = step_feedback.get("score", 0)
+
+        if (
+            skill_names
+            and isinstance(step_number, int)
+            and 1 <= step_number <= len(skill_names)
+        ):
+            skill_name = skill_names[step_number - 1]
+        else:
+            skill_name = f"Simulation Step {step_number}"
+
         step_results.append({
-            "step": step_feedback.get("step"),
-            "skill": (
-                f"Simulation Step "
-                f"{step_feedback.get('step')}"
-            ),
-            "score": step_feedback.get(
-                "score",
-                0,
-            ),
+            "step": step_number,
+            "skill": skill_name,
+            "score": step_score,
             "maximum_score": 100,
+            "status": (
+                "ready"
+                if step_score >= STEP_READY_THRESHOLD
+                else "needs_practice"
+            ),
             "feedback": step_feedback.get(
                 "feedback",
                 "",
             ),
         })
 
+    # Skills to practice more, based on low-scoring steps.
+    skills_to_practice = [
+        step["skill"]
+        for step in step_results
+        if step["status"] == "needs_practice"
+    ]
+
     return {
         "score": score,
         "maximum_score": 100,
         "performance_level": performance_level,
+        "readiness": _build_readiness(score),
         "summary": evaluation.get(
             "summary",
             "",
@@ -819,6 +928,7 @@ def prepare_evaluation_for_results_page(evaluation):
             "recommended_skills",
             [],
         ),
+        "skills_to_practice": skills_to_practice,
         "step_results": step_results,
     }
 # =========================================================
@@ -1407,7 +1517,10 @@ def simulation_step(career_id, position_id, company_id, step):
 
             if not error:
                 result = prepare_evaluation_for_results_page(
-                    evaluation
+                    evaluation,
+                    _step_skill_names(
+                        position_id=position_id
+                    ),
                 )
 
                 return render_template(
@@ -1714,7 +1827,10 @@ def simulation_step(career_id, position_id, company_id, step):
 
             if not error:
                 result = prepare_evaluation_for_results_page(
-                    evaluation
+                       evaluation,
+                    _step_skill_names(
+                        position_id=position_id
+                    ),
                 )
 
                 return render_template(
@@ -1973,7 +2089,12 @@ def dashboard_attempt(attempt_id):
     evaluation = attempt.get("evaluation")
     roadmap = attempt.get("roadmap")
 
-    result = prepare_evaluation_for_results_page(evaluation)
+    result = prepare_evaluation_for_results_page(
+        evaluation,
+        _step_skill_names(
+            position_id=attempt.get("position_id")
+        ),
+    )
 
     return render_template(
         "roadmap.html",
@@ -1994,7 +2115,10 @@ def roadmap():
     )
 
     result = prepare_evaluation_for_results_page(
-        evaluation
+        evaluation,
+        _step_skill_names(
+            scenario_id=session.get("scenario_id")
+        ),
     )
 
     return render_template(

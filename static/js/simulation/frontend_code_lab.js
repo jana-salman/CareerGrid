@@ -85,15 +85,8 @@
             document.getElementById("fe-run-tests");
         const statusText =
             document.getElementById("fe-tests-status");
-        const submitButton =
-            document.getElementById("fe-code-submit");
 
-        if (
-            !hiddenAnswer ||
-            !editor ||
-            !runButton ||
-            !submitButton
-        ) {
+        if (!hiddenAnswer || !editor) {
             return;
         }
 
@@ -158,8 +151,8 @@
             if (statusText) {
                 statusText.textContent = allPassed
                     ? "All checks passed. You can continue."
-                    : "Some checks still fail. Review the code " +
-                      "and run the tests again.";
+                    : "Some checks still fail. You can keep " +
+                      "editing or continue anyway.";
                 statusText.classList.toggle(
                     "fe-status--ok",
                     allPassed
@@ -169,11 +162,11 @@
                     !allPassed
                 );
             }
-
-            submitButton.disabled = !allPassed;
         }
 
-        runButton.addEventListener("click", runTests);
+        if (runButton) {
+            runButton.addEventListener("click", runTests);
+        }
 
         if (resetButton) {
             resetButton.addEventListener("click", () => {
@@ -194,7 +187,6 @@
                 });
 
                 state.passedTests = [];
-                submitButton.disabled = true;
 
                 if (statusText) {
                     statusText.textContent =
@@ -209,7 +201,7 @@
 
         if (hintButton && hintText) {
             hintButton.addEventListener("click", () => {
-                if (state.hintsUsed < 10) {
+                if (state.hintsUsed < 100) {
                     state.hintsUsed += 1;
                 }
 
@@ -263,26 +255,13 @@
             state.failedTestRuns = saved.failed_test_runs || 0;
             state.hintsUsed = saved.hints_used || 0;
             state.guidedFixUsed = Boolean(saved.guided_fix_used);
-
-            // Re-run tests so the UI and submit state match.
-            runTests();
         }
 
-        form.addEventListener("submit", (event) => {
+        form.addEventListener("submit", () => {
             const results = analyzeCode(editor.value);
             const passedTests = REQUIRED_TESTS.filter(
                 (testId) => results[testId]
             );
-
-            if (passedTests.length !== REQUIRED_TESTS.length) {
-                event.preventDefault();
-                submitButton.disabled = true;
-                return;
-            }
-
-            if (state.testRuns < 1) {
-                state.testRuns = 1;
-            }
 
             const payload = {
                 task_type: "frontend_code_lab",

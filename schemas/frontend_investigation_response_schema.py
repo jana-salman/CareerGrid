@@ -1,81 +1,64 @@
-from typing import Literal
+from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 
 class FrontendInvestigationResponse(BaseModel):
-    """Validated response from the Step 2 DevTools investigation."""
+    """
+    Validated response from the Step 2 DevTools investigation.
+
+    The user is allowed to make mistakes. This schema records what
+    the user selected and how they investigated; it does not force
+    the correct answer. The final AI evaluation judges the quality.
+    """
 
     task_type: Literal["frontend_investigation"]
 
     issue_id: Literal["FE-4021"]
 
-    investigation_actions: list[
-        Literal[
-            "inspect_console",
-            "compare_ids",
-            "test_devices",
-        ]
-    ] = Field(
-        min_length=3,
-        max_length=3,
+    investigation_actions: list[str] = Field(
+        default_factory=list,
     )
 
     diagnosis_attempts: int = Field(
-        ge=1,
-        le=100,
+        ge=0,
+        le=1000,
+        default=0,
     )
 
     incorrect_diagnosis_attempts: int = Field(
         ge=0,
-        le=100,
+        le=1000,
+        default=0,
     )
 
     diagnostic_runs: int = Field(
-        ge=1,
-        le=100,
+        ge=0,
+        le=1000,
+        default=0,
     )
 
-    selected_html_id: Literal["buy-now-btn"]
+    selected_html_id: Optional[str] = None
 
-    selected_js_selector: Literal["#checkout-btn"]
+    selected_js_selector: Optional[str] = None
 
-    selected_root_cause: Literal["selector_id_mismatch"]
+    selected_root_cause: Optional[str] = None
 
-    selected_null_reason: Literal["element_not_found"]
+    selected_null_reason: Optional[str] = None
 
-    selected_failure_mechanism: Literal[
-        "addeventlistener_on_null"
-    ]
+    selected_failure_mechanism: Optional[str] = None
 
     hints_used: int = Field(
         ge=0,
-        le=10,
+        le=100,
+        default=0,
     )
 
     guided_diagnosis_used: bool = False
 
-    diagnosis_confirmed: Literal[True]
+    diagnosis_confirmed: bool = False
 
     technical_finding: str = Field(
-        min_length=20,
+        default="",
         max_length=1500,
     )
-
-    @model_validator(mode="after")
-    def validate_attempt_counts(self):
-        if (
-            self.incorrect_diagnosis_attempts
-            > self.diagnosis_attempts
-        ):
-            raise ValueError(
-                "Incorrect attempts cannot exceed total "
-                "diagnosis attempts."
-            )
-
-        if self.diagnostic_runs != self.diagnosis_attempts:
-            raise ValueError(
-                "Diagnostic runs must match diagnosis attempts."
-            )
-
-        return self

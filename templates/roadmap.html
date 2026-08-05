@@ -15,6 +15,27 @@
         rel="stylesheet"
         href="{{ url_for('static', filename='css/style.css') }}"
     >
+
+    <style>
+        .step-status-badge {
+            display: inline-block;
+            margin-top: 4px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 999px;
+        }
+
+        .step-status-ready {
+            background: #ecfdf5;
+            color: #047857;
+        }
+
+        .step-status-needs_practice {
+            background: #fef2f2;
+            color: #b91c1c;
+        }
+    </style>
 </head>
 
 <body>
@@ -22,27 +43,27 @@
     <div class="career-page">
 
         <!-- NAVIGATION -->
-        <<nav class="navbar">
+        <nav class="navbar">
 
-    <h2 class="logo">
-        CareerGrid
-    </h2>
+            <h2 class="logo">
+                CareerGrid
+            </h2>
 
-    <div>
-        <a href="{{ url_for('dashboard') }}">
-            {% if from_dashboard %}
-                Back to Dashboard
-            {% else %}
-                Dashboard
-            {% endif %}
-        </a>
+            <div>
+                <a href="{{ url_for('dashboard') }}">
+                    {% if from_dashboard %}
+                        Back to Dashboard
+                    {% else %}
+                        Dashboard
+                    {% endif %}
+                </a>
 
-        <a href="{{ url_for('career') }}">
-            Back to Careers
-        </a>
-    </div>
+                <a href="{{ url_for('career') }}">
+                    Back to Careers
+                </a>
+            </div>
 
-</nav>
+        </nav>
 
 
         <!-- PAGE HEADING -->
@@ -77,6 +98,55 @@
 
             <!-- COMPLETE RESULTS DASHBOARD -->
             <main class="results-dashboard {{ performance_class }}">
+
+                <!-- READINESS VERDICT -->
+                {% if result.readiness %}
+                <section
+                    class="readiness-banner"
+                    style="border-radius: 14px; padding: 20px 24px;
+                    margin-bottom: 24px;
+                    {% if result.readiness.ready %}
+                        background: #ecfdf5; border: 1px solid #a7f3d0;
+                    {% elif result.score >= 60 %}
+                        background: #fffbeb; border: 1px solid #fde68a;
+                    {% else %}
+                        background: #fef2f2; border: 1px solid #fecaca;
+                    {% endif %}"
+                >
+                    <div style="display: flex; align-items: center;
+                        gap: 12px; flex-wrap: wrap;">
+                        <span style="font-weight: 700; font-size: 0.8rem;
+                            padding: 4px 12px; border-radius: 999px;
+                            color: #ffffff;
+                            {% if result.readiness.ready %}
+                                background: #047857;
+                            {% elif result.score >= 60 %}
+                                background: #b45309;
+                            {% else %}
+                                background: #b91c1c;
+                            {% endif %}">
+                            {{ result.readiness.label }}
+                        </span>
+
+                        <strong style="font-size: 1.15rem;">
+                            {{ result.readiness.headline }}
+                        </strong>
+                    </div>
+
+                    <p style="margin: 10px 0 0; color: #374151;">
+                        {{ result.readiness.advice }}
+                    </p>
+
+                    {% if result.skills_to_practice %}
+                    <p style="margin: 10px 0 0; color: #374151;">
+                        Practice these next:
+                        {% for skill in result.skills_to_practice %}
+                            <strong>{{ skill }}</strong>{% if not loop.last %}, {% endif %}
+                        {% endfor %}.
+                    </p>
+                    {% endif %}
+                </section>
+                {% endif %}
 
                 <!-- SCORE OVERVIEW -->
                 <section class="results-overview">
@@ -300,6 +370,18 @@
                                             <h4>
                                                 {{ step_result.skill }}
                                             </h4>
+
+                                            {% if step_result.status %}
+                                            <span
+                                                class="step-status-badge step-status-{{ step_result.status }}"
+                                            >
+                                                {% if step_result.status == 'ready' %}
+                                                    Ready
+                                                {% else %}
+                                                    Needs practice
+                                                {% endif %}
+                                            </span>
+                                            {% endif %}
 
                                         </div>
 
@@ -588,7 +670,7 @@
                 <!-- BUTTONS -->
                 <div class="results-actions">
 
-                    <a
+                    
                         href="{{ url_for('career') }}"
                         class="secondary-result-button"
                     >
@@ -596,7 +678,7 @@
                     </a>
 
 
-                    <a
+                    
                         href="{{ url_for(
                             'simulation_step',
                             career_id='software-developer',
@@ -633,7 +715,7 @@
                     your personalized performance analysis.
                 </p>
 
-                <a
+                
                     href="{{ url_for('career') }}"
                     class="primary-result-button"
                 >

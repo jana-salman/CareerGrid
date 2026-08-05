@@ -8,7 +8,7 @@ from schemas.frontend_team_chat_response_schema import (
 
 
 class FrontendTeamChatValidationError(ValueError):
-    """Raised when the Step 5 frontend team update is invalid."""
+    """Raised only when the response is structurally unusable."""
 
 
 REQUIRED_CHECKLIST_ORDER = [
@@ -40,10 +40,9 @@ def validate_frontend_team_chat_response(
     raw_answer: str,
 ) -> dict:
     """
-    Validate and normalize the interactive Step 5 response.
-
-    The final message is rebuilt on the server instead of trusting
-    the message text sent by the browser.
+    Validate the structure of the Step 5 update and rebuild the
+    final message from the submitted fields. The update may be
+    incomplete; the final AI evaluation judges its quality.
     """
 
     try:
@@ -51,7 +50,7 @@ def validate_frontend_team_chat_response(
 
     except json.JSONDecodeError as error:
         raise FrontendTeamChatValidationError(
-            "The team update format is invalid."
+            "The team update could not be read."
         ) from error
 
     if not isinstance(submitted_data, dict):
@@ -85,15 +84,23 @@ def validate_frontend_team_chat_response(
 
     except ValidationError as error:
         raise FrontendTeamChatValidationError(
-            "Complete every part of the update and preview it "
-            "before finishing the simulation."
+            "The team update was not in the expected format."
         ) from error
 
     normalized_response = response.model_dump()
 
-    # Use a consistent checklist order.
-    normalized_response["checklist"] = (
-        REQUIRED_CHECKLIST_ORDER
+    # Keep the confirmed checklist in a consistent order.
+    confirmed = set(response.checklist)
+    normalized_response["checklist"] = [
+        item
+        for item in REQUIRED_CHECKLIST_ORDER
+        if item in confirmed
+    ]
+
+    # Record how complete the checklist is for the AI evaluation.
+    normalized_response["checklist_complete"] = (
+        len(normalized_response["checklist"])
+        == len(REQUIRED_CHECKLIST_ORDER)
     )
 
     issue_status_label = ISSUE_STATUS_LABELS[
@@ -104,21 +111,22 @@ def validate_frontend_team_chat_response(
         response.release_recommendation
     ]
 
-    # Rebuild the final message using server-validated fields.
+    # Rebuild the final message using the server-validated fields
+    # instead of trusting the browser text.
     normalized_response["message"] = "\n".join([
         f"Issue status: {issue_status_label}",
         "",
         "Root cause:",
-        response.root_cause,
+        response.root_cause or "(not provided)",
         "",
         "Fix implemented:",
-        response.fix_summary,
+        response.fix_summary or "(not provided)",
         "",
         "Browser testing completed:",
-        response.testing_summary,
+        response.testing_summary or "(not provided)",
         "",
         "Accessibility and responsive design:",
-        response.accessibility_summary,
+        response.accessibility_summary or "(not provided)",
         "",
         (
             "Release recommendation: "
