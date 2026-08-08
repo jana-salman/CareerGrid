@@ -22,11 +22,6 @@
     class="fe-investigation"
 >
 
-    <!--
-        Flask still expects one field called "answer".
-        JavaScript places all investigation data into this hidden
-        input as a JSON string before submission.
-    -->
     <input
         type="hidden"
         id="answer"
@@ -39,7 +34,6 @@
         Issue <strong>FE-4021</strong> · Product page · Buy Now button
     </p>
 
-    <!-- EVIDENCE -->
     <section class="fe-evidence">
 
         <h4 class="fe-section-title">Evidence</h4>
@@ -134,7 +128,6 @@ The checkout panel never opens on any screen size.</pre>
         </div>
     </section>
 
-    <!-- COMPARE IDS -->
     <section class="fe-compare">
 
         <h4 class="fe-section-title">Compare the identifiers</h4>
@@ -168,7 +161,6 @@ The checkout panel never opens on any screen size.</pre>
         </div>
     </section>
 
-    <!-- INVESTIGATION ACTIONS -->
     <section class="fe-actions-taken">
 
         <h4 class="fe-section-title">Investigation actions</h4>
@@ -206,7 +198,6 @@ The checkout panel never opens on any screen size.</pre>
 
     </section>
 
-    <!-- DIAGNOSIS -->
     <section class="fe-diagnosis">
 
         <h4 class="fe-section-title">Diagnosis</h4>
@@ -306,7 +297,6 @@ The checkout panel never opens on any screen size.</pre>
         </p>
     </section>
 
-    <!-- FINDING -->
     <section class="fe-finding">
 
         <h4 class="fe-section-title">Technical finding</h4>
@@ -318,7 +308,7 @@ The checkout panel never opens on any screen size.</pre>
         <textarea
             id="fe-technical-finding"
             rows="5"
-            placeholder="The HTML button uses the id buy-now-btn, but product.js queries #checkout-btn, so querySelector returns null and addEventListener fails..."
+            placeholder="Describe the root cause in your own words, based on the evidence you reviewed..."
         ></textarea>
 
         <p id="fe-finding-validation" class="fe-validation" hidden>
@@ -334,18 +324,13 @@ The checkout panel never opens on any screen size.</pre>
 
     <div class="simulation-actions">
 
-        
-            href="{{ url_for(
-                'simulation_step',
-                career_id=career_id,
-                position_id=position_id,
-                company_id=company_id,
-                step=step - 1
-            ) }}"
-            class="secondary-btn"
-        >
-            ← Previous Step
-        </a>
+        <button
+    type="button"
+    class="secondary-btn"
+    onclick="window.location.href='{{ url_for('simulation_step', career_id=career_id, position_id=position_id, company_id=company_id, step=step - 1) }}'"
+    >
+        ← Previous Step
+    </button>
 
         <button
             type="submit"

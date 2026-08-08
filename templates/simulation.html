@@ -48,7 +48,7 @@
     ) }}?v=1"
     >
 
-<link
+    <link
     rel="stylesheet"
     href="{{ url_for(
         'static',
@@ -134,7 +134,7 @@
                 {{ ai_generation_error }}
             </p>
 
-            <a
+            
                 href="{{ url_for(
                     'simulation_step',
                     career_id=career_id,
@@ -226,12 +226,12 @@
         </form>
 
     {% endif %}
-    
+
             <!-- STEP 2 -->
-            
+
             {% elif step == 2 %}
 
-   {% if is_backend_simulation %}
+    {% if is_backend_simulation %}
 
         {% include "simulation_tasks/incident.html" %}
 
@@ -287,7 +287,7 @@
 
             <div class="simulation-actions">
 
-                <a
+                
                     href="{{ url_for(
                         'simulation_step',
                         career_id=career_id,
@@ -313,11 +313,11 @@
 
     {% endif %}
 
-                
+
             <!-- STEP 3 -->
 {% elif step == 3 %}
 
-   {% if is_backend_simulation %}
+    {% if is_backend_simulation %}
 
         {% include "simulation_tasks/code_review.html" %}
 
@@ -397,7 +397,7 @@
 
             <div class="simulation-actions">
 
-                <a
+                
                     href="{{ url_for(
                         'simulation_step',
                         career_id=career_id,
@@ -484,7 +484,7 @@
 
                         <div class="simulation-actions">
 
-                            <a
+                            
                                 href="{{ url_for(
                                     'simulation_step',
                                     career_id=career_id,
@@ -513,7 +513,7 @@
             <!-- STEP 5 -->
             {% elif step == 5 %}
 
-               {% if is_backend_simulation %}
+                {% if is_backend_simulation %}
 
                     {% include "simulation_tasks/team_chat.html" %}
 
@@ -577,7 +577,7 @@
 
                         <div class="simulation-actions">
 
-                            <a
+                            
                                 href="{{ url_for(
                                     'simulation_step',
                                     career_id=career_id,
@@ -619,7 +619,7 @@
 
                 <div class="simulation-actions">
 
-                    <a
+                    
                         href="{{ url_for(
                             'simulation_step',
                             career_id=career_id,
@@ -647,13 +647,6 @@
     defer
 ></script>
 
-<link
-    rel="stylesheet"
-    href="{{ url_for(
-        'static',
-        filename='css/simulation/incident.css'
-    ) }}?v=3"
->
 <script
     src="{{ url_for(
         'static',
