@@ -630,6 +630,45 @@ POSITIONS_DATA = {
                 }
             ]
         }
+    },
+
+    "ui-ux-designer": {
+
+        "ux-designer": {
+            "title": "UX Designer",
+
+            "companies": [
+                {
+                    "id": "designflow",
+                    "name": "DesignFlow",
+                    "location": "Local"
+                },
+
+                {
+                    "id": "nexora",
+                    "name": "Nexora",
+                    "location": "Global"
+                }
+            ]
+        },
+
+        "ui-designer": {
+            "title": "UI Designer",
+
+            "companies": [
+                {
+                    "id": "pixelcraft",
+                    "name": "PixelCraft",
+                    "location": "Local"
+                },
+
+                {
+                    "id": "visionlabs",
+                    "name": "VisionLabs",
+                    "location": "Global"
+                }
+            ]
+        }
     }
 }
 
