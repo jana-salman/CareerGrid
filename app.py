@@ -9,6 +9,7 @@ from routes.auth import auth_bp
 from services.simulation_generator import (
     generate_backend_inbox_task,
     generate_frontend_inbox_task,
+    generate_ux_inbox_task,
 )
 from services.roadmap_service import (
     RoadmapGenerationError,
@@ -27,6 +28,7 @@ from services.simulation_storage import (
     save_simulation_step_response,
     create_backend_simulation_attempt,
     create_frontend_simulation_attempt,
+    create_ux_simulation_attempt,
     get_backend_inbox_task,
     save_simulation_evaluation,
     save_simulation_roadmap,
@@ -591,6 +593,68 @@ FRONTEND_SCENARIO = {
 }
 
 
+# =========================================================
+# COMPLETE UX DESIGNER SIMULATION SCENARIO
+# =========================================================
+
+UX_SCENARIO = {
+    "scenario_id": "checkout-ux-redesign",
+    "career_id": "ui-ux-designer",
+    "position_id": "ux-designer",
+    "title": "Checkout Experience Redesign",
+
+    "steps": {
+        1: {
+            "sender": "Jordan Lee, Product Manager",
+            "subject": "Checkout abandonment has increased",
+            "body": (
+                "Our checkout abandonment rate has increased significantly. "
+                "We have user feedback, analytics, and usability findings "
+                "available for review. Please investigate the checkout "
+                "experience and identify the main source of friction."
+            ),
+        },
+
+        2: {
+            "title": "Investigate Checkout User Research",
+            "issue_id": "UX-2048",
+            "instructions": (
+                "Review analytics, user interviews, usability observations, "
+                "customer feedback, and the current checkout flow to identify "
+                "the primary UX problem."
+            ),
+        },
+
+        3: {
+            "title": "Redesign the Checkout User Flow",
+            "issue_id": "UX-2048",
+            "instructions": (
+                "Use the research findings to improve the checkout flow "
+                "and reduce unnecessary friction for users."
+            ),
+        },
+
+        4: {
+            "title": "Run Usability Tests",
+            "issue_id": "UX-2048",
+            "instructions": (
+                "Test the redesigned checkout experience with several "
+                "simulated users and evaluate the results."
+            ),
+        },
+
+        5: {
+            "title": "Send the UX Recommendation",
+            "issue_id": "UX-2048",
+            "channel": "product-design",
+            "recipient": "Jordan Lee, Product Manager",
+            "instructions": (
+                "Summarize the research findings, root cause, flow changes, "
+                "usability results, and final UX recommendation."
+            ),
+        },
+    },
+}
 
 POSITIONS_DATA = {
     "software-developer": {
@@ -1042,6 +1106,20 @@ def simulation_step(career_id, position_id, company_id, step):
         step_four_task = scenario_steps.get(4)
         step_five_task = scenario_steps.get(5)
 
+    elif (
+        career_id == UX_SCENARIO["career_id"]
+        and position_id == UX_SCENARIO["position_id"]
+    ):
+        scenario = UX_SCENARIO
+        scenario_steps = scenario["steps"]
+
+        email = scenario_steps.get(1)
+        step_two_task = scenario_steps.get(2)
+        step_three_task = scenario_steps.get(3)
+        step_four_task = scenario_steps.get(4)
+        step_five_task = scenario_steps.get(5)
+
+
     else:
         scenario = None
 
@@ -1154,8 +1232,18 @@ def simulation_step(career_id, position_id, company_id, step):
 
     generated_inbox_task = None
     ai_generation_error = None
+    is_ux_simulation = (
+        career_id == UX_SCENARIO["career_id"]
+        and position_id == UX_SCENARIO["position_id"]
 
-    if is_backend_simulation or is_frontend_simulation:
+    )
+
+    if (
+    is_backend_simulation
+    or is_frontend_simulation
+    or is_ux_simulation
+    ):
+        
         user_id = session.get("user_id")
 
         if not user_id:
@@ -1190,6 +1278,17 @@ def simulation_step(career_id, position_id, company_id, step):
                             company_id=company_id,
                             generated_inbox_task=complete_inbox_task,
                         )
+                    )
+                elif is_ux_simulation:
+                    complete_inbox_task = generate_ux_inbox_task(
+                        company_name=company_name
+                    )
+                    attempt_id = create_ux_simulation_attempt(
+                        user_id=user_id,
+                        career_id=career_id,
+                        position_id=position_id,
+                        company_id=company_id,
+                        generated_inbox_task=complete_inbox_task,
                     )
                 else:
                     complete_inbox_task = generate_backend_inbox_task(
@@ -1252,7 +1351,9 @@ def simulation_step(career_id, position_id, company_id, step):
 
         # The interactive Backend inbox submits structured JSON.
         elif (
-            is_backend_simulation or is_frontend_simulation
+            is_backend_simulation
+            or is_frontend_simulation
+            or is_ux_simulation
         ) and step == 1:
             try:
                 validated_response = validate_inbox_response(
@@ -1978,6 +2079,7 @@ def simulation_step(career_id, position_id, company_id, step):
         ai_generation_error=ai_generation_error,
         is_backend_simulation=is_backend_simulation,
         is_frontend_simulation=is_frontend_simulation,
+        is_ux_simulation=is_ux_simulation,
     )
 
 
