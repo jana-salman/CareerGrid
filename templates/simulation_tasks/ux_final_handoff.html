@@ -1,0 +1,641 @@
+<div class="task-heading">
+
+    <span class="task-icon">🚀</span>
+
+    <div>
+        <h3>Present Your Final UX Recommendation</h3>
+
+        <p>
+            The Product Manager is waiting for your final recommendation.
+            Turn your research, redesigned flow, and usability findings into
+            a clear stakeholder handoff and release decision.
+        </p>
+    </div>
+
+</div>
+
+
+<form
+    method="POST"
+    id="ux-handoff-form"
+    class="ux-handoff"
+>
+
+    <input
+        type="hidden"
+        id="ux-handoff-answer"
+        name="answer"
+        value=""
+    >
+
+
+    <!-- BRIEF -->
+
+    <section class="ux-handoff-section ux-stakeholder-brief">
+
+        <div>
+            <span class="ux-handoff-eyebrow">
+                PRODUCT REVIEW · UX-2048
+            </span>
+
+            <h4>Message from Jordan Lee</h4>
+
+            <p>
+                We need a final recommendation before tomorrow's release
+                meeting. Explain what was wrong, what you changed, what the
+                usability testing tells us, and what the team should do next.
+            </p>
+        </div>
+
+        <div class="ux-deadline-card">
+            <span>Decision needed</span>
+            <strong>Today</strong>
+        </div>
+
+    </section>
+
+
+    <!-- EVIDENCE -->
+
+    <section class="ux-handoff-section">
+
+        <h4>1. Build your evidence case</h4>
+
+        <p>
+            Select the <strong>3 strongest pieces of evidence</strong>.
+            Stakeholders do not need every detail — they need the evidence
+            that best supports your recommendation.
+        </p>
+
+
+        <div class="ux-evidence-grid">
+
+            <label class="ux-evidence-card">
+
+                <input
+                    type="checkbox"
+                    class="ux-handoff-evidence"
+                    value="funnel_drop"
+                >
+
+                <span class="ux-evidence-icon">📊</span>
+
+                <span>
+                    <strong>Checkout funnel</strong>
+
+                    <small>
+                        Major abandonment occurs between account creation
+                        and payment.
+                    </small>
+                </span>
+
+            </label>
+
+
+            <label class="ux-evidence-card">
+
+                <input
+                    type="checkbox"
+                    class="ux-handoff-evidence"
+                    value="interview"
+                >
+
+                <span class="ux-evidence-icon">🎙️</span>
+
+                <span>
+                    <strong>User interviews</strong>
+
+                    <small>
+                        Users explicitly rejected mandatory account creation.
+                    </small>
+                </span>
+
+            </label>
+
+
+            <label class="ux-evidence-card">
+
+                <input
+                    type="checkbox"
+                    class="ux-handoff-evidence"
+                    value="usability"
+                >
+
+                <span class="ux-evidence-icon">🧪</span>
+
+                <span>
+                    <strong>Usability sessions</strong>
+
+                    <small>
+                        Participants searched for guest checkout and abandoned.
+                    </small>
+                </span>
+
+            </label>
+
+
+            <label class="ux-evidence-card">
+
+                <input
+                    type="checkbox"
+                    class="ux-handoff-evidence"
+                    value="support"
+                >
+
+                <span class="ux-evidence-icon">💬</span>
+
+                <span>
+                    <strong>Support tickets</strong>
+
+                    <small>
+                        Customers repeatedly ask how to purchase as a guest.
+                    </small>
+                </span>
+
+            </label>
+
+
+            <label class="ux-evidence-card">
+
+                <input
+                    type="checkbox"
+                    class="ux-handoff-evidence"
+                    value="visual_preference"
+                >
+
+                <span class="ux-evidence-icon">🎨</span>
+
+                <span>
+                    <strong>Visual preference</strong>
+
+                    <small>
+                        Some users preferred the newer checkout styling.
+                    </small>
+                </span>
+
+            </label>
+
+
+            <label class="ux-evidence-card">
+
+                <input
+                    type="checkbox"
+                    class="ux-handoff-evidence"
+                    value="stakeholder_opinion"
+                >
+
+                <span class="ux-evidence-icon">👔</span>
+
+                <span>
+                    <strong>Stakeholder preference</strong>
+
+                    <small>
+                        Sales prefers account creation because it captures leads.
+                    </small>
+                </span>
+
+            </label>
+
+        </div>
+
+
+        <p
+            id="ux-evidence-count"
+            class="ux-selection-count"
+        >
+            0 / 3 selected
+        </p>
+
+    </section>
+
+
+    <!-- FINAL RECOMMENDATION -->
+
+    <section class="ux-handoff-section">
+
+        <h4>2. Make the product recommendation</h4>
+
+        <div class="ux-recommendation-grid">
+
+
+            <label class="ux-recommendation-card">
+
+                <input
+                    type="radio"
+                    name="ux_final_recommendation"
+                    value="keep_current"
+                >
+
+                <span>
+                    <strong>Keep current checkout</strong>
+
+                    <small>
+                        Retain mandatory account creation and monitor metrics.
+                    </small>
+                </span>
+
+            </label>
+
+
+            <label class="ux-recommendation-card">
+
+                <input
+                    type="radio"
+                    name="ux_final_recommendation"
+                    value="guest_checkout"
+                >
+
+                <span>
+                    <strong>Launch guest checkout</strong>
+
+                    <small>
+                        Remove mandatory account creation while preserving
+                        optional sign-in/account creation.
+                    </small>
+                </span>
+
+            </label>
+
+
+            <label class="ux-recommendation-card">
+
+                <input
+                    type="radio"
+                    name="ux_final_recommendation"
+                    value="full_redesign"
+                >
+
+                <span>
+                    <strong>Delay for full redesign</strong>
+
+                    <small>
+                        Stop release and redesign the entire checkout journey.
+                    </small>
+                </span>
+
+            </label>
+
+        </div>
+
+    </section>
+
+
+    <!-- SUCCESS METRICS -->
+
+    <section class="ux-handoff-section">
+
+        <h4>3. Define success</h4>
+
+        <p>
+            Choose the <strong>3 KPIs</strong> you would monitor after release.
+        </p>
+
+
+        <div class="ux-kpi-grid">
+
+            <label class="ux-kpi-card">
+                <input
+                    type="checkbox"
+                    class="ux-kpi"
+                    value="checkout_completion"
+                >
+
+                <span>
+                    <strong>Checkout completion</strong>
+                    <small>Primary conversion outcome</small>
+                </span>
+            </label>
+
+
+            <label class="ux-kpi-card">
+                <input
+                    type="checkbox"
+                    class="ux-kpi"
+                    value="checkout_time"
+                >
+
+                <span>
+                    <strong>Time to complete checkout</strong>
+                    <small>Measures task efficiency</small>
+                </span>
+            </label>
+
+
+            <label class="ux-kpi-card">
+                <input
+                    type="checkbox"
+                    class="ux-kpi"
+                    value="account_creation_rate"
+                >
+
+                <span>
+                    <strong>Optional account creation</strong>
+                    <small>Measures post-purchase account adoption</small>
+                </span>
+            </label>
+
+
+            <label class="ux-kpi-card">
+                <input
+                    type="checkbox"
+                    class="ux-kpi"
+                    value="error_rate"
+                >
+
+                <span>
+                    <strong>Checkout error rate</strong>
+                    <small>Measures usability breakdowns</small>
+                </span>
+            </label>
+
+
+            <label class="ux-kpi-card">
+                <input
+                    type="checkbox"
+                    class="ux-kpi"
+                    value="page_views"
+                >
+
+                <span>
+                    <strong>Homepage page views</strong>
+                    <small>General traffic volume</small>
+                </span>
+            </label>
+
+
+            <label class="ux-kpi-card">
+                <input
+                    type="checkbox"
+                    class="ux-kpi"
+                    value="social_followers"
+                >
+
+                <span>
+                    <strong>Social followers</strong>
+                    <small>Brand audience growth</small>
+                </span>
+            </label>
+
+        </div>
+
+
+        <p
+            id="ux-kpi-count"
+            class="ux-selection-count"
+        >
+            0 / 3 selected
+        </p>
+
+    </section>
+
+
+    <!-- NEXT ACTIONS -->
+
+    <section class="ux-handoff-section">
+
+        <h4>4. Prioritize the next actions</h4>
+
+        <p>
+            Choose the order in which the product team should act.
+        </p>
+
+
+        <div
+            id="ux-action-priority"
+            class="ux-action-priority"
+        >
+
+            <div
+                class="ux-priority-item"
+                data-action="guest_checkout"
+            >
+                <span>Implement guest checkout</span>
+
+                <div>
+                    <button type="button" class="ux-move-up">↑</button>
+                    <button type="button" class="ux-move-down">↓</button>
+                </div>
+            </div>
+
+
+            <div
+                class="ux-priority-item"
+                data-action="accessibility"
+            >
+                <span>Resolve high-risk accessibility issues</span>
+
+                <div>
+                    <button type="button" class="ux-move-up">↑</button>
+                    <button type="button" class="ux-move-down">↓</button>
+                </div>
+            </div>
+
+
+            <div
+                class="ux-priority-item"
+                data-action="analytics"
+            >
+                <span>Instrument checkout analytics</span>
+
+                <div>
+                    <button type="button" class="ux-move-up">↑</button>
+                    <button type="button" class="ux-move-down">↓</button>
+                </div>
+            </div>
+
+
+            <div
+                class="ux-priority-item"
+                data-action="experiment"
+            >
+                <span>Run post-release experiment</span>
+
+                <div>
+                    <button type="button" class="ux-move-up">↑</button>
+                    <button type="button" class="ux-move-down">↓</button>
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- STAKEHOLDER COMMUNICATION -->
+
+    <section class="ux-handoff-section">
+
+        <h4>5. Write the stakeholder recommendation</h4>
+
+        <p>
+            Keep it concise. Communicate the problem, evidence, decision,
+            risk, and next step as if this were going directly to the
+            Product Manager.
+        </p>
+
+
+        <textarea
+            id="ux-stakeholder-message"
+            rows="8"
+            maxlength="1800"
+            placeholder="Example: Research indicates that mandatory account creation is the primary checkout barrier..."
+        ></textarea>
+
+
+        <div class="ux-message-meta">
+
+            <span id="ux-message-length">
+                0 characters
+            </span>
+
+            <span>
+                Recommended: 180–700 characters
+            </span>
+
+        </div>
+
+    </section>
+
+
+    <!-- HANDOFF PREVIEW -->
+
+    <section class="ux-handoff-section">
+
+        <div class="ux-preview-heading">
+
+            <div>
+                <h4>6. Stakeholder handoff preview</h4>
+
+                <p>
+                    Generate the final handoff before submitting.
+                </p>
+            </div>
+
+
+            <button
+                type="button"
+                id="ux-preview-handoff"
+                class="secondary-btn"
+            >
+                Generate Handoff
+            </button>
+
+        </div>
+
+
+        <div
+            id="ux-handoff-preview"
+            class="ux-handoff-preview"
+            hidden
+        >
+
+            <div class="ux-preview-header">
+
+                <div>
+                    <span>TO</span>
+                    <strong>Jordan Lee · Product Manager</strong>
+                </div>
+
+                <div>
+                    <span>SUBJECT</span>
+                    <strong>UX-2048 Checkout Recommendation</strong>
+                </div>
+
+            </div>
+
+
+            <div class="ux-preview-block">
+
+                <span class="ux-preview-label">
+                    RECOMMENDATION
+                </span>
+
+                <strong id="ux-preview-recommendation">
+                    —
+                </strong>
+
+            </div>
+
+
+            <div class="ux-preview-block">
+
+                <span class="ux-preview-label">
+                    KEY EVIDENCE
+                </span>
+
+                <ul id="ux-preview-evidence"></ul>
+
+            </div>
+
+
+            <div class="ux-preview-block">
+
+                <span class="ux-preview-label">
+                    SUCCESS METRICS
+                </span>
+
+                <ul id="ux-preview-kpis"></ul>
+
+            </div>
+
+
+            <div class="ux-preview-block">
+
+                <span class="ux-preview-label">
+                    MESSAGE
+                </span>
+
+                <p id="ux-preview-message"></p>
+
+            </div>
+
+        </div>
+
+
+        <p
+            id="ux-handoff-status"
+            class="ux-status"
+        >
+            Complete your recommendation and generate the handoff.
+        </p>
+
+    </section>
+
+
+    {% if error %}
+
+        <p class="error-message">
+            {{ error }}
+        </p>
+
+    {% endif %}
+
+
+    <div class="simulation-actions">
+
+        <button
+            type="button"
+            class="secondary-btn"
+            onclick="window.location.href='{{ url_for(
+                'simulation_step',
+                career_id=career_id,
+                position_id=position_id,
+                company_id=company_id,
+                step=4
+            ) }}'"
+        >
+            ← Previous Step
+        </button>
+
+
+        <button
+            type="submit"
+            id="ux-handoff-submit"
+            class="main-btn"
+        >
+            Finish Simulation
+        </button>
+
+    </div>
+
+</form>

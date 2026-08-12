@@ -1,0 +1,343 @@
+.ux-research {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.ux-issue-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    margin: 0;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: #eef4ff;
+    color: #315ea8;
+    font-size: 13px;
+}
+
+.ux-section {
+    padding: 22px;
+    border: 1px solid #dfe6f1;
+    border-radius: 18px;
+    background: #ffffff;
+}
+
+.ux-section-title {
+    margin: 0 0 6px;
+    color: #17233c;
+    font-size: 20px;
+}
+
+.ux-section-hint {
+    margin: 0 0 18px;
+    color: #66738a;
+    line-height: 1.6;
+}
+
+.ux-evidence-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ux-evidence-item {
+    overflow: hidden;
+    border: 1px solid #dfe6f1;
+    border-radius: 14px;
+    background: #f8fafc;
+}
+
+.ux-evidence-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 15px 16px;
+    border: 0;
+    background: transparent;
+    color: #17233c;
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+}
+
+.ux-evidence-toggle:hover {
+    background: #f1f5fb;
+}
+
+.ux-evidence-toggle.active {
+    background: #edf4ff;
+    color: #245fc7;
+}
+
+.ux-evidence-body {
+    padding: 0 16px 16px;
+    color: #44516a;
+    line-height: 1.7;
+}
+
+.ux-evidence-body p {
+    margin: 10px 0 0;
+}
+
+.ux-evidence-body blockquote {
+    margin: 14px 0 0;
+    padding: 14px 16px;
+    border-left: 4px solid #8ab4ff;
+    border-radius: 10px;
+    background: #eef4ff;
+    color: #31405a;
+}
+
+.ux-metric-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 14px;
+    margin-top: 10px;
+    border-radius: 10px;
+    background: #ffffff;
+    border: 1px solid #e5eaf2;
+}
+
+.ux-metric-alert {
+    border-color: #ffc7cf;
+    background: #fff3f5;
+}
+
+.ux-evidence-note {
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #fff8e7;
+    color: #7a5a12;
+}
+
+.ux-support-list {
+    margin: 10px 0 0;
+    padding-left: 22px;
+}
+
+.ux-support-list li {
+    margin-bottom: 10px;
+}
+
+.ux-flow-preview {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.ux-flow-preview span {
+    padding: 10px 13px;
+    border-radius: 10px;
+    background: #ffffff;
+    border: 1px solid #dfe6f1;
+}
+
+.ux-flow-preview span:nth-child(even) {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #94a0b3;
+}
+
+.ux-flow-preview .ux-flow-problem {
+    border-color: #ffbdc7;
+    background: #fff1f3;
+    color: #be2443;
+    font-weight: 700;
+}
+
+.ux-check,
+.ux-radio {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 13px 14px;
+    margin-bottom: 10px;
+    border: 1px solid #dfe6f1;
+    border-radius: 12px;
+    background: #f9fbfd;
+    cursor: pointer;
+}
+
+.ux-check:hover,
+.ux-radio:hover {
+    border-color: #b8cff8;
+    background: #f4f8ff;
+}
+
+.ux-check input,
+.ux-radio input {
+    margin-top: 3px;
+    accent-color: #2f6bed;
+}
+
+.ux-radio span {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.ux-radio strong {
+    color: #17233c;
+}
+
+.ux-radio small {
+    color: #6c7890;
+    line-height: 1.45;
+}
+
+.ux-choice-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0 0 22px;
+    padding: 0;
+    border: 0;
+}
+
+.ux-choice-group legend {
+    margin-bottom: 12px;
+    color: #25324a;
+    font-weight: 700;
+}
+
+.ux-diagnosis-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.ux-link-btn {
+    padding: 10px 14px;
+    border: 0;
+    background: transparent;
+    color: #2f6bed;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.ux-link-btn:hover {
+    text-decoration: underline;
+}
+
+.ux-hint {
+    margin: 14px 0 0;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #fff8e7;
+    color: #7a5a12;
+    line-height: 1.5;
+}
+
+.ux-status {
+    margin: 14px 0 0;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #f5f7fa;
+    color: #58667c;
+}
+
+.ux-status--success {
+    background: #edf9f1;
+    color: #276b43;
+}
+
+.ux-status--warning {
+    background: #fff8e7;
+    color: #7a5a12;
+}
+
+.ux-status--error {
+    background: #fff0f2;
+    color: #b4233f;
+}
+
+.ux-field-label {
+    display: block;
+    margin-bottom: 10px;
+    color: #33415b;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+#ux-research-finding {
+    width: 100%;
+    min-height: 130px;
+    box-sizing: border-box;
+    padding: 14px;
+    border: 1px solid #cfd8e6;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #17233c;
+    font: inherit;
+    line-height: 1.6;
+    resize: vertical;
+    outline: none;
+}
+
+#ux-research-finding:focus {
+    border-color: #5d8ff1;
+    box-shadow: 0 0 0 3px rgba(47, 107, 237, 0.12);
+}
+
+.ux-validation {
+    margin: 8px 0 0;
+    color: #b4233f;
+    font-size: 14px;
+}
+
+.simulation-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-top: 6px;
+}
+
+.simulation-actions .secondary-btn,
+.simulation-actions .main-btn {
+    min-width: 180px;
+}
+
+@media (max-width: 760px) {
+    .ux-section {
+        padding: 18px;
+    }
+
+    .ux-metric-row {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .ux-flow-preview {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ux-flow-preview span:nth-child(even) {
+        align-self: center;
+        transform: rotate(90deg);
+    }
+
+    .ux-diagnosis-controls,
+    .simulation-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .simulation-actions .secondary-btn,
+    .simulation-actions .main-btn {
+        width: 100%;
+    }
+}

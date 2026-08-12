@@ -1,0 +1,607 @@
+/* =========================================================
+   UI DESIGNER — STEP 3
+   COMPONENT SYSTEM
+   ========================================================= */
+
+.ui-component-builder {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    width: 100%;
+}
+
+.ui-component-section,
+.ui-component-workspace {
+    border: 1px solid #dce5f3;
+    border-radius: 24px;
+    background: #ffffff;
+    padding: 30px;
+}
+
+.ui-component-tag {
+    display: inline-block;
+    margin-bottom: 10px;
+    color: #2f67f6;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .05em;
+}
+
+.ui-component-section h4 {
+    margin: 0 0 10px;
+    color: #17233b;
+    font-size: 24px;
+}
+
+.ui-component-section p {
+    margin: 0;
+    color: #66738d;
+    line-height: 1.6;
+}
+
+.ui-component-brief {
+    background: #f8faff;
+}
+
+
+/* =========================================================
+   WORKSPACE
+   ========================================================= */
+
+.ui-component-workspace {
+    display: grid;
+    grid-template-columns: minmax(320px, .85fr) minmax(430px, 1.15fr);
+    gap: 30px;
+    align-items: start;
+}
+
+.ui-component-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.ui-component-group {
+    padding: 20px;
+    border: 1px solid #dce5f3;
+    border-radius: 16px;
+    background: #ffffff;
+}
+
+.ui-component-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 32px;
+    height: 32px;
+
+    margin-bottom: 12px;
+
+    border-radius: 50%;
+    background: #edf2ff;
+    color: #2f67f6;
+
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.ui-component-group h4 {
+    margin: 0 0 4px;
+    color: #17233b;
+    font-size: 18px;
+}
+
+.ui-component-group p {
+    margin: 0 0 16px;
+    color: #78859e;
+    font-size: 14px;
+}
+
+
+/* =========================================================
+   OPTIONS
+   ========================================================= */
+
+.ui-component-options {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 9px;
+}
+
+.ui-component-option {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+
+    width: 100%;
+    padding: 13px 15px;
+
+    border: 1px solid #d5deed;
+    border-radius: 11px;
+
+    background: #ffffff;
+    text-align: left;
+
+    cursor: pointer;
+    transition: .18s ease;
+}
+
+.ui-component-option:hover {
+    border-color: #8daaf7;
+    background: #f8faff;
+}
+
+.ui-component-option.active {
+    border: 2px solid #316cf4;
+    background: #f1f5ff;
+}
+
+.ui-component-option strong {
+    color: #17233b;
+    font-size: 14px;
+}
+
+.ui-component-option span {
+    margin-top: 3px;
+    color: #7a879e;
+    font-size: 12px;
+}
+
+
+/* =========================================================
+   PREVIEW COLUMN
+   ========================================================= */
+
+.ui-component-preview-column {
+    position: sticky;
+    top: 20px;
+}
+
+.ui-component-preview-heading {
+    margin-bottom: 14px;
+}
+
+.ui-component-preview-heading span {
+    color: #2f67f6;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .08em;
+}
+
+.ui-component-preview-heading h4 {
+    margin: 4px 0 0;
+    color: #17233b;
+    font-size: 20px;
+}
+
+
+/* =========================================================
+   COMPONENT PREVIEW
+   ========================================================= */
+
+.ui-component-preview {
+    --ui-primary: #316cf4;
+    --ui-radius: 10px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    padding: 22px;
+
+    border: 1px solid #dce5f3;
+    border-radius: 18px;
+
+    background: #f6f8fc;
+}
+
+.ui-preview-block {
+    padding: 20px;
+
+    border: 1px solid #e0e7f1;
+    border-radius: 14px;
+
+    background: #ffffff;
+}
+
+.ui-preview-block h5 {
+    margin: 0 0 15px;
+    color: #17233b;
+    font-size: 15px;
+}
+
+
+/* =========================================================
+   BUTTON PREVIEW
+   ========================================================= */
+
+.ui-preview-button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.ui-demo-primary,
+.ui-demo-secondary,
+.ui-state-button {
+    padding: 11px 16px;
+
+    border-radius: var(--ui-radius);
+
+    font: inherit;
+    font-weight: 700;
+
+    cursor: pointer;
+    transition: .15s ease;
+}
+
+/* Primary states */
+
+.ui-primary-solid .ui-demo-primary {
+    border: 1px solid var(--ui-primary);
+    background: var(--ui-primary);
+    color: #ffffff;
+}
+
+.ui-primary-soft .ui-demo-primary {
+    border: 1px solid transparent;
+    background: color-mix(
+        in srgb,
+        var(--ui-primary) 12%,
+        white
+    );
+    color: var(--ui-primary);
+}
+
+.ui-primary-outline .ui-demo-primary {
+    border: 1px solid var(--ui-primary);
+    background: #ffffff;
+    color: var(--ui-primary);
+}
+
+
+/* Secondary states */
+
+.ui-secondary-outline .ui-demo-secondary {
+    border: 1px solid #cbd5e3;
+    background: #ffffff;
+    color: #33415b;
+}
+
+.ui-secondary-ghost .ui-demo-secondary {
+    border: 1px solid transparent;
+    background: transparent;
+    color: #536078;
+}
+
+.ui-secondary-soft .ui-demo-secondary {
+    border: 1px solid transparent;
+    background: #eef2f7;
+    color: #33415b;
+}
+
+
+/* =========================================================
+   INPUT PREVIEW
+   ========================================================= */
+
+.ui-demo-label {
+    display: block;
+    margin-bottom: 7px;
+
+    color: #33415b;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.ui-demo-input {
+    width: 100%;
+    box-sizing: border-box;
+
+    padding: 12px 13px;
+
+    border-radius: var(--ui-radius);
+
+    color: #17233b;
+    font: inherit;
+
+    outline: none;
+}
+
+.ui-input-outlined .ui-demo-input {
+    border: 1px solid #cfd8e6;
+    background: #ffffff;
+}
+
+.ui-input-filled .ui-demo-input {
+    border: 1px solid transparent;
+    background: #eef2f7;
+}
+
+.ui-input-underlined .ui-demo-input {
+    border: 0;
+    border-bottom: 2px solid #cfd8e6;
+    border-radius: 0;
+    background: transparent;
+}
+
+.ui-demo-helper {
+    display: block;
+    margin-top: 7px;
+    color: #8490a4;
+    font-size: 11px;
+}
+
+
+/* =========================================================
+   FOCUS STATES
+   ========================================================= */
+
+.ui-focus-ring .ui-demo-input:focus {
+    border-color: var(--ui-primary);
+    box-shadow:
+        0 0 0 3px
+        color-mix(
+            in srgb,
+            var(--ui-primary) 18%,
+            transparent
+        );
+}
+
+.ui-focus-border .ui-demo-input:focus {
+    border-color: var(--ui-primary);
+    box-shadow: none;
+}
+
+.ui-focus-shadow .ui-demo-input:focus {
+    border-color: transparent;
+    box-shadow:
+        0 4px 18px
+        color-mix(
+            in srgb,
+            var(--ui-primary) 25%,
+            transparent
+        );
+}
+
+
+/* =========================================================
+   CARD
+   ========================================================= */
+
+.ui-demo-card {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+
+    padding: 18px;
+
+    border: 1px solid #dce5f3;
+    border-radius: var(--ui-radius);
+
+    background: #ffffff;
+}
+
+.ui-demo-eyebrow {
+    display: block;
+    margin-bottom: 5px;
+
+    color: var(--ui-primary);
+
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .05em;
+}
+
+.ui-demo-card h4 {
+    margin: 0 0 6px;
+
+    color: #17233b;
+    font-size: 17px;
+}
+
+.ui-demo-card p {
+    margin: 0;
+
+    max-width: 350px;
+
+    color: #748096;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   STATUS BADGES
+   ========================================================= */
+
+.ui-demo-status {
+    white-space: nowrap;
+
+    padding: 6px 9px;
+
+    border-radius: 20px;
+    background: #eaf8f0;
+    color: #167648;
+
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.ui-status-label-only .ui-demo-status::first-letter {
+    font-size: 0;
+}
+
+.ui-status-dot-label .ui-demo-status::before {
+    content: "";
+    display: inline-block;
+
+    width: 7px;
+    height: 7px;
+
+    margin-right: 6px;
+
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.ui-status-dot-label .ui-demo-status {
+    font-size: 0;
+}
+
+.ui-status-dot-label .ui-demo-status::after {
+    content: "In progress";
+    font-size: 11px;
+}
+
+.ui-status-label-only .ui-demo-status {
+    font-size: 0;
+}
+
+.ui-status-label-only .ui-demo-status::after {
+    content: "In progress";
+    font-size: 11px;
+}
+
+
+/* =========================================================
+   INTERACTION STATES
+   ========================================================= */
+
+.ui-state-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+}
+
+.ui-state-grid > div {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.ui-state-grid span {
+    color: #8490a4;
+    font-size: 11px;
+}
+
+.ui-state-button {
+    border: 1px solid var(--ui-primary);
+    background: var(--ui-primary);
+    color: #ffffff;
+}
+
+.ui-state-hover {
+    filter: brightness(.92);
+    transform: translateY(-1px);
+}
+
+.ui-state-button:disabled {
+    border-color: #d7dee9;
+    background: #e8edf4;
+    color: #97a2b5;
+    cursor: not-allowed;
+}
+
+
+/* =========================================================
+   RATIONALE
+   ========================================================= */
+
+.ui-component-rationale {
+    width: 100%;
+    min-height: 150px;
+
+    box-sizing: border-box;
+
+    margin-top: 18px;
+    padding: 16px;
+
+    border: 1px solid #d5deed;
+    border-radius: 12px;
+
+    resize: vertical;
+
+    color: #17233b;
+    font: inherit;
+
+    outline: none;
+}
+
+.ui-component-rationale:focus {
+    border-color: #316cf4;
+
+    box-shadow:
+        0 0 0 3px
+        rgba(49, 108, 244, .10);
+}
+
+.ui-component-character-row {
+    display: flex;
+    justify-content: space-between;
+
+    margin-top: 8px;
+
+    color: #8a96aa;
+    font-size: 12px;
+}
+
+
+/* =========================================================
+   STATUS MESSAGE
+   ========================================================= */
+
+.ui-component-status {
+    padding: 14px 16px;
+
+    border-radius: 10px;
+
+    background: #f1f5ff;
+    color: #42577d;
+}
+
+.ui-component-status--error {
+    background: #fff0f1;
+    color: #c6283e;
+}
+
+.ui-component-status--success {
+    background: #edf9f1;
+    color: #26734a;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1000px) {
+    .ui-component-workspace {
+        grid-template-columns: 1fr;
+    }
+
+    .ui-component-preview-column {
+        position: static;
+    }
+}
+
+@media (max-width: 700px) {
+    .ui-state-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ui-demo-card {
+        flex-direction: column;
+    }
+
+    .ui-preview-button-row {
+        flex-direction: column;
+    }
+
+    .ui-demo-primary,
+    .ui-demo-secondary {
+        width: 100%;
+    }
+}
