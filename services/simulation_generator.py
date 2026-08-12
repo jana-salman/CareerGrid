@@ -2,6 +2,7 @@ import os
 from google.genai import types
 from schemas.inbox_schema import BackendInboxTask
 from schemas.frontend_inbox_schema import FrontendInboxTask
+from schemas.ux_inbox_schema import UXInboxTask
 from services.gemini_service import get_gemini_client
 
 
@@ -204,3 +205,133 @@ Requirements:
     raise RuntimeError(
         "Gemini did not return an inbox simulation."
     )
+
+def generate_ux_inbox_task(
+    company_name: str = "CareerGrid Technologies"
+) -> dict:
+    """
+    Generate the first interactive task for a UX Designer.
+
+    Args:
+        company_name:
+            The company selected by the user.
+
+    Returns:
+        A validated Python dictionary matching UXInboxTask.
+
+    Raises:
+        RuntimeError:
+            If Gemini returns no usable response.
+    """
+
+    model = os.getenv(
+        "GEMINI_MODEL",
+        "gemini-3.1-flash-lite"
+    )
+def generate_ui_inbox_task(company_name):
+    """
+    UI Designer - Step 1
+    Interactive workplace inbox.
+
+    Uses the same shared inbox structure as the existing
+    Backend / Frontend / UX simulations.
+    """
+
+    return {
+        "title": "UI Designer Workday Inbox",
+
+        "introduction": (
+            "You are starting your day as a UI Designer. "
+            "Review the messages, prioritize the work, choose what "
+            "you would handle first, and write a professional response."
+        ),
+
+        "position_name": "UI Designer",
+        "company_name": company_name,
+
+        "emails": [
+            {
+                "id": "ui_design_review",
+                "sender_name": "Maya Chen",
+                "sender_role": "Product Design Lead",
+                "subject": "Dashboard visual design review needed before release",
+                "preview": (
+                    "The dashboard works, but the visual system needs "
+                    "a final design review before release."
+                ),
+                "body": (
+                    f"Hi,\n\n"
+                    f"The engineering team at {company_name} has completed "
+                    "the first implementation of our analytics dashboard.\n\n"
+                    "Functionally it works, but the interface still has "
+                    "visual inconsistencies across typography, spacing, "
+                    "hierarchy, component styling, colors, states, and "
+                    "alignment.\n\n"
+                    "Please review the dashboard and identify the "
+                    "highest-impact UI problems before engineering proceeds "
+                    "with the final release.\n\n"
+                    "Pay particular attention to visual hierarchy, "
+                    "consistency, readability, spacing, component quality, "
+                    "responsive behavior, and accessibility.\n\n"
+                    "Please send me your recommendations and explain what "
+                    "engineering should prioritize before release.\n\n"
+                    "Thanks,\n"
+                    "Maya"
+                ),
+                "priority": "high"
+            },
+
+            {
+                "id": "ui_component_request",
+                "sender_name": "Daniel Brooks",
+                "sender_role": "Frontend Engineer",
+                "subject": "Need clarification on button states",
+                "preview": (
+                    "Can you confirm the visual states for our buttons?"
+                ),
+                "body": (
+                    "Hi,\n\n"
+                    "I'm finishing the dashboard component implementation "
+                    "and noticed that our buttons use inconsistent states "
+                    "across the product.\n\n"
+                    "Hover, focus, disabled, and loading states currently "
+                    "look different depending on the screen.\n\n"
+                    "Can you define which states should be standardized "
+                    "before I finish implementation?\n\n"
+                    "Thanks,\n"
+                    "Daniel"
+                ),
+                "priority": "medium"
+            },
+
+            {
+                "id": "ui_marketing_request",
+                "sender_name": "Sofia Martinez",
+                "sender_role": "Marketing Designer",
+                "subject": "Quick color question for campaign graphic",
+                "preview": (
+                    "Which blue should I use for the campaign graphic?"
+                ),
+                "body": (
+                    "Hey,\n\n"
+                    "I'm preparing a campaign graphic and noticed two "
+                    "similar blue colors in our design files.\n\n"
+                    "Can you confirm which one should be used for the "
+                    "primary CTA?\n\n"
+                    "Thanks,\n"
+                    "Sofia"
+                ),
+                "priority": "low"
+            }
+        ],
+
+        # IMPORTANT:
+        # inbox.html renders each action directly.
+        # These MUST therefore be strings.
+        "available_first_actions": [
+            "Review the dashboard visual design issues before release",
+            "Clarify the component states with the frontend engineer",
+            "Answer the marketing color question",
+            "Schedule a broader design review before taking action"
+        ]
+    }
