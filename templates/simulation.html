@@ -63,6 +63,91 @@
         filename='css/simulation/frontend_simulation.css'
     ) }}?v=1"
 >
+<link
+    rel="stylesheet"
+    href="{{ url_for(
+        'static',
+        filename='css/simulation/ux_research.css'
+    ) }}?v=2"
+>
+
+<link
+    rel="stylesheet"
+    href="{{ url_for(
+        'static',
+        filename='css/simulation/ux_flow_builder.css'
+    ) }}?v=3"
+>
+
+{% if is_ux_simulation and step == 4 %}
+<link
+    rel="stylesheet"
+    href="{{ url_for(
+        'static',
+        filename='css/simulation/ux_usability_audit.css'
+    ) }}?v=5"
+>
+{% endif %}
+
+{% if is_ux_simulation and step == 5 %}
+<link
+    rel="stylesheet"
+    href="{{ url_for(
+        'static',
+        filename='css/simulation/ux_final_handoff.css'
+    ) }}?v=1"
+>
+{% endif %}
+
+{% if is_ui_simulation and step == 2 %}
+<link
+    rel="stylesheet"
+    href="{{ url_for(
+        'static',
+        filename='css/simulation/ui_visual_audit.css'
+    ) }}?v=2"
+>
+{% endif %}
+
+{% if is_ui_simulation and step == 3 %}
+<link
+    rel="stylesheet"
+    href="{{ url_for(
+        'static',
+        filename='css/simulation/ui_component_system.css'
+    ) }}?v=1"
+>
+{% endif %}
+
+{% if is_ui_simulation and step == 4 %}
+<link
+    rel="stylesheet"
+    href="{{ url_for(
+        'static',
+        filename='css/simulation/ui_quality_assurance.css'
+    ) }}?v=1"
+>
+{% endif %}
+
+{% if is_ui_simulation and step == 4 %}
+<link
+    rel="stylesheet"
+    href="{{ url_for(
+        'static',
+        filename='css/simulation/ui_quality_assurance.css'
+    ) }}?v=2"
+>
+{% endif %}
+
+{% if is_ui_simulation and step == 5 %}
+<link
+    rel="stylesheet"
+    href="{{ url_for(
+        'static',
+        filename='css/simulation/ui_design_handoff.css'
+    ) }}?v=1"
+>
+{% endif %}
 
 </head>
 
@@ -239,6 +324,14 @@
 
         {% include "simulation_tasks/frontend_investigation.html" %}
 
+    {% elif is_ux_simulation %}
+
+        {% include "simulation_tasks/ux_research.html" %}
+    
+    {% elif is_ui_simulation %}
+
+        {% include "simulation_tasks/ui_visual_audit.html" %}
+
     {% else %}
 
         <div class="task-heading">
@@ -324,6 +417,14 @@
     {% elif is_frontend_simulation %}
 
         {% include "simulation_tasks/frontend_code_lab.html" %}
+
+    {% elif is_ux_simulation %}
+
+        {% include "simulation_tasks/ux_flow_builder.html" %}
+
+    {% elif is_ui_simulation %}
+
+        {% include "simulation_tasks/ui_component_system.html" %}
 
     {% else %}
 
@@ -433,6 +534,13 @@
                 {% elif is_frontend_simulation %}
 
                     {% include "simulation_tasks/frontend_browser_testing.html" %}
+                
+                {% elif is_ux_simulation %}
+
+                    {% include "simulation_tasks/ux_usability_audit.html" %}
+                {% elif is_ui_simulation and step == 4 %}
+
+                    {% include "simulation_tasks/ui_quality_assurance.html" %}
 
                 {% else %}
 
@@ -520,6 +628,14 @@
                 {% elif is_frontend_simulation %}
 
                     {% include "simulation_tasks/frontend_team_chat.html" %}
+                
+                {% elif is_ux_simulation %}
+
+                    {% include "simulation_tasks/ux_final_handoff.html" %}
+                
+                {% elif is_ui_simulation and step == 5 %}
+
+                    {% include "simulation_tasks/ui_design_handoff.html" %}
 
                 {% else %}
 
@@ -710,6 +826,94 @@
     ) }}?v=1"
     defer
 ></script>
+{% if is_ux_simulation and step == 2 %}
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/ux_research.js'
+    ) }}?v=1"
+    defer
+></script>
+{% endif %}
+
+
+{% if is_ui_simulation and step == 2 %}
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/ui_visual_audit.js'
+    ) }}?v=1"
+    defer
+></script>
+{% endif %}
+
+
+{% if is_ux_simulation and step == 3 %}
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/ux_flow_builder.js'
+    ) }}?v=2"
+    defer
+></script>
+{% endif %}
+
+{% if is_ui_simulation and step == 3 %}
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/ui_component_system.js'
+    ) }}?v=1"
+    defer
+></script>
+{% endif %}
+
+{% if is_ui_simulation and step == 3 %}
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/ui_component_system.js'
+    ) }}?v=1"
+></script>
+{% endif %}
+
+{% if is_ux_simulation and step == 4 %}
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/ux_usability_audit.js'
+    ) }}?v=5"
+    defer
+></script>
+{% endif %}
+
+{% if is_ux_simulation and step == 5 %}
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/ux_final_handoff.js'
+    ) }}?v=1"
+    defer
+></script>
+{% endif %}
+
+{% if is_ui_simulation and step == 4 %}
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/ui_quality_assurance.js'
+    ) }}?v=1"
+></script>
+{% endif %}
+
+{% if is_ui_simulation and step == 5 %}
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/ui_design_handoff.js'
+    ) }}?v=1"
+></script>
+{% endif %}
 
 </body>
 </html>

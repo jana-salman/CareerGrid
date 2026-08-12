@@ -1,0 +1,209 @@
+<div class="task-heading">
+    <span class="task-icon">💬</span>
+
+    <div>
+        <h3>Send the UI Design Handoff</h3>
+        <p>
+            Prepare the final UI handoff for engineering.
+            Summarize the visual system, component rules,
+            responsive behavior, accessibility requirements,
+            and implementation priorities.
+        </p>
+    </div>
+</div>
+
+<form method="POST" id="ui-handoff-form">
+
+    <input
+        type="hidden"
+        id="ui-handoff-answer"
+        name="answer"
+        value=""
+    >
+
+    <section class="ui-handoff-section ui-handoff-request">
+
+        <span class="ui-handoff-tag">
+            UI-5102 · ENGINEERING HANDOFF
+        </span>
+
+        <h4>Team Lead Request</h4>
+
+        <p>
+            Maya Chen, Product Design Lead:
+        </p>
+
+        <blockquote>
+            Please prepare the final UI handoff for engineering.
+            Include the visual direction, component standards,
+            responsive behavior, accessibility requirements,
+            and anything developers must verify before release.
+        </blockquote>
+
+    </section>
+
+
+    <section class="ui-handoff-grid">
+
+        <div class="ui-handoff-field">
+            <label for="ui-handoff-visual">
+                1. Visual Direction
+            </label>
+
+            <textarea
+                id="ui-handoff-visual"
+                placeholder="Summarize color, typography, spacing, radius and card treatment..."
+            ></textarea>
+        </div>
+
+
+        <div class="ui-handoff-field">
+            <label for="ui-handoff-components">
+                2. Component Standards
+            </label>
+
+            <textarea
+                id="ui-handoff-components"
+                placeholder="Explain button hierarchy, input treatment, status badges and interaction states..."
+            ></textarea>
+        </div>
+
+
+        <div class="ui-handoff-field">
+            <label for="ui-handoff-responsive">
+                3. Responsive Behavior
+            </label>
+
+            <textarea
+                id="ui-handoff-responsive"
+                placeholder="Explain desktop, tablet and mobile layout expectations..."
+            ></textarea>
+        </div>
+
+
+        <div class="ui-handoff-field">
+            <label for="ui-handoff-accessibility">
+                4. Accessibility Requirements
+            </label>
+
+            <textarea
+                id="ui-handoff-accessibility"
+                placeholder="Document contrast, focus states, readable text and touch-target requirements..."
+            ></textarea>
+        </div>
+
+    </section>
+
+
+    <section class="ui-handoff-section">
+
+        <h4>Implementation Priority</h4>
+
+        <p>
+            What should engineering prioritize during implementation?
+        </p>
+
+        <div class="ui-handoff-priorities">
+
+            <button
+                type="button"
+                class="ui-handoff-priority"
+                data-priority="visual_consistency"
+            >
+                <strong>Visual Consistency</strong>
+                <span>
+                    Ensure every screen follows the same visual system.
+                </span>
+            </button>
+
+            <button
+                type="button"
+                class="ui-handoff-priority"
+                data-priority="component_accuracy"
+            >
+                <strong>Component Accuracy</strong>
+                <span>
+                    Implement reusable components and states correctly.
+                </span>
+            </button>
+
+            <button
+                type="button"
+                class="ui-handoff-priority"
+                data-priority="responsive_accessibility"
+            >
+                <strong>Responsive + Accessibility</strong>
+                <span>
+                    Protect mobile behavior, contrast, focus and touch targets.
+                </span>
+            </button>
+
+        </div>
+
+    </section>
+
+
+    <section class="ui-handoff-section">
+
+        <h4>Final Engineering Message</h4>
+
+        <p>
+            Write the final message you would send to the engineering team.
+        </p>
+
+        <textarea
+            id="ui-handoff-message"
+            class="ui-handoff-message"
+            placeholder="Hi team, the UI system is ready for implementation..."
+        ></textarea>
+
+        <div class="ui-handoff-character-row">
+            <span id="ui-handoff-count">
+                0 characters
+            </span>
+
+            <span>
+                Recommended: 150–700 characters
+            </span>
+        </div>
+
+    </section>
+
+
+    <p id="ui-handoff-status" class="ui-handoff-status">
+        Complete the handoff before finishing the simulation.
+    </p>
+
+
+    {% if error %}
+        <p class="error-message">
+            {{ error }}
+        </p>
+    {% endif %}
+
+
+    <div class="simulation-actions">
+
+        <a
+            href="{{ url_for(
+                'simulation_step',
+                career_id=career_id,
+                position_id=position_id,
+                company_id=company_id,
+                step=4
+            ) }}"
+            class="secondary-btn"
+        >
+            ← Previous Step
+        </a>
+
+        <button
+            type="submit"
+            class="main-btn"
+        >
+            Finish Simulation
+        </button>
+
+    </div>
+
+</form>

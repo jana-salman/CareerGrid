@@ -200,6 +200,51 @@ def create_frontend_simulation_attempt(
         generated_inbox_task=generated_inbox_task,
     )
 
+def create_ux_simulation_attempt(
+    *,
+    user_id: str,
+    career_id: str,
+    position_id: str,
+    company_id: str,
+    generated_inbox_task: dict[str, Any],
+) -> str:
+    """
+    Create a new UX Designer simulation attempt.
+
+    The UX inbox has the same structure as the Backend and Frontend
+    inboxes, so this reuses the shared attempt-creation logic.
+    """
+
+    return create_backend_simulation_attempt(
+        user_id=user_id,
+        career_id=career_id,
+        position_id=position_id,
+        company_id=company_id,
+        generated_inbox_task=generated_inbox_task,
+    )
+
+def create_ui_simulation_attempt(
+    *,
+    user_id: str,
+    career_id: str,
+    position_id: str,
+    company_id: str,
+    generated_inbox_task: dict,
+) -> str:
+    """
+    Create a new UI Designer simulation attempt.
+
+    The UI inbox uses the same stored attempt structure
+    as the Backend, Frontend, and UX simulations.
+    """
+
+    return create_backend_simulation_attempt(
+        user_id=user_id,
+        career_id=career_id,
+        position_id=position_id,
+        company_id=company_id,
+        generated_inbox_task=generated_inbox_task,
+    )
 
 def get_frontend_inbox_task(
     *,
