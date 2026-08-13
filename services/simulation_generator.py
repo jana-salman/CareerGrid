@@ -4,6 +4,7 @@ from schemas.inbox_schema import BackendInboxTask
 from schemas.frontend_inbox_schema import FrontendInboxTask
 from schemas.ux_inbox_schema import UXInboxTask
 from services.gemini_service import get_gemini_client
+from schemas.data_analyst_inbox_schema import DataAnalystInboxTask
 
 
 
@@ -310,6 +311,169 @@ Requirements:
     raise RuntimeError(
         "Gemini did not return a UX inbox simulation."
     )
+
+def generate_data_analyst_inbox_task(
+    company_name: str = "InsightLab"
+) -> dict:
+    """
+    Data Analyst - Step 1
+    Interactive workplace inbox.
+    """
+
+    return {
+        "task_type": "inbox",
+
+        "title": "Data Analyst Workday Inbox",
+
+        "introduction": (
+            "You are starting your morning as a Data Analyst. "
+            "Review the five messages, prioritize the work, "
+            "choose what you would handle first, and write "
+            "a professional response."
+        ),
+
+        "company_name": company_name,
+
+        "position_name": "Data Analyst",
+
+        "emails": [
+            {
+                "id": "revenue_discrepancy",
+                "sender_name": "Olivia Carter",
+                "sender_role": "Analytics Manager",
+                "subject": "URGENT: Sales dashboard totals do not match Finance",
+                "body": (
+                    "Hi,\n\n"
+                    "Leadership is reviewing the sales dashboard this "
+                    "afternoon. The dashboard currently reports revenue "
+                    "of $15,950, while Finance has verified $14,750.\n\n"
+                    "Please investigate the underlying sales data before "
+                    "the numbers are presented. We need to understand "
+                    "whether this is a data-quality issue, transformation "
+                    "problem, or reporting error.\n\n"
+                    "Please prioritize this investigation and send me "
+                    "an update when you identify the likely cause.\n\n"
+                    "Thanks,\n"
+                    "Olivia"
+                ),
+                "timestamp": "08:15",
+                "priority": "critical",
+                "has_attachment": True,
+                "attachment_name": "sales_dashboard_summary.xlsx",
+                "linked_ticket_id": "DA-2104",
+            },
+
+            {
+                "id": "weekly_team_sync",
+                "sender_name": "Marcus Thorne",
+                "sender_role": "Analytics Manager",
+                "subject": "Weekly analytics team sync moved",
+                "body": (
+                    "Hi team,\n\n"
+                    "Our weekly analytics meeting has been moved to "
+                    "tomorrow morning. No preparation is required today.\n\n"
+                    "Thanks,\n"
+                    "Marcus"
+                ),
+                "timestamp": "08:30",
+                "priority": "low",
+                "has_attachment": False,
+                "attachment_name": None,
+                "linked_ticket_id": None,
+            },
+
+            {
+                "id": "marketing_report",
+                "sender_name": "Elena Rodriguez",
+                "sender_role": "Marketing Manager",
+                "subject": "Request for ad-hoc campaign report",
+                "body": (
+                    "Hi,\n\n"
+                    "Could you prepare last month's email campaign "
+                    "click-through rates by the end of this week? "
+                    "There is no urgency today.\n\n"
+                    "Thanks,\n"
+                    "Elena"
+                ),
+                "timestamp": "08:45",
+                "priority": "medium",
+                "has_attachment": False,
+                "attachment_name": None,
+                "linked_ticket_id": None,
+            },
+
+            {
+                "id": "dashboard_color",
+                "sender_name": "Daniel Kim",
+                "sender_role": "Product Designer",
+                "subject": "Dashboard chart color question",
+                "body": (
+                    "Hey,\n\n"
+                    "When you have time, can you confirm which blue "
+                    "we should use for the new dashboard chart? "
+                    "This can wait until later.\n\n"
+                    "Daniel"
+                ),
+                "timestamp": "09:00",
+                "priority": "low",
+                "has_attachment": True,
+                "attachment_name": "dashboard_mockup.png",
+                "linked_ticket_id": None,
+            },
+
+            {
+                "id": "customer_export",
+                "sender_name": "Sarah Jenkins",
+                "sender_role": "Sales Operations Manager",
+                "subject": "Customer export needed tomorrow",
+                "body": (
+                    "Hi,\n\n"
+                    "Could you export the active-customer list for "
+                    "tomorrow's sales planning session? We need it "
+                    "before tomorrow morning.\n\n"
+                    "Thanks,\n"
+                    "Sarah"
+                ),
+                "timestamp": "09:10",
+                "priority": "high",
+                "has_attachment": False,
+                "attachment_name": None,
+                "linked_ticket_id": None,
+            },
+        ],
+
+        "available_first_actions": [
+            "Investigate the revenue dashboard discrepancy immediately",
+            "Prepare the customer export first",
+            "Start the marketing campaign report",
+            "Answer the dashboard color question",
+        ],
+
+        "reply_instruction": (
+            "Write a professional response to the person responsible "
+            "for the task you chose to handle first."
+        ),
+
+        "answer_key": {
+            "recommended_priority_order": [
+                "revenue_discrepancy",
+                "customer_export",
+                "marketing_report",
+                "weekly_team_sync",
+                "dashboard_color",
+            ],
+
+            "best_first_action": (
+                "Investigate the revenue dashboard discrepancy immediately"
+            ),
+
+            "explanation": (
+                "The revenue discrepancy affects a leadership meeting "
+                "later today and could cause incorrect financial "
+                "information to be presented."
+            ),
+        },
+    }
 
 def generate_ui_inbox_task(company_name):
     """
