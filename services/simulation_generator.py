@@ -30,6 +30,7 @@ def generate_backend_inbox_task(
         "gemini-3.1-flash-lite"
     )
 
+
     prompt = f"""
 You are designing the first task of a realistic CareerGrid
 workplace simulation.
@@ -228,6 +229,88 @@ def generate_ux_inbox_task(
         "GEMINI_MODEL",
         "gemini-3.1-flash-lite"
     )
+
+    prompt = f"""
+You are designing the first task of a realistic CareerGrid
+workplace simulation.
+
+Career:
+UI/UX Design
+
+Position:
+Junior UX Designer
+
+Company:
+{company_name}
+
+Main storyline:
+The company's e-commerce checkout is experiencing a significant
+increase in abandonment. Users are reaching checkout but many are
+not completing their purchases.
+
+Generate an interactive morning inbox task.
+
+Requirements:
+
+1. Generate exactly five fictional workplace emails.
+2. Exactly one email must report the urgent checkout abandonment
+   problem that requires UX investigation.
+3. The critical email must link to a fictional UX issue or
+   research ticket.
+4. The other four emails must be realistic distractions or
+   lower-priority workplace responsibilities.
+5. Include a mixture of messages from roles such as:
+   - Product Manager
+   - UX Researcher
+   - UI Designer
+   - Frontend Developer
+   - Customer Support
+   - Marketing
+   - Human Resources
+6. Do not mention that this is a quiz.
+7. Do not directly reveal which email the user should choose.
+8. Keep the difficulty suitable for a junior UX Designer.
+9. Use fictional employee names.
+10. Do not use real confidential company information.
+11. The answer key must correctly identify the recommended priority.
+12. The available actions must include both reasonable and
+    less-effective choices.
+13. The written content must be concise enough to display inside
+    an email application interface.
+14. The urgent issue should naturally lead into a later user
+    research investigation of the checkout experience.
+"""
+
+    with get_gemini_client() as client:
+        response = client.models.generate_content(
+            model=model,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=UXInboxTask,
+                temperature=0.7,
+            ),
+        )
+
+    if response.parsed:
+        generated_task = response.parsed
+
+        if isinstance(generated_task, UXInboxTask):
+            return generated_task.model_dump()
+
+        return UXInboxTask.model_validate(
+            generated_task
+        ).model_dump()
+
+    if response.text:
+        return UXInboxTask.model_validate_json(
+            response.text
+        ).model_dump()
+
+    raise RuntimeError(
+        "Gemini did not return a UX inbox simulation."
+    )
+
 def generate_ui_inbox_task(company_name):
     """
     UI Designer - Step 1
