@@ -812,7 +812,29 @@ POSITIONS_DATA = {
                 }
             ]
         }
+    },
+
+    "data-analyst": {
+
+        "data-analyst": {
+            "title": "Data Analyst",
+
+            "companies": [
+                {
+                    "id": "insightlab",
+                    "name": "InsightLab",
+                    "location": "Local"
+                },
+
+                {
+                    "id": "datapulse",
+                    "name": "DataPulse",
+                    "location": "Global"
+                }
+            ]
+        }
     }
+    
 }
 
 
