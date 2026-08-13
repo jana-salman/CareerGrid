@@ -1,0 +1,437 @@
+<div
+    class="da-dataset-workspace"
+    id="daDatasetWorkspace"
+>
+
+    <div class="da-task-header">
+
+        <div class="da-task-icon">
+            📊
+        </div>
+
+        <div>
+            <span class="da-issue">
+                DA-2104
+            </span>
+
+            <h3>
+                Investigate the Sales Dataset
+            </h3>
+
+            <p>
+                Finance reports that the verified revenue total
+                does not match the executive dashboard. Inspect
+                the dataset and identify the likely data-quality
+                problem before leadership uses the report.
+            </p>
+        </div>
+
+    </div>
+
+
+    <div class="da-metric-grid">
+
+        <div class="da-metric">
+            <span>Dataset</span>
+            <strong>March Sales</strong>
+        </div>
+
+        <div class="da-metric">
+            <span>Rows</span>
+            <strong>10</strong>
+        </div>
+
+        <div class="da-metric">
+            <span>Dashboard Revenue</span>
+            <strong>$15,950</strong>
+        </div>
+
+        <div class="da-metric">
+            <span>Finance Revenue</span>
+            <strong>$14,750</strong>
+        </div>
+
+    </div>
+
+
+    <div class="da-analysis-toolbar">
+
+        <button
+            type="button"
+            class="da-tool-btn"
+            id="inspectSummaryBtn"
+        >
+            Inspect Summary
+        </button>
+
+        <button
+            type="button"
+            class="da-tool-btn"
+            id="checkDuplicatesBtn"
+        >
+            Find Duplicates
+        </button>
+
+        <button
+            type="button"
+            class="da-tool-btn"
+            id="checkMissingBtn"
+        >
+            Check Missing Values
+        </button>
+
+    </div>
+
+
+    <div
+        class="da-analysis-result"
+        id="analysisResult"
+    >
+        Select an analysis tool above to investigate the dataset.
+    </div>
+
+
+    <div class="da-table-section">
+
+        <div class="da-section-heading">
+            <div>
+                <h4>sales_march.csv</h4>
+
+                <p>
+                    Select rows that you believe require investigation.
+                </p>
+            </div>
+
+            <span id="selectedRowCount">
+                0 rows selected
+            </span>
+        </div>
+
+
+        <div class="da-table-wrapper">
+
+            <table class="da-data-table">
+
+                <thead>
+                    <tr>
+                        <th>Select</th>
+                        <th>Row</th>
+                        <th>Order ID</th>
+                        <th>Date</th>
+                        <th>Region</th>
+                        <th>Product</th>
+                        <th>Qty</th>
+                        <th>Unit Price</th>
+                        <th>Revenue</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    <tr data-row="1">
+                        <td>
+                            <input
+                                type="checkbox"
+                                class="da-row-checkbox"
+                                value="1"
+                            >
+                        </td>
+                        <td>1</td>
+                        <td>ORD-1001</td>
+                        <td>2026-03-02</td>
+                        <td>North</td>
+                        <td>Analytics Pro</td>
+                        <td>2</td>
+                        <td>$900</td>
+                        <td>$1,800</td>
+                    </tr>
+
+                    <tr data-row="2">
+                        <td>
+                            <input
+                                type="checkbox"
+                                class="da-row-checkbox"
+                                value="2"
+                            >
+                        </td>
+                        <td>2</td>
+                        <td>ORD-1002</td>
+                        <td>2026-03-04</td>
+                        <td>South</td>
+                        <td>Starter</td>
+                        <td>3</td>
+                        <td>$450</td>
+                        <td>$1,350</td>
+                    </tr>
+
+                    <tr data-row="3">
+                        <td>
+                            <input
+                                type="checkbox"
+                                class="da-row-checkbox"
+                                value="3"
+                            >
+                        </td>
+                        <td>3</td>
+                        <td>ORD-1003</td>
+                        <td>2026-03-07</td>
+                        <td>West</td>
+                        <td>Analytics Pro</td>
+                        <td>1</td>
+                        <td>$900</td>
+                        <td>$900</td>
+                    </tr>
+
+                    <tr
+                        data-row="4"
+                        data-duplicate="true"
+                    >
+                        <td>
+                            <input
+                                type="checkbox"
+                                class="da-row-checkbox"
+                                value="4"
+                            >
+                        </td>
+                        <td>4</td>
+                        <td>ORD-1004</td>
+                        <td>2026-03-10</td>
+                        <td>East</td>
+                        <td>Business</td>
+                        <td>2</td>
+                        <td>$600</td>
+                        <td>$1,200</td>
+                    </tr>
+
+                    <tr
+                        data-row="5"
+                        data-duplicate="true"
+                    >
+                        <td>
+                            <input
+                                type="checkbox"
+                                class="da-row-checkbox"
+                                value="5"
+                            >
+                        </td>
+                        <td>5</td>
+                        <td>ORD-1004</td>
+                        <td>2026-03-10</td>
+                        <td>East</td>
+                        <td>Business</td>
+                        <td>2</td>
+                        <td>$600</td>
+                        <td>$1,200</td>
+                    </tr>
+
+                    <tr
+                        data-row="6"
+                        data-missing="true"
+                    >
+                        <td>
+                            <input
+                                type="checkbox"
+                                class="da-row-checkbox"
+                                value="6"
+                            >
+                        </td>
+                        <td>6</td>
+                        <td>ORD-1005</td>
+                        <td>2026-03-12</td>
+                        <td class="da-missing-cell">
+                            —
+                        </td>
+                        <td>Starter</td>
+                        <td>4</td>
+                        <td>$450</td>
+                        <td>$1,800</td>
+                    </tr>
+
+                    <tr data-row="7">
+                        <td>
+                            <input
+                                type="checkbox"
+                                class="da-row-checkbox"
+                                value="7"
+                            >
+                        </td>
+                        <td>7</td>
+                        <td>ORD-1006</td>
+                        <td>2026-03-16</td>
+                        <td>North</td>
+                        <td>Business</td>
+                        <td>3</td>
+                        <td>$600</td>
+                        <td>$1,800</td>
+                    </tr>
+
+                    <tr data-row="8">
+                        <td>
+                            <input
+                                type="checkbox"
+                                class="da-row-checkbox"
+                                value="8"
+                            >
+                        </td>
+                        <td>8</td>
+                        <td>ORD-1007</td>
+                        <td>2026-03-20</td>
+                        <td>South</td>
+                        <td>Analytics Pro</td>
+                        <td>2</td>
+                        <td>$900</td>
+                        <td>$1,800</td>
+                    </tr>
+
+                    <tr data-row="9">
+                        <td>
+                            <input
+                                type="checkbox"
+                                class="da-row-checkbox"
+                                value="9"
+                            >
+                        </td>
+                        <td>9</td>
+                        <td>ORD-1008</td>
+                        <td>2026-03-24</td>
+                        <td>West</td>
+                        <td>Starter</td>
+                        <td>5</td>
+                        <td>$450</td>
+                        <td>$2,250</td>
+                    </tr>
+
+                    <tr data-row="10">
+                        <td>
+                            <input
+                                type="checkbox"
+                                class="da-row-checkbox"
+                                value="10"
+                            >
+                        </td>
+                        <td>10</td>
+                        <td>ORD-1009</td>
+                        <td>2026-03-28</td>
+                        <td>East</td>
+                        <td>Starter</td>
+                        <td>2</td>
+                        <td>$450</td>
+                        <td>$900</td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+    <form
+        method="POST"
+        id="dataAnalystDatasetForm"
+    >
+
+        <input
+            type="hidden"
+            name="answer"
+            id="dataAnalystDatasetAnswer"
+            data-saved-answer="{{ saved_answer | e }}"
+        >
+
+
+        <div class="da-diagnosis-panel">
+
+            <h4>
+                Diagnose the discrepancy
+            </h4>
+
+            <label for="rootCauseSelect">
+                Most likely root cause
+            </label>
+
+            <select
+                id="rootCauseSelect"
+                required
+            >
+                <option value="">
+                    Select a root cause
+                </option>
+
+                <option value="duplicate_transactions">
+                    Duplicate transaction records
+                </option>
+
+                <option value="missing_region">
+                    Missing region value
+                </option>
+
+                <option value="incorrect_unit_price">
+                    Incorrect unit price
+                </option>
+
+                <option value="date_format_issue">
+                    Date formatting issue
+                </option>
+
+            </select>
+
+
+            <label for="analystFinding">
+                Analyst finding
+            </label>
+
+            <textarea
+                id="analystFinding"
+                rows="5"
+                maxlength="1200"
+                placeholder="Explain what you found, which records support your conclusion, and why the dashboard total differs..."
+                required
+            ></textarea>
+
+            <div class="da-character-count">
+                <span id="analystFindingCount">
+                    0 / 1200
+                </span>
+            </div>
+
+        </div>
+
+
+        {% if error %}
+            <p class="error-message">
+                {{ error }}
+            </p>
+        {% endif %}
+
+
+        <div class="simulation-actions">
+
+            <a
+                href="{{ url_for(
+                    'simulation_step',
+                    career_id=career_id,
+                    position_id=position_id,
+                    company_id=company_id,
+                    step=1
+                ) }}"
+                class="secondary-btn"
+            >
+                ← Previous Step
+            </a>
+
+            <button
+                type="submit"
+                class="main-btn"
+                id="submitDatasetBtn"
+                disabled
+            >
+                Complete Investigation
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
