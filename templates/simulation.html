@@ -198,11 +198,13 @@
     {% elif step == 2 and is_backend_simulation %}
         simulation-card--incident
     {% elif step == 3 and is_backend_simulation %}
-    simulation-card--code-review
+        simulation-card--code-review
     {% elif step == 4 and is_backend_simulation %}
         simulation-card--api-testing
     {% elif step == 5 and is_backend_simulation %}
-    simulation-card--team-chat
+        simulation-card--team-chat
+    {% elif (is_ui_simulation or is_ux_simulation) and step >= 2 and step <= 5 %}
+    simulation-card--ui-workspace
     {% endif %}
     "
 >
@@ -219,7 +221,7 @@
                 {{ ai_generation_error }}
             </p>
 
-            
+            <a
                 href="{{ url_for(
                     'simulation_step',
                     career_id=career_id,

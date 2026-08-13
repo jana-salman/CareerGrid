@@ -1363,8 +1363,15 @@ def simulation_step(career_id, position_id, company_id, step):
         attempt_id = session.get("simulation_attempt_id")
 
         # First try to retrieve an already generated inbox.
+        if attempt_id:
+            generated_inbox_task = get_backend_inbox_task(
+                user_id=user_id,
+                attempt_id=attempt_id,
+            )
+
+        # First try to retrieve an already generated inbox.
         # Old UI attempts may contain the previous single-email format.
-# Ignore them and generate a proper shared inbox instead.
+        # Ignore them and generate a proper shared inbox instead.
         if (
             is_ui_simulation
             and generated_inbox_task

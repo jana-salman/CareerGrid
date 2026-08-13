@@ -1821,3 +1821,9 @@ body {
         flex-direction: column;
     }
 }
+
+/* Wider workspace for UI Designer simulation steps 2–5 */
+.simulation-page .simulation-card--ui-workspace {
+    width: calc(100% - 40px);
+    max-width: 1180px;
+}
