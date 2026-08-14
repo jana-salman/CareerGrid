@@ -149,6 +149,40 @@
 >
 {% endif %}
 
+{% if is_data_analyst_simulation and step == 2 %}
+<link
+    rel="stylesheet"
+    href="{{ url_for(
+        'static',
+        filename='css/simulation/data_analyst_dataset.css'
+    ) }}?v=1"
+>
+{% endif %}
+
+{% if is_data_analyst_simulation and step == 3 %}
+<link
+    rel="stylesheet"
+    href="{{ url_for(
+        'static',
+        filename='css/simulation/data_analyst_cleaning.css'
+    ) }}?v=1"
+>
+{% endif %}
+
+{% if is_data_analyst_simulation and step == 4 %}
+<link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='css/simulation/data_analyst_insight.css') }}?v=1"
+>
+{% endif %}
+
+{% if is_data_analyst_simulation and step == 5 %}
+<link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='css/simulation/data_analyst_update.css') }}?v=1"
+>
+{% endif %}
+
 </head>
 
 <body>
@@ -205,6 +239,8 @@
         simulation-card--team-chat
     {% elif (is_ui_simulation or is_ux_simulation) and step >= 2 and step <= 5 %}
     simulation-card--ui-workspace
+    {% elif is_data_analyst_simulation and step >= 2 and step <= 5 %}
+    simulation-card--data-analyst
     {% endif %}
     "
 >
@@ -334,6 +370,10 @@
 
         {% include "simulation_tasks/ui_visual_audit.html" %}
 
+    {% elif is_data_analyst_simulation %}
+
+        {% include "simulation_tasks/data_analyst_dataset.html" %}
+
     {% else %}
 
         <div class="task-heading">
@@ -427,6 +467,10 @@
     {% elif is_ui_simulation %}
 
         {% include "simulation_tasks/ui_component_system.html" %}
+    
+    {% elif is_data_analyst_simulation %}
+
+        {% include "simulation_tasks/data_analyst_cleaning.html" %}
 
     {% else %}
 
@@ -540,9 +584,14 @@
                 {% elif is_ux_simulation %}
 
                     {% include "simulation_tasks/ux_usability_audit.html" %}
+
                 {% elif is_ui_simulation and step == 4 %}
 
                     {% include "simulation_tasks/ui_quality_assurance.html" %}
+
+                {% elif is_data_analyst_simulation %}
+
+                    {% include "simulation_tasks/data_analyst_insight.html" %}
 
                 {% else %}
 
@@ -638,6 +687,10 @@
                 {% elif is_ui_simulation and step == 5 %}
 
                     {% include "simulation_tasks/ui_design_handoff.html" %}
+
+                {% elif is_data_analyst_simulation %}
+
+                    {% include "simulation_tasks/data_analyst_update.html" %}
 
                 {% else %}
 
@@ -916,6 +969,44 @@
     ) }}?v=1"
 ></script>
 {% endif %}
+
+{% if is_data_analyst_simulation and step == 2 %}
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/data_analyst_dataset.js'
+    ) }}?v=1"
+    defer
+></script>
+{% endif %}
+
+{% if is_data_analyst_simulation and step == 3 %}
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/data_analyst_cleaning.js'
+    ) }}?v=1"
+    defer
+></script>
+{% endif %}
+
+{% if is_data_analyst_simulation and step == 4 %}
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/data_analyst_insight.js'
+    ) }}?v=1"
+    defer
+></script>
+{% endif %}
+
+{% if is_data_analyst_simulation and step == 5 %}
+<script
+    src="{{ url_for('static', filename='js/simulation/data_analyst_update.js') }}?v=1"
+    defer
+></script>
+{% endif %}
+
 
 </body>
 </html>

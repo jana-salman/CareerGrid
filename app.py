@@ -11,6 +11,7 @@ from services.simulation_generator import (
     generate_frontend_inbox_task,
     generate_ux_inbox_task,
     generate_ui_inbox_task,
+    generate_data_analyst_inbox_task,
 )
 
 from services.roadmap_service import (
@@ -38,6 +39,7 @@ from services.simulation_storage import (
     get_simulation_attempt,
     list_completed_simulation_attempts,
     create_ui_simulation_attempt,
+    create_data_analyst_simulation_attempt,
 )
 
 from services.incident_response_service import (
@@ -93,6 +95,22 @@ from services.ux_flow_response_service import (
 from schemas.ux_usability_audit_response_schema import (
     validate_ux_usability_audit_response,
 )
+
+from services.data_analyst_dataset_response_service import (
+    DataAnalystDatasetValidationError,
+    validate_data_analyst_dataset_response,
+)
+
+from services.data_analyst_cleaning_response_service import (
+    DataAnalystCleaningValidationError,
+    validate_data_analyst_cleaning_response,
+)
+
+from services.data_analyst_insight_response_service import (
+    DataAnalystInsightValidationError,
+    validate_data_analyst_insight_response,
+)
+
 
 # ---------------------------------------------------------
 # Load environment variables
@@ -735,6 +753,67 @@ UI_SCENARIO = {
     },
 }
 
+DATA_ANALYST_SCENARIO = {
+    "scenario_id": "sales-dashboard-data-investigation",
+    "career_id": "data-analyst",
+    "position_id": "data-analyst",
+    "title": "Sales Dashboard Data Investigation",
+
+    "steps": {
+        1: {
+            "sender": "Olivia Carter, Analytics Manager",
+            "subject": "Sales dashboard totals do not match Finance",
+            "body": (
+                "The executive sales dashboard is showing a revenue total "
+                "that does not match Finance's verified report. Leadership "
+                "will review the dashboard later today. Please investigate "
+                "the discrepancy before the numbers are presented."
+            ),
+        },
+
+        2: {
+            "title": "Investigate the Sales Dataset",
+            "issue_id": "DA-2104",
+            "instructions": (
+                "Inspect the sales dataset and identify records or fields "
+                "that could explain why the dashboard revenue total differs "
+                "from the verified Finance report."
+            ),
+        },
+
+        3: {
+            "title": "Clean the Sales Data",
+            "issue_id": "DA-2104",
+            "instructions": (
+                "Apply appropriate cleaning decisions to the suspicious "
+                "records while preserving valid business data."
+            ),
+        },
+
+        4: {
+            "title": "Analyze the Corrected Results",
+            "issue_id": "DA-2104",
+            "instructions": (
+                "Review the corrected metrics and determine the most "
+                "important business insight for the leadership team."
+            ),
+        },
+
+        5: {
+            "title": "Send the Data Analysis Update",
+            "issue_id": "DA-2104",
+            "channel": "analytics-team",
+            "recipient": "Olivia Carter, Analytics Manager",
+            "instructions": (
+                "Summarize the discrepancy, the data-quality issue you "
+                "identified, the corrected result, and your recommendation "
+                "for the leadership dashboard."
+            ),
+        },
+    },
+}
+
+
 POSITIONS_DATA = {
     "software-developer": {
 
@@ -812,7 +891,29 @@ POSITIONS_DATA = {
                 }
             ]
         }
+    },
+
+    "data-analyst": {
+
+        "data-analyst": {
+            "title": "Data Analyst",
+
+            "companies": [
+                {
+                    "id": "insightlab",
+                    "name": "InsightLab",
+                    "location": "Local"
+                },
+
+                {
+                    "id": "datapulse",
+                    "name": "DataPulse",
+                    "location": "Global"
+                }
+            ]
+        }
     }
+    
 }
 
 
@@ -963,6 +1064,14 @@ UX_STEP_SKILLS = [
     "Stakeholder Communication & Handoff",
 ]
 
+DATA_ANALYST_STEP_SKILLS = [
+    "Inbox Prioritization & Business Communication",
+    "Data Quality Investigation",
+    "Data Cleaning & Validation",
+    "KPI Analysis & Business Insight",
+    "Stakeholder Communication & Recommendation",
+]
+
 # A step is considered "ready" at or above this score, otherwise the
 # user is told to practice that specific skill more.
 STEP_READY_THRESHOLD = 70
@@ -982,11 +1091,23 @@ def _step_skill_names(position_id=None, scenario_id=None):
         or scenario_id == "checkout-api-investigation"
     ):
         return BACKEND_STEP_SKILLS
+    
     if (
         position_id == "ux-designer"
         or scenario_id == "ux-checkout-redesign"
     ):
         return UX_STEP_SKILLS
+    if (
+        position_id == "data-analyst"
+        or scenario_id == "sales-dashboard-data-investigation"
+    ):
+        return DATA_ANALYST_STEP_SKILLS
+
+    if (
+        position_id == "data-analyst"
+        or scenario_id == "sales-dashboard-data-investigation"
+    ):
+        return DATA_ANALYST_STEP_SKILLS
     
     return None
 
@@ -1224,6 +1345,19 @@ def simulation_step(career_id, position_id, company_id, step):
         step_four_task = scenario_steps.get(4)
         step_five_task = scenario_steps.get(5)
 
+    elif (
+        career_id == DATA_ANALYST_SCENARIO["career_id"]
+        and position_id == DATA_ANALYST_SCENARIO["position_id"]
+    ):
+        scenario = DATA_ANALYST_SCENARIO
+        scenario_steps = scenario["steps"]
+
+        email = scenario_steps.get(1)
+        step_two_task = scenario_steps.get(2)
+        step_three_task = scenario_steps.get(3)
+        step_four_task = scenario_steps.get(4)
+        step_five_task = scenario_steps.get(5)
+
     else:
         scenario = None
 
@@ -1346,11 +1480,17 @@ def simulation_step(career_id, position_id, company_id, step):
         and position_id == UI_SCENARIO["position_id"]
     )
 
+    is_data_analyst_simulation = (
+        career_id == DATA_ANALYST_SCENARIO["career_id"]
+        and position_id == DATA_ANALYST_SCENARIO["position_id"]
+    )
+
     if (
     is_backend_simulation
     or is_frontend_simulation
     or is_ux_simulation
     or is_ui_simulation
+    or is_data_analyst_simulation
     ):
         
         user_id = session.get("user_id")
@@ -1423,6 +1563,19 @@ def simulation_step(career_id, position_id, company_id, step):
                         generated_inbox_task=complete_inbox_task,
                     )
 
+                elif is_data_analyst_simulation:
+                    complete_inbox_task = generate_data_analyst_inbox_task(
+                        company_name=company_name
+                    )
+
+                    attempt_id = create_data_analyst_simulation_attempt(
+                        user_id=user_id,
+                        career_id=career_id,
+                        position_id=position_id,
+                        company_id=company_id,
+                        generated_inbox_task=complete_inbox_task,
+                    )
+
                 else:
                     complete_inbox_task = generate_backend_inbox_task(
                         company_name=company_name
@@ -1486,6 +1639,7 @@ def simulation_step(career_id, position_id, company_id, step):
             or is_frontend_simulation
             or is_ux_simulation
             or is_ui_simulation
+            or is_data_analyst_simulation
         ) and step == 1:
             try:
                 validated_response = validate_inbox_response(
@@ -1928,6 +2082,72 @@ def simulation_step(career_id, position_id, company_id, step):
                     "right now. Please try again."
                 )
 
+        elif is_data_analyst_simulation and step == 4:
+
+            try:
+
+                validated_response = (
+                    validate_data_analyst_insight_response(
+                        raw_answer=answer,
+                    )
+                )
+
+
+                save_simulation_step_response(
+                    user_id=session.get("user_id"),
+                    attempt_id=session.get(
+                        "simulation_attempt_id"
+                    ),
+                    step=4,
+                    response=validated_response,
+                )
+
+
+            except (
+                DataAnalystInsightValidationError
+            ) as validation_error:
+
+                app.logger.warning(
+                    "Data Analyst insight validation failed: %s",
+                    validation_error,
+                )
+
+                error = str(
+                    validation_error
+                )
+
+
+            except Exception:
+
+                app.logger.exception(
+                    "Failed to save Data Analyst insight analysis."
+                )
+
+                error = (
+                    "We could not save your dashboard analysis "
+                    "right now. Please try again."
+                )
+
+
+            if not error:
+
+                answers["step_4"] = json.dumps(
+                    validated_response
+                )
+
+                session["simulation_answers"] = answers
+
+
+                return redirect(
+                    url_for(
+                        "simulation_step",
+                        career_id=career_id,
+                        position_id=position_id,
+                        company_id=company_id,
+                        step=5,
+                    )
+                )
+    
         elif is_backend_simulation and step == 4:
             try:
                 validated_response = (
@@ -2246,7 +2466,126 @@ def simulation_step(career_id, position_id, company_id, step):
                             step=3,
                         )
                     )
+            elif is_data_analyst_simulation and step == 2:
+                try:
+                    validated_response = (
+                        validate_data_analyst_dataset_response(
+                            raw_answer=answer,
+                        )
+                    )
 
+                    save_simulation_step_response(
+                        user_id=session.get("user_id"),
+                        attempt_id=session.get(
+                            "simulation_attempt_id"
+                        ),
+                        step=2,
+                        response=validated_response,
+                    )
+
+                except (
+                    DataAnalystDatasetValidationError
+                ) as validation_error:
+                    app.logger.warning(
+                        "Data Analyst dataset validation failed: %s",
+                        validation_error,
+                    )
+
+                    error = str(validation_error)
+
+                except Exception:
+                    app.logger.exception(
+                        "Failed to save Data Analyst dataset investigation."
+                    )
+
+                    error = (
+                        "We could not save your dataset investigation "
+                        "right now. Please try again."
+                    )
+
+                if not error:
+                    answers["step_2"] = json.dumps(
+                        validated_response
+                    )
+
+                    session["simulation_answers"] = answers
+
+                    return redirect(
+                        url_for(
+                            "simulation_step",
+                            career_id=career_id,
+                            position_id=position_id,
+                            company_id=company_id,
+                            step=3,
+                        )
+                    )    
+
+            elif is_data_analyst_simulation and step == 3:
+
+                try:
+
+                    validated_response = (
+                        validate_data_analyst_cleaning_response(
+                            raw_answer=answer,
+                        )
+                    )
+
+
+                    save_simulation_step_response(
+                        user_id=session.get("user_id"),
+                        attempt_id=session.get(
+                            "simulation_attempt_id"
+                        ),
+                        step=3,
+                        response=validated_response,
+                    )
+
+
+                except (
+                    DataAnalystCleaningValidationError
+                ) as validation_error:
+
+                    app.logger.warning(
+                        "Data Analyst cleaning validation failed: %s",
+                        validation_error,
+                    )
+
+                    error = str(
+                        validation_error
+                    )
+
+
+                except Exception:
+
+                    app.logger.exception(
+                        "Failed to save Data Analyst cleaning response."
+                    )
+
+                    error = (
+                        "We could not save your data-cleaning work "
+                        "right now. Please try again."
+                    )
+
+
+                if not error:
+
+                    answers["step_3"] = json.dumps(
+                        validated_response
+                    )
+
+                    session["simulation_answers"] = answers
+
+
+                    return redirect(
+                        url_for(
+                            "simulation_step",
+                            career_id=career_id,
+                            position_id=position_id,
+                            company_id=company_id,
+                            step=4,
+                        )
+                    )
+    
             elif is_frontend_simulation and step == 3:
                 try:
                     validated_response = (
@@ -3328,8 +3667,607 @@ def simulation_step(career_id, position_id, company_id, step):
                     result=result,
                     roadmap=roadmap,
                     from_dashboard=False,
-        )
-    
+                )
+            
+        elif is_data_analyst_simulation and step == 5:
+                    try:
+                        # =====================================================
+                        # 1. READ STEP 5 JSON
+                        # =====================================================
+
+                        parsed_response = json.loads(answer)
+
+                        if (
+                            parsed_response.get("task_type")
+                            != "data_analyst_final_update"
+                        ):
+                            raise ValueError(
+                                "Invalid Data Analyst final update response."
+                            )
+
+
+                        # =====================================================
+                        # 2. READ FIELDS
+                        # =====================================================
+
+                        subject = parsed_response.get(
+                            "subject",
+                            ""
+                        ).strip()
+
+                        root_cause = parsed_response.get(
+                            "root_cause",
+                            ""
+                        ).strip()
+
+                        verified_revenue = str(
+                            parsed_response.get(
+                                "verified_revenue",
+                                ""
+                            )
+                        ).strip()
+
+                        recommendation = parsed_response.get(
+                            "recommendation",
+                            ""
+                        ).strip()
+
+                        executive_update = parsed_response.get(
+                            "executive_update",
+                            ""
+                        ).strip()
+
+
+                        # =====================================================
+                        # 3. VALIDATE
+                        # =====================================================
+
+                        if len(subject) < 8:
+                            raise ValueError(
+                                "Write a clear subject line."
+                            )
+
+                        valid_root_causes = {
+                            "duplicate_and_missing_region",
+                            "finance_error",
+                            "sales_decline",
+                        }
+
+                        if root_cause not in valid_root_causes:
+                            raise ValueError(
+                                "Choose a valid root cause."
+                            )
+
+                        valid_revenues = {
+                            "15950",
+                            "14750",
+                            "14200",
+                        }
+
+                        if verified_revenue not in valid_revenues:
+                            raise ValueError(
+                                "Choose a valid verified revenue value."
+                            )
+
+                        valid_recommendations = {
+                            "validate_pipeline",
+                            "ignore",
+                            "remove_dashboard",
+                            "increase_sales",
+                        }
+
+                        if recommendation not in valid_recommendations:
+                            raise ValueError(
+                                "Choose a valid recommendation."
+                            )
+
+                        if len(executive_update) < 80:
+                            raise ValueError(
+                                "Write a complete executive update."
+                            )
+
+
+                        # =====================================================
+                        # 4. NORMALIZE STEP 5 RESPONSE
+                        # =====================================================
+
+                        validated_response = {
+                            "task_type":
+                                "data_analyst_final_update",
+
+                            "issue_id":
+                                "DA-2104",
+
+                            "subject":
+                                subject,
+
+                            "root_cause":
+                                root_cause,
+
+                            "verified_revenue":
+                                verified_revenue,
+
+                            "recommendation":
+                                recommendation,
+
+                            "executive_update":
+                                executive_update,
+                        }
+
+
+                        # =====================================================
+                        # 5. SAVE STEP 5
+                        # =====================================================
+
+                        save_simulation_step_response(
+                            user_id=session.get("user_id"),
+                            attempt_id=session.get(
+                                "simulation_attempt_id"
+                            ),
+                            step=5,
+                            response=validated_response,
+                        )
+
+                        answers["step_5"] = json.dumps(
+                            validated_response
+                        )
+
+                        session["simulation_answers"] = answers
+
+
+                        # =====================================================
+                        # 6. PREPARE ALL 5 ANSWERS
+                        # =====================================================
+
+                        prepared_answers = (
+                            prepare_answers_for_evaluation(
+                                answers
+                            )
+                        )
+
+
+                        # =====================================================
+                        # 7. DEFINE DATA ANALYST TASKS
+                        # =====================================================
+
+                        data_analyst_tasks = {
+
+                            "step_1": {
+                                "title":
+                                    "Data Analyst Workday Inbox",
+
+                                "skill":
+                                    "Inbox Prioritization & Business Communication",
+
+                                "instructions": (
+                                    "Review incoming analytics requests, "
+                                    "identify the highest-priority business "
+                                    "issue, choose an appropriate first action, "
+                                    "and respond professionally."
+                                ),
+                            },
+
+                            "step_2": {
+                                "title":
+                                    "Investigate the Sales Dataset",
+
+                                "skill":
+                                    "Data Quality Investigation",
+
+                                "instructions": (
+                                    "Inspect the sales dataset for duplicate "
+                                    "records, missing values, suspicious fields, "
+                                    "and other data-quality problems that could "
+                                    "explain the revenue discrepancy."
+                                ),
+                            },
+
+                            "step_3": {
+                                "title":
+                                    "Clean and Validate the Sales Data",
+
+                                "skill":
+                                    "Data Cleaning & Validation",
+
+                                "instructions": (
+                                    "Apply appropriate cleaning decisions to "
+                                    "duplicate and incomplete records while "
+                                    "preserving valid business data and "
+                                    "documenting the reasoning."
+                                ),
+                            },
+
+                            "step_4": {
+                                "title":
+                                    "Analyze the Corrected Results",
+
+                                "skill":
+                                    "KPI Analysis & Business Insight",
+
+                                "instructions": (
+                                    "Review the corrected sales metrics, "
+                                    "compare dashboard and Finance figures, "
+                                    "identify the most important business "
+                                    "insight, and support the conclusion "
+                                    "with evidence."
+                                ),
+                            },
+
+                            "step_5": {
+                                "title":
+                                    "Send the Data Analysis Update",
+
+                                "skill":
+                                    "Stakeholder Communication & Recommendation",
+
+                                "instructions": (
+                                    "Communicate the root cause, corrected KPI, "
+                                    "business impact, and recommended preventive "
+                                    "action to leadership in a concise "
+                                    "executive update."
+                                ),
+                            },
+                        }
+
+
+                        # =====================================================
+                        # 8. BUILD SIMULATION DATA
+                        # =====================================================
+
+                        simulation_data = {
+                            "career": {
+                                "id": career_id,
+                                "name": career_name,
+                            },
+
+                            "position": {
+                                "id": position_id,
+                                "title": position_title,
+                            },
+
+                            "company": {
+                                "id": company_id,
+                                "name": company_name,
+                            },
+
+                            "scenario": {
+                                "id": DATA_ANALYST_SCENARIO[
+                                    "scenario_id"
+                                ],
+                                "title": DATA_ANALYST_SCENARIO[
+                                    "title"
+                                ],
+                            },
+
+                            "tasks": data_analyst_tasks,
+
+                            "answers": prepared_answers,
+                        }
+
+
+                        # =====================================================
+                        # 9. GEMINI EVALUATION
+                        # =====================================================
+
+                        evaluation = evaluate_simulation(
+                            simulation_data
+                        )
+
+
+                        # =====================================================
+                        # 10. SAVE EVALUATION
+                        # =====================================================
+
+                        save_simulation_evaluation(
+                            user_id=session.get("user_id"),
+                            attempt_id=session.get(
+                                "simulation_attempt_id"
+                            ),
+                            evaluation=evaluation,
+                        )
+
+
+                        # =====================================================
+                        # 11. GENERATE ROADMAP
+                        # =====================================================
+
+                        roadmap = generate_personalized_roadmap(
+                            evaluation=evaluation,
+                            career_name=career_name,
+                            position_title=position_title,
+                            company_name=company_name,
+                        )
+
+
+                        # =====================================================
+                        # 12. SAVE ROADMAP
+                        # =====================================================
+
+                        save_simulation_roadmap(
+                            user_id=session.get("user_id"),
+                            attempt_id=session.get(
+                                "simulation_attempt_id"
+                            ),
+                            roadmap=roadmap,
+                        )
+
+
+                        # =====================================================
+                        # 13. SAVE SESSION RESULTS
+                        # =====================================================
+
+                        session["scenario_id"] = (
+                            DATA_ANALYST_SCENARIO[
+                                "scenario_id"
+                            ]
+                        )
+
+                        session["evaluation_result"] = evaluation
+                        session["roadmap_result"] = roadmap
+                        session["simulation_result"] = evaluation
+
+
+                    except json.JSONDecodeError:
+                        error = (
+                            "Your Data Analyst update could not be read. "
+                            "Please try again."
+                        )
+
+                    except ValueError as validation_error:
+                        app.logger.warning(
+                            "Data Analyst final update validation "
+                            "failed: %s",
+                            validation_error,
+                        )
+
+                        error = str(validation_error)
+
+                    except SimulationEvaluationError as evaluation_error:
+                        app.logger.exception(
+                            "Gemini Data Analyst simulation "
+                            "evaluation failed."
+                        )
+
+                        error = str(evaluation_error)
+
+                    except RoadmapGenerationError as roadmap_error:
+                        app.logger.exception(
+                            "Data Analyst personalized roadmap "
+                            "generation failed."
+                        )
+
+                        error = str(roadmap_error)
+
+                    except Exception:
+                        app.logger.exception(
+                            "Failed to finish Data Analyst simulation."
+                        )
+
+                        error = (
+                            "We could not finish your Data Analyst "
+                            "simulation right now. Please try again."
+                        )
+
+
+                    # =====================================================
+                    # 14. SHOW RESULTS
+                    # =====================================================
+
+                    if not error:
+                        result = prepare_evaluation_for_results_page(
+                            evaluation,
+                            _step_skill_names(
+                                position_id=position_id,
+                                scenario_id=DATA_ANALYST_SCENARIO[
+                                    "scenario_id"
+                                ],
+                            ),
+                        )
+
+                        return render_template(
+                            "roadmap.html",
+                            answers=prepared_answers,
+                            evaluation=evaluation,
+                            result=result,
+                            roadmap=roadmap,
+                            from_dashboard=False,
+                        )
+
+        elif is_data_analyst_simulation and step == 5:
+                    try:
+                        # ---------------------------------------------
+                        # 1. Read Data Analyst Step 5 response
+                        # ---------------------------------------------
+                        parsed_response = json.loads(answer)
+
+                        if (
+                            parsed_response.get("task_type")
+                            != "data_analyst_final_update"
+                        ):
+                            raise ValueError(
+                                "Invalid Data Analyst final update."
+                            )
+
+                        # ---------------------------------------------
+                        # 2. Save Step 5
+                        # ---------------------------------------------
+                        save_simulation_step_response(
+                            user_id=session.get("user_id"),
+                            attempt_id=session.get(
+                                "simulation_attempt_id"
+                            ),
+                            step=5,
+                            response=parsed_response,
+                        )
+
+                        answers["step_5"] = json.dumps(
+                            parsed_response
+                        )
+
+                        session["simulation_answers"] = answers
+
+                        # ---------------------------------------------
+                        # 3. Prepare all 5 answers
+                        # ---------------------------------------------
+                        prepared_answers = (
+                            prepare_answers_for_evaluation(
+                                answers
+                            )
+                        )
+
+                        # ---------------------------------------------
+                        # 4. Build SAME evaluation structure
+                        #    used by teammates
+                        # ---------------------------------------------
+                        simulation_data = {
+                            "career": {
+                                "id": career_id,
+                                "name": career_name,
+                            },
+
+                            "position": {
+                                "id": position_id,
+                                "title": position_title,
+                            },
+
+                            "company": {
+                                "id": company_id,
+                                "name": company_name,
+                            },
+
+                            "scenario": {
+                                "id": DATA_ANALYST_SCENARIO[
+                                    "scenario_id"
+                                ],
+                                "title": DATA_ANALYST_SCENARIO[
+                                    "title"
+                                ],
+                            },
+
+                            "tasks": {
+                                "step_1": generated_inbox_task,
+                                "step_2": step_two_task,
+                                "step_3": step_three_task,
+                                "step_4": step_four_task,
+                                "step_5": step_five_task,
+                            },
+
+                            "answers": prepared_answers,
+                        }
+
+                        # ---------------------------------------------
+                        # 5. Evaluate all five Data Analyst tasks
+                        # ---------------------------------------------
+                        evaluation = evaluate_simulation(
+                            simulation_data
+                        )
+
+                        # ---------------------------------------------
+                        # 6. Save evaluation
+                        # ---------------------------------------------
+                        save_simulation_evaluation(
+                            user_id=session.get("user_id"),
+                            attempt_id=session.get(
+                                "simulation_attempt_id"
+                            ),
+                            evaluation=evaluation,
+                        )
+
+                        # ---------------------------------------------
+                        # 7. Generate roadmap
+                        # ---------------------------------------------
+                        roadmap = generate_personalized_roadmap(
+                            evaluation=evaluation,
+                            career_name=career_name,
+                            position_title=position_title,
+                            company_name=company_name,
+                        )
+
+                        # ---------------------------------------------
+                        # 8. Save roadmap
+                        # ---------------------------------------------
+                        save_simulation_roadmap(
+                            user_id=session.get("user_id"),
+                            attempt_id=session.get(
+                                "simulation_attempt_id"
+                            ),
+                            roadmap=roadmap,
+                        )
+
+                        # ---------------------------------------------
+                        # 9. SAME session variables as teammates
+                        # ---------------------------------------------
+                        session["scenario_id"] = (
+                            DATA_ANALYST_SCENARIO[
+                                "scenario_id"
+                            ]
+                        )
+
+                        session["evaluation_result"] = evaluation
+                        session["roadmap_result"] = roadmap
+                        session["simulation_result"] = evaluation
+
+                    except json.JSONDecodeError:
+                        error = (
+                            "Your Data Analyst final update "
+                            "could not be read."
+                        )
+
+                    except ValueError as validation_error:
+                        app.logger.warning(
+                            "Data Analyst final update failed: %s",
+                            validation_error,
+                        )
+
+                        error = str(validation_error)
+
+                    except SimulationEvaluationError as evaluation_error:
+                        app.logger.exception(
+                            "Gemini Data Analyst evaluation failed."
+                        )
+
+                        error = str(evaluation_error)
+
+                    except RoadmapGenerationError as roadmap_error:
+                        app.logger.exception(
+                            "Data Analyst roadmap generation failed."
+                        )
+
+                        error = str(roadmap_error)
+
+                    except Exception:
+                        app.logger.exception(
+                            "Failed to finish Data Analyst simulation."
+                        )
+
+                        error = (
+                            "We could not finish your Data Analyst "
+                            "simulation right now. Please try again."
+                        )
+
+                    # ---------------------------------------------
+                    # 10. SHOW RESULTS — SAME AS TEAMMATES
+                    # ---------------------------------------------
+                    if not error:
+                        result = (
+                            prepare_evaluation_for_results_page(
+                                evaluation,
+                                _step_skill_names(
+                                    position_id=position_id
+                                ),
+                            )
+                        )
+
+                        return render_template(
+                            "roadmap.html",
+                            answers=prepared_answers,
+                            evaluation=evaluation,
+                            result=result,
+                            roadmap=roadmap,
+                            from_dashboard=False,
+                        )
+
+            
         else:
             answers[f"step_{step}"] = answer
             session["simulation_answers"] = answers
@@ -3429,6 +4367,7 @@ def simulation_step(career_id, position_id, company_id, step):
         is_frontend_simulation=is_frontend_simulation,
         is_ux_simulation=is_ux_simulation,
         is_ui_simulation=is_ui_simulation,
+        is_data_analyst_simulation=is_data_analyst_simulation,
     )
 
 
