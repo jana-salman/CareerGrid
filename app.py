@@ -1019,7 +1019,55 @@ def companies(career_id, position_id):
         jobs=jobs,
         local_companies=local_companies
     )
+@app.route("/workspace/<career_id>/<position_id>/<company_id>")
+def simulation_workspace(career_id, position_id, company_id):
+    """
+    Display the persistent desktop workspace for a simulation.
+    """
 
+    position_data = (
+        POSITIONS_DATA
+        .get(career_id, {})
+        .get(position_id, {})
+    )
+
+    # Invalid career/position.
+    if not position_data:
+        return redirect(
+            url_for(
+                "positions",
+                career_id=career_id
+            )
+        )
+
+    position_title = position_data.get(
+        "title",
+        position_id.replace("-", " ").title()
+    )
+
+    # Default company name for live Adzuna listings.
+    company_name = company_id.replace("-", " ").title()
+
+    # If this is one of our local/demo companies,
+    # use its proper display name.
+    for company in position_data.get("companies", []):
+        if company.get("id") == company_id:
+            company_name = company.get(
+                "name",
+                company_name
+            )
+            break
+
+    return render_template(
+        "desktop.html",
+        career_id=career_id,
+        position_id=position_id,
+        company_id=company_id,
+        career_name=career_id.replace("-", " ").title(),
+        position_title=position_title,
+        company_name=company_name,
+        user_name=session.get("user_name", "User")
+    )
 def prepare_answers_for_evaluation(answers):
     """
     Convert JSON answer strings back into dictionaries when possible.
