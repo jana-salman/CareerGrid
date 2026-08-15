@@ -71,16 +71,14 @@
 
                         <a
                             href="{{ url_for(
-                                'simulation_step',
+                                'simulation_workspace',
                                 career_id=career_id,
                                 position_id=position_id,
-                                company_id=job.company.display_name.replace(' ', '-'),
-                                step=1,
-                                reset=1
+                                company_id=job.company.display_name.replace(' ', '-')
                             ) }}"
                             class="main-btn"
                         >
-                            Practice for this role
+                            Enter Workspace
                         </a>
 
                     </div>
@@ -120,16 +118,14 @@
 
                             <a
                                 href="{{ url_for(
-                                    'simulation_step',
+                                    'simulation_workspace',
                                     career_id=career_id,
                                     position_id=position_id,
-                                    company_id=company.id,
-                                    step=1,
-                                    reset=1
+                                    company_id=company.id
                                 ) }}"
-                                class="main-btn"
+                                class="main-btn"    
                             >
-                                Practice for this role
+                                Enter Workspace
                             </a>
 
                         </div>

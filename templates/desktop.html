@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        {{ position_title }} Workspace | CareerGrid
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for(
+            'static',
+            filename='css/simulation/desktop.css'
+        ) }}?v=1"
+    >
+</head>
+
+<body>
+
+<main class="workspace">
+
+    <!-- =========================
+         TOP BAR
+    ========================== -->
+
+    <header class="workspace-topbar">
+
+        <div class="workspace-brand">
+
+            <div class="brand-icon">
+                CG
+            </div>
+
+            <div class="brand-text">
+                <strong>CareerGrid</strong>
+                <span>Interactive Career Simulation</span>
+            </div>
+
+        </div>
+
+
+        <div class="workspace-user">
+
+            <div class="workspace-clock">
+                <strong id="workspace-clock">
+                    --:--
+                </strong>
+
+                <span id="workspace-date">
+                    ---
+                </span>
+            </div>
+
+
+            <div class="user-avatar">
+                {{ (user_name or 'U')[0] | upper }}
+            </div>
+
+            <div class="user-information">
+
+                <strong>
+                    {{ user_name or "User" }}
+                </strong>
+
+                <span>
+                    {{ position_title }}
+                </span>
+
+            </div>
+
+        </div>
+
+    </header>
+
+
+    <!-- =========================
+         DESKTOP
+    ========================== -->
+
+    <section
+        class="desktop"
+        id="desktop"
+    >
+
+        <!-- APP DOCK -->
+
+        <aside class="app-dock">
+
+            <button
+                class="dock-app"
+                data-app="mail"
+                type="button"
+            >
+                <span class="app-icon app-icon-mail">
+                    ✉
+                </span>
+
+                <span>Mail</span>
+            </button>
+
+
+            <button
+                class="dock-app"
+                data-app="files"
+                type="button"
+            >
+                <span class="app-icon app-icon-files">
+                    ▰
+                </span>
+
+                <span>Files</span>
+            </button>
+
+
+            <button
+                class="dock-app"
+                data-app="vscode"
+                type="button"
+            >
+                <span class="app-icon app-icon-vscode">
+                    &lt;/&gt;
+                </span>
+
+                <span>VS Code</span>
+            </button>
+
+
+            <button
+                class="dock-app"
+                data-app="browser"
+                type="button"
+            >
+                <span class="app-icon app-icon-browser">
+                    ◎
+                </span>
+
+                <span>Browser</span>
+            </button>
+
+
+            <button
+                class="dock-app"
+                data-app="terminal"
+                type="button"
+            >
+                <span class="app-icon app-icon-terminal">
+                    &gt;_
+                </span>
+
+                <span>Terminal</span>
+            </button>
+
+
+            <button
+                class="dock-app"
+                data-app="github"
+                type="button"
+            >
+                <span class="app-icon app-icon-github">
+                    GH
+                </span>
+
+                <span>GitHub</span>
+            </button>
+
+
+            <button
+                class="dock-app dock-help"
+                data-app="guide"
+                type="button"
+            >
+                <span class="app-icon app-icon-guide">
+                    ?
+                </span>
+
+                <span>Guide</span>
+            </button>
+
+        </aside>
+
+
+        <!-- =========================
+             DESKTOP WELCOME AREA
+        ========================== -->
+
+        <section class="desktop-home">
+
+            <div class="welcome-card">
+
+                <span class="welcome-label">
+                    Workspace ready
+                </span>
+
+                <h1>
+                    Welcome to your
+                    {{ position_title }}
+                    workspace.
+                </h1>
+
+                <p>
+                    You're working with
+                    <strong>{{ company_name }}</strong>.
+                    Check your inbox to see what needs
+                    your attention today.
+                </p>
+
+                <button
+                    type="button"
+                    class="open-mail-btn"
+                    data-open-app="mail"
+                >
+                    Open Mail
+                </button>
+
+            </div>
+
+
+            <div class="role-card">
+
+                <span>Role</span>
+
+                <strong>
+                    {{ position_title }}
+                </strong>
+
+
+                <span>Company</span>
+
+                <strong>
+                    {{ company_name }}
+                </strong>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================
+             MAIL PLACEHOLDER
+        ========================== -->
+
+        <section
+            class="app-window"
+            data-window="mail"
+            aria-hidden="true"
+        >
+
+            <div class="window-header">
+
+                <div class="window-title">
+                    <span class="mini-icon app-icon-mail">
+                        ✉
+                    </span>
+
+                    <strong>Mail</strong>
+                </div>
+
+                <div class="window-controls">
+
+                    <button
+                        type="button"
+                        data-window-action="minimize"
+                    >
+                        —
+                    </button>
+
+                    <button
+                        type="button"
+                        data-window-action="close"
+                    >
+                        ×
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="placeholder-content">
+
+                <div class="placeholder-symbol">
+                    ✉
+                </div>
+
+                <h2>
+                    Your inbox will live here.
+                </h2>
+
+                <p>
+                    In our next branch this becomes the
+                    interactive Outlook-style inbox with
+                    tasks, deadlines, advisor conversations
+                    and attachments.
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <!-- FILES -->
+
+        <section
+            class="app-window"
+            data-window="files"
+            aria-hidden="true"
+        >
+
+            <div class="window-header">
+
+                <div class="window-title">
+                    <span class="mini-icon app-icon-files">
+                        ▰
+                    </span>
+
+                    <strong>Files</strong>
+                </div>
+
+                <div class="window-controls">
+
+                    <button
+                        type="button"
+                        data-window-action="minimize"
+                    >
+                        —
+                    </button>
+
+                    <button
+                        type="button"
+                        data-window-action="close"
+                    >
+                        ×
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="placeholder-content">
+
+                <div class="placeholder-symbol">
+                    ▰
+                </div>
+
+                <h2>Files</h2>
+
+                <p>
+                    Downloaded projects and simulation
+                    documents will appear here.
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <!-- VS CODE -->
+
+        <section
+            class="app-window"
+            data-window="vscode"
+            aria-hidden="true"
+        >
+
+            <div class="window-header">
+
+                <div class="window-title">
+                    <span class="mini-icon app-icon-vscode">
+                        &lt;/&gt;
+                    </span>
+
+                    <strong>VS Code</strong>
+                </div>
+
+                <div class="window-controls">
+
+                    <button
+                        type="button"
+                        data-window-action="minimize"
+                    >
+                        —
+                    </button>
+
+                    <button
+                        type="button"
+                        data-window-action="close"
+                    >
+                        ×
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="placeholder-content dark-placeholder">
+
+                <div class="placeholder-symbol">
+                    &lt;/&gt;
+                </div>
+
+                <h2>VS Code</h2>
+
+                <p>
+                    Projects downloaded from Mail will
+                    eventually open here.
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <!-- BROWSER -->
+
+        <section
+            class="app-window"
+            data-window="browser"
+            aria-hidden="true"
+        >
+
+            <div class="window-header">
+
+                <div class="window-title">
+                    <span class="mini-icon app-icon-browser">
+                        ◎
+                    </span>
+
+                    <strong>Browser</strong>
+                </div>
+
+                <div class="window-controls">
+
+                    <button
+                        type="button"
+                        data-window-action="minimize"
+                    >
+                        —
+                    </button>
+
+                    <button
+                        type="button"
+                        data-window-action="close"
+                    >
+                        ×
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="placeholder-content">
+
+                <div class="placeholder-symbol">
+                    ◎
+                </div>
+
+                <h2>Browser & DevTools</h2>
+
+                <p>
+                    Site previews, network requests,
+                    console output and debugging tools
+                    will appear here.
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <!-- TERMINAL -->
+
+        <section
+            class="app-window terminal-window"
+            data-window="terminal"
+            aria-hidden="true"
+        >
+
+            <div class="window-header terminal-header">
+
+                <div class="window-title">
+
+                    <span class="mini-icon app-icon-terminal">
+                        &gt;_
+                    </span>
+
+                    <strong>Terminal</strong>
+
+                </div>
+
+                <div class="window-controls">
+
+                    <button
+                        type="button"
+                        data-window-action="minimize"
+                    >
+                        —
+                    </button>
+
+                    <button
+                        type="button"
+                        data-window-action="close"
+                    >
+                        ×
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="terminal-content">
+
+                <span>
+                    careergrid@workspace:~$
+                </span>
+
+                <span class="terminal-cursor"></span>
+
+            </div>
+
+        </section>
+
+
+        <!-- GITHUB -->
+
+        <section
+            class="app-window"
+            data-window="github"
+            aria-hidden="true"
+        >
+
+            <div class="window-header">
+
+                <div class="window-title">
+
+                    <span class="mini-icon app-icon-github">
+                        GH
+                    </span>
+
+                    <strong>GitHub</strong>
+
+                </div>
+
+                <div class="window-controls">
+
+                    <button
+                        type="button"
+                        data-window-action="minimize"
+                    >
+                        —
+                    </button>
+
+                    <button
+                        type="button"
+                        data-window-action="close"
+                    >
+                        ×
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="placeholder-content">
+
+                <div class="placeholder-symbol">
+                    GH
+                </div>
+
+                <h2>GitHub Workspace</h2>
+
+                <p>
+                    Branches, commits, pushes and pull
+                    requests will appear here.
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <!-- GUIDE -->
+
+        <section
+            class="app-window guide-window"
+            data-window="guide"
+            aria-hidden="true"
+        >
+
+            <div class="window-header">
+
+                <div class="window-title">
+
+                    <span class="mini-icon app-icon-guide">
+                        ?
+                    </span>
+
+                    <strong>Workspace Guide</strong>
+
+                </div>
+
+                <div class="window-controls">
+
+                    <button
+                        type="button"
+                        data-window-action="minimize"
+                    >
+                        —
+                    </button>
+
+                    <button
+                        type="button"
+                        data-window-action="close"
+                    >
+                        ×
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="guide-content">
+
+                <span class="welcome-label">
+                    How CareerGrid works
+                </span>
+
+                <h2>
+                    Treat this workspace like a real workday.
+                </h2>
+
+                <div class="guide-step">
+
+                    <strong>1. Check Mail</strong>
+
+                    <p>
+                        Tasks and advisor messages arrive
+                        through your inbox.
+                    </p>
+
+                </div>
+
+
+                <div class="guide-step">
+
+                    <strong>2. Use your tools</strong>
+
+                    <p>
+                        Investigate files, code, browser
+                        behavior and logs.
+                    </p>
+
+                </div>
+
+
+                <div class="guide-step">
+
+                    <strong>3. Ask naturally</strong>
+
+                    <p>
+                        If you're stuck, reply to your
+                        advisor instead of requesting a hint.
+                    </p>
+
+                </div>
+
+
+                <div class="guide-step">
+
+                    <strong>4. Deliver your work</strong>
+
+                    <p>
+                        Share your branch or pull request
+                        and report your findings through Mail.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </section>
+
+</main>
+
+
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/desktop.js'
+    ) }}?v=1"
+    defer
+></script>
+
+</body>
+</html>
