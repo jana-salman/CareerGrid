@@ -1,0 +1,366 @@
+<section
+    class="app-window vscode-window"
+    data-window="vscode"
+    aria-hidden="true"
+    id="vscode-app"
+>
+
+    <!-- =====================================
+         TITLE BAR
+    ====================================== -->
+
+    <div class="window-header vscode-window-header">
+
+        <div class="window-title">
+
+            <span class="mini-icon app-icon-vscode">
+                &lt;/&gt;
+            </span>
+
+            <strong>VS Code</strong>
+
+        </div>
+
+
+        <div class="window-controls">
+
+            <button
+                type="button"
+                data-window-action="minimize"
+                title="Minimize"
+            >
+                —
+            </button>
+
+            <button
+                type="button"
+                data-window-action="close"
+                title="Close"
+            >
+                ×
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================
+         VS CODE BODY
+    ====================================== -->
+
+    <div class="vscode-layout">
+
+        <!-- ACTIVITY BAR -->
+
+        <aside class="vscode-activity-bar">
+
+            <button
+                type="button"
+                class="vscode-activity-button is-active"
+                title="Explorer"
+            >
+                ▤
+            </button>
+
+            <button
+                type="button"
+                class="vscode-activity-button"
+                id="vscode-search-button"
+                title="Search"
+            >
+                ⌕
+            </button>
+
+            <button
+                type="button"
+                class="vscode-activity-button"
+                title="Source Control"
+                disabled
+            >
+                ⑂
+            </button>
+
+            <button
+                type="button"
+                class="vscode-activity-button vscode-activity-bottom"
+                title="Settings"
+                disabled
+            >
+                ⚙
+            </button>
+
+        </aside>
+
+
+        <!-- =====================================
+             EXPLORER
+        ====================================== -->
+
+        <aside class="vscode-sidebar">
+
+            <header class="vscode-sidebar-header">
+
+                <span>EXPLORER</span>
+
+                <button
+                    type="button"
+                    id="vscode-refresh-project"
+                    title="Refresh Explorer"
+                >
+                    ↻
+                </button>
+
+            </header>
+
+
+            <!-- PROJECT PICKER -->
+
+            <section
+                class="vscode-project-picker"
+                id="vscode-project-picker"
+            >
+
+                <strong>
+                    Open Project
+                </strong>
+
+                <p>
+                    Choose a project from your CareerGrid
+                    Projects folder.
+                </p>
+
+                <div
+                    class="vscode-project-list"
+                    id="vscode-project-list"
+                >
+                </div>
+
+            </section>
+
+
+            <!-- OPENED PROJECT -->
+
+            <section
+                class="vscode-project-explorer"
+                id="vscode-project-explorer"
+                hidden
+            >
+
+                <div class="vscode-project-title-row">
+
+                    <strong
+                        id="vscode-project-name"
+                    >
+                    </strong>
+
+                    <button
+                        type="button"
+                        id="vscode-close-project"
+                        title="Close Project"
+                    >
+                        ×
+                    </button>
+
+                </div>
+
+
+                <div
+                    class="vscode-file-tree"
+                    id="vscode-file-tree"
+                >
+                </div>
+
+            </section>
+
+        </aside>
+
+
+        <!-- =====================================
+             MAIN EDITOR
+        ====================================== -->
+
+        <main class="vscode-editor-area">
+
+            <!-- SEARCH PANEL -->
+
+            <section
+                class="vscode-search-panel"
+                id="vscode-search-panel"
+                hidden
+            >
+
+                <div class="vscode-search-box-row">
+
+                    <input
+                        type="search"
+                        id="vscode-search-input"
+                        placeholder="Search project files"
+                        autocomplete="off"
+                    >
+
+                    <button
+                        type="button"
+                        id="vscode-close-search"
+                    >
+                        ×
+                    </button>
+
+                </div>
+
+
+                <div
+                    class="vscode-search-results"
+                    id="vscode-search-results"
+                >
+                </div>
+
+            </section>
+
+
+            <!-- TABS -->
+
+            <div
+                class="vscode-tabs"
+                id="vscode-tabs"
+            >
+            </div>
+
+
+            <!-- EMPTY STATE -->
+
+            <section
+                class="vscode-empty-editor"
+                id="vscode-empty-editor"
+            >
+
+                <div class="vscode-logo-large">
+                    &lt;/&gt;
+                </div>
+
+                <h2>
+                    CareerGrid Code Workspace
+                </h2>
+
+                <p>
+                    Open a project from the Explorer,
+                    then select a file to begin working.
+                </p>
+
+                <div class="vscode-shortcuts">
+
+                    <span>
+                        <kbd>Ctrl</kbd>
+                        +
+                        <kbd>S</kbd>
+                        Save file
+                    </span>
+
+                    <span>
+                        <kbd>Ctrl</kbd>
+                        +
+                        <kbd>F</kbd>
+                        Search project
+                    </span>
+
+                </div>
+
+            </section>
+
+
+            <!-- EDITOR -->
+
+            <section
+                class="vscode-editor"
+                id="vscode-editor"
+                hidden
+            >
+
+                <div class="vscode-editor-toolbar">
+
+                    <div
+                        class="vscode-breadcrumb"
+                        id="vscode-breadcrumb"
+                    >
+                    </div>
+
+
+                    <button
+                        type="button"
+                        class="vscode-save-button"
+                        id="vscode-save-button"
+                        disabled
+                    >
+                        Save
+                    </button>
+
+                </div>
+
+
+                <div class="vscode-code-wrapper">
+
+                    <div
+                        class="vscode-line-numbers"
+                        id="vscode-line-numbers"
+                    >
+                    </div>
+
+
+                    <textarea
+                        id="vscode-code-editor"
+                        class="vscode-code-editor"
+                        spellcheck="false"
+                        autocomplete="off"
+                        autocorrect="off"
+                        autocapitalize="off"
+                    ></textarea>
+
+                </div>
+
+            </section>
+
+
+            <!-- STATUS BAR -->
+
+            <footer class="vscode-status-bar">
+
+                <div>
+
+                    <span id="vscode-status-project">
+                        No project
+                    </span>
+
+                </div>
+
+
+                <div>
+
+                    <span id="vscode-status-position">
+                        Ln 1, Col 1
+                    </span>
+
+                    <span id="vscode-status-language">
+                        Plain Text
+                    </span>
+
+                    <span>
+                        UTF-8
+                    </span>
+
+                </div>
+
+            </footer>
+
+        </main>
+
+    </div>
+
+
+    <div
+        class="vscode-toast"
+        id="vscode-toast"
+        hidden
+    >
+    </div>
+
+</section>
