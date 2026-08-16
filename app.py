@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, session, request
+from flask import Flask, jsonify, render_template, redirect, url_for, session, request
 import os
 import json
 import requests
@@ -26,6 +26,10 @@ from services.evaluation_service import (
 from services.inbox_response_service import (
     InboxResponseValidationError,
     validate_inbox_response,
+)
+from services.advisor_service import (
+    AdvisorReplyError,
+    generate_advisor_reply,
 )
 
 from services.simulation_storage import (
@@ -1068,6 +1072,34 @@ def simulation_workspace(career_id, position_id, company_id):
         company_name=company_name,
         user_name=session.get("user_name", "User")
     )
+
+
+@app.post("/api/simulation/advisor/reply")
+def simulation_advisor_reply():
+    """Generate a conversational advisor reply from browser-verified state."""
+    payload = request.get_json(silent=True) or {}
+    advisor_context = payload.get("advisor_context")
+
+    if not isinstance(advisor_context, dict):
+        return jsonify(
+            {
+                "error": "Advisor context is required.",
+            }
+        ), 400
+
+    try:
+        reply = generate_advisor_reply(advisor_context)
+    except AdvisorReplyError as error:
+        app.logger.warning("Advisor reply generation failed: %s", error)
+        return jsonify(
+            {
+                "error": "Advisor service is temporarily unavailable.",
+            }
+        ), 503
+
+    return jsonify(reply)
+
+
 def prepare_answers_for_evaluation(answers):
     """
     Convert JSON answer strings back into dictionaries when possible.
