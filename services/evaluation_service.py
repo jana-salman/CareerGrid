@@ -11,6 +11,36 @@ class SimulationEvaluationError(Exception):
     """Raised when Gemini cannot produce a valid evaluation."""
 
 
+def evaluate_workplace_submission(evidence: dict[str, Any]) -> dict[str, Any]:
+    """Evaluate a submitted workplace task from recorded simulation evidence."""
+    model = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
+    prompt = f"""Evaluate this CareerGrid workplace submission using only the evidence.
+Do not invent facts. Return JSON only with: overall_score (0-100), summary,
+dimensions (technical_accuracy, problem_solving, verification_testing,
+git_workflow, communication, independence; each with score, max_score, feedback),
+strengths, areas_for_improvement, recommended_next_steps, advisor_feedback, and
+review_message (a concise email announcing the attached review).
+Evidence: {json.dumps(evidence, ensure_ascii=False)}"""
+    try:
+        with get_gemini_client() as client:
+            response = client.models.generate_content(
+                model=model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.35,
+                ),
+            )
+        evaluation = json.loads(_clean_json_response(response.text or ""))
+    except Exception as error:
+        raise SimulationEvaluationError(
+            "Gemini could not evaluate the submitted work."
+        ) from error
+    if not isinstance(evaluation, dict) or not isinstance(evaluation.get("dimensions"), dict):
+        raise SimulationEvaluationError("Gemini returned an invalid workplace evaluation.")
+    return evaluation
+
+
 def _clean_json_response(response_text: str) -> str:
     """
     Remove optional Markdown code blocks from Gemini's response.

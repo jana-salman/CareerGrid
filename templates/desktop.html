@@ -60,6 +60,7 @@
             filename='css/simulation/github.css'
         ) }}?v=1"
     >
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/simulation/report.css') }}?v=2">
 </head>
 
 <body>
@@ -470,6 +471,8 @@
 
 </main>
 
+{% include "simulation_apps/report_viewer.html" %}
+
 
 <script
     src="{{ url_for(
@@ -478,6 +481,7 @@
     ) }}?v=1"
     defer
 ></script>
+<script src="{{ url_for('static', filename='js/simulation/report.js') }}?v=2" defer></script>
 
 <script
     src="{{ url_for(
@@ -491,7 +495,7 @@
     src="{{ url_for(
         'static',
         filename='js/simulation/mail.js'
-    ) }}?v=3"
+    ) }}?v=4"
     defer
 ></script>
 

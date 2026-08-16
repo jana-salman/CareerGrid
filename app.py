@@ -22,6 +22,7 @@ from services.roadmap_service import (
 from services.evaluation_service import (
     SimulationEvaluationError,
     evaluate_simulation,
+    evaluate_workplace_submission,
 )
 from services.inbox_response_service import (
     InboxResponseValidationError,
@@ -1098,6 +1099,19 @@ def simulation_advisor_reply():
         ), 503
 
     return jsonify(reply)
+
+
+@app.post("/api/simulation/evaluation")
+def simulation_workplace_evaluation():
+    payload = request.get_json(silent=True) or {}
+    evidence = payload.get("evidence")
+    if not isinstance(evidence, dict):
+        return jsonify({"error": "Evaluation evidence is required."}), 400
+    try:
+        return jsonify(evaluate_workplace_submission(evidence))
+    except SimulationEvaluationError as error:
+        app.logger.warning("Workplace evaluation failed: %s", error)
+        return jsonify({"error": str(error)}), 503
 
 
 def prepare_answers_for_evaluation(answers):
