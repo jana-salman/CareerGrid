@@ -1,0 +1,126 @@
+<section
+    class="app-window terminal-app-window"
+    data-window="terminal"
+    aria-hidden="true"
+    id="terminal-app"
+    data-user-name="{{ user_name }}"
+>
+
+    <!-- TITLE BAR -->
+
+    <div class="window-header terminal-app-header">
+
+        <div class="window-title">
+
+            <span class="mini-icon app-icon-terminal">
+                &gt;_
+            </span>
+
+            <strong>Terminal</strong>
+
+        </div>
+
+
+        <div class="window-controls">
+
+            <button
+                type="button"
+                data-window-action="minimize"
+                title="Minimize"
+            >
+                —
+            </button>
+
+            <button
+                type="button"
+                data-window-action="close"
+                title="Close"
+            >
+                ×
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- TERMINAL TAB BAR -->
+
+    <div class="terminal-tab-bar">
+
+        <div class="terminal-tab is-active">
+
+            <span>
+                &gt;_
+            </span>
+
+            <span>
+                bash
+            </span>
+
+        </div>
+
+
+        <div
+            class="terminal-working-directory"
+            id="terminal-working-directory"
+        >
+            /Projects
+        </div>
+
+    </div>
+
+
+    <!-- OUTPUT -->
+
+    <div
+        class="terminal-screen"
+        id="terminal-screen"
+    >
+
+        <div class="terminal-welcome">
+
+            CareerGrid Workspace Terminal
+
+            Type <strong>help</strong> to see available commands.
+
+        </div>
+
+
+        <div
+            class="terminal-history"
+            id="terminal-history"
+        >
+        </div>
+
+    </div>
+
+
+        <!-- =====================================
+            PERMANENT COMMAND BAR
+        ====================================== -->
+
+    <div class="terminal-command-bar">
+
+        <span
+            class="terminal-prompt"
+            id="terminal-prompt"
+        >
+            careergrid:~/Projects$
+        </span>
+
+        <input
+            type="text"
+            id="terminal-input"
+            class="terminal-input"
+            autocomplete="off"
+            spellcheck="false"
+            autocorrect="off"
+            autocapitalize="off"
+            aria-label="Terminal command"
+            autofocus
+        >
+
+</div>
+
+</section>
