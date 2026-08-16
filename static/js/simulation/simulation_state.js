@@ -462,6 +462,26 @@ __pycache__/
                     }
 
 
+                    Object.values(
+                        parsed.git.repositories
+                    )
+                        .forEach(
+                            repository => {
+
+                                if (
+                                    !Array.isArray(
+                                        repository.pullRequests
+                                    )
+                                ) {
+
+                                    repository.pullRequests = [];
+
+                                }
+
+                            }
+                        );
+
+
                     if (!parsed.terminal) {
 
                         parsed.terminal = {
@@ -1281,7 +1301,9 @@ __pycache__/
 
                     }
 
-                }
+                },
+
+                pullRequests: []
 
             };
 
@@ -1322,6 +1344,287 @@ __pycache__/
         return clone(
             state.git.repositories
         );
+
+    }
+
+
+    // =========================================
+    // PULL REQUESTS
+    // =========================================
+
+    function getPullRequests(
+        projectPath
+    ) {
+
+        const repository =
+            getRepository(
+                projectPath
+            );
+
+
+        if (!repository) {
+
+            return [];
+
+        }
+
+
+        return clone(
+            repository.pullRequests
+            ||
+            []
+        );
+
+    }
+
+
+    function getPullRequest(
+        projectPath,
+        pullRequestId
+    ) {
+
+        const pullRequests =
+            getPullRequests(
+                projectPath
+            );
+
+
+        return (
+            pullRequests.find(
+                pullRequest =>
+                    pullRequest.id
+                    ===
+                    Number(
+                        pullRequestId
+                    )
+            )
+            ||
+            null
+        );
+
+    }
+
+
+    function createPullRequest(
+        projectPath,
+        details = {}
+    ) {
+
+        const repository =
+            ensureRepository(
+                projectPath
+            );
+
+
+        if (!repository) {
+
+            return {
+                success: false,
+                message: "Repository not found."
+            };
+
+        }
+
+
+        if (
+            !Array.isArray(
+                repository.pullRequests
+            )
+        ) {
+
+            repository.pullRequests = [];
+
+        }
+
+
+        const baseBranch =
+            String(
+                details.baseBranch
+                ||
+                ""
+            )
+                .trim();
+
+
+        const compareBranch =
+            String(
+                details.compareBranch
+                ||
+                ""
+            )
+                .trim();
+
+
+        const title =
+            String(
+                details.title
+                ||
+                ""
+            )
+                .trim();
+
+
+        const description =
+            String(
+                details.description
+                ||
+                ""
+            )
+                .trim();
+
+
+        if (
+            !repository.branches[
+                baseBranch
+            ]
+            ||
+            !repository.branches[
+                compareBranch
+            ]
+        ) {
+
+            return {
+                success: false,
+                message: "Select branches that exist in this repository."
+            };
+
+        }
+
+
+        if (
+            baseBranch
+            ===
+            compareBranch
+        ) {
+
+            return {
+                success: false,
+                message: "Choose different base and compare branches."
+            };
+
+        }
+
+
+        if (
+            compareBranch
+            ===
+            "main"
+        ) {
+
+            return {
+                success: false,
+                message: "Choose a feature branch to compare with main."
+            };
+
+        }
+
+
+        if (
+            !repository.remote.pushedBranches
+                .includes(
+                    compareBranch
+                )
+        ) {
+
+            return {
+                success: false,
+                message: "Push this branch before opening a pull request."
+            };
+
+        }
+
+
+        const baseCommitIds =
+            new Set(
+                repository.branches[
+                    baseBranch
+                ].commits.map(
+                    commit => commit.id
+                )
+            );
+
+
+        const compareHasChanges =
+            repository.branches[
+                compareBranch
+            ].commits.some(
+                commit =>
+                    !baseCommitIds.has(
+                        commit.id
+                    )
+            );
+
+
+        if (!compareHasChanges) {
+
+            return {
+                success: false,
+                message: "This branch has no commits to compare with the base branch."
+            };
+
+        }
+
+
+        if (!title) {
+
+            return {
+                success: false,
+                message: "Add a pull request title."
+            };
+
+        }
+
+
+        const nextId =
+            repository.pullRequests.reduce(
+                (highestId, pullRequest) =>
+                    Math.max(
+                        highestId,
+                        Number(
+                            pullRequest.id
+                        )
+                        ||
+                        0
+                    ),
+                0
+            )
+            +
+            1;
+
+
+        const pullRequest = {
+            id: nextId,
+            title: title,
+            description: description,
+            baseBranch: baseBranch,
+            compareBranch: compareBranch,
+            author: String(
+                details.author
+                ||
+                "CareerGrid User"
+            ),
+            createdAt: new Date()
+                .toISOString(),
+            status: "open",
+            url:
+                `https://github.com/careergrid-sim/${baseName(repository.rootPath)}/pull/${nextId}`
+        };
+
+
+        repository.pullRequests.push(
+            pullRequest
+        );
+
+
+        saveState();
+
+
+        return {
+            success: true,
+            pullRequest: clone(
+                pullRequest
+            )
+        };
 
     }
 
@@ -2336,6 +2639,15 @@ __pycache__/
 
         getRepositories:
             getRepositories,
+
+        getPullRequests:
+            getPullRequests,
+
+        getPullRequest:
+            getPullRequest,
+
+        createPullRequest:
+            createPullRequest,
 
         gitStatus:
             gitStatus,
