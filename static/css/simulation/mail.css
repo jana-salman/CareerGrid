@@ -513,7 +513,8 @@
 
 
 .mail-priority,
-.mail-deadline {
+.mail-deadline,
+.mail-task-status {
     display: inline-flex;
 
     padding: 4px 8px;
@@ -1013,4 +1014,11 @@
         display: none;
     }
 
+}
+
+
+.mail-task-status {
+    color: #1f6f43;
+
+    background: #dcfce7;
 }

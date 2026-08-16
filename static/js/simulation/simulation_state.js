@@ -414,7 +414,9 @@ __pycache__/
                 history:
                     []
 
-            }
+            },
+
+            submissions: {}
 
         };
 
@@ -495,6 +497,13 @@ __pycache__/
                     if (!Array.isArray(parsed.terminal.history)) {
 
                         parsed.terminal.history = [];
+
+                    }
+
+
+                    if (!parsed.submissions) {
+
+                        parsed.submissions = {};
 
                     }
 
@@ -2586,6 +2595,89 @@ __pycache__/
 
     }
 
+
+    // =========================================
+    // WORK SUBMISSIONS
+    // =========================================
+
+    function getSubmission(
+        threadId
+    ) {
+
+        return clone(
+            state.submissions[
+                String(threadId || "default")
+            ]
+            ||
+            null
+        );
+
+    }
+
+
+    function getSubmissionStatus(
+        threadId
+    ) {
+
+        return getSubmission(threadId)?.status
+            ||
+            "in_progress";
+
+    }
+
+
+    function recordSubmission(
+        details = {}
+    ) {
+
+        const threadId =
+            String(
+                details.threadId
+                ||
+                "default"
+            );
+
+
+        const existing =
+            state.submissions[threadId];
+
+
+        if (existing) {
+
+            return {
+                success: false,
+                existing: clone(existing),
+                message: "This task already has a recorded submission."
+            };
+
+        }
+
+
+        const submission = {
+            status: "submitted",
+            submittedAt: new Date().toISOString(),
+            messageId: String(details.messageId || ""),
+            threadId: threadId,
+            rawMessage: String(details.rawMessage || ""),
+            repositoryPath: String(details.repositoryPath || ""),
+            branch: String(details.branch || ""),
+            pullRequestId: Number(details.pullRequestId),
+            pullRequestUrl: String(details.pullRequestUrl || ""),
+            extracted: clone(details.extracted || {})
+        };
+
+
+        state.submissions[threadId] = submission;
+
+        saveState();
+
+        return {
+            success: true,
+            submission: clone(submission)
+        };
+
+    }
+
     // =========================================
     // EXPOSE API
     // =========================================
@@ -2680,7 +2772,16 @@ __pycache__/
             recordTerminalCommand,
 
         clearTerminalHistory:
-            clearTerminalHistory
+            clearTerminalHistory,
+
+        getSubmission:
+            getSubmission,
+
+        getSubmissionStatus:
+            getSubmissionStatus,
+
+        recordSubmission:
+            recordSubmission
 
     };
 
