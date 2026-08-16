@@ -416,7 +416,9 @@ __pycache__/
 
             },
 
-            submissions: {}
+            submissions: {},
+
+            evaluations: {}
 
         };
 
@@ -504,6 +506,12 @@ __pycache__/
                     if (!parsed.submissions) {
 
                         parsed.submissions = {};
+
+                    }
+
+                    if (!parsed.evaluations) {
+
+                        parsed.evaluations = {};
 
                     }
 
@@ -2678,6 +2686,33 @@ __pycache__/
 
     }
 
+
+    function getEvaluation(threadId) {
+        return clone(state.evaluations[String(threadId || "default")] || null);
+    }
+
+    function markEvaluationPending(threadId) {
+        const key = String(threadId || "default");
+        if (state.evaluations[key]?.status === "completed") return clone(state.evaluations[key]);
+        state.evaluations[key] = { status: "pending", startedAt: new Date().toISOString() };
+        saveState();
+        return clone(state.evaluations[key]);
+    }
+
+    function recordEvaluation(threadId, evaluation) {
+        const key = String(threadId || "default");
+        state.evaluations[key] = { status: "completed", completedAt: new Date().toISOString(), data: clone(evaluation) };
+        saveState();
+        return clone(state.evaluations[key]);
+    }
+
+    function markEvaluationFailed(threadId, message) {
+        const key = String(threadId || "default");
+        state.evaluations[key] = { status: "failed", failedAt: new Date().toISOString(), message: String(message || "Evaluation unavailable.") };
+        saveState();
+        return clone(state.evaluations[key]);
+    }
+
     // =========================================
     // EXPOSE API
     // =========================================
@@ -2781,7 +2816,12 @@ __pycache__/
             getSubmissionStatus,
 
         recordSubmission:
-            recordSubmission
+            recordSubmission,
+
+        getEvaluation: getEvaluation,
+        markEvaluationPending: markEvaluationPending,
+        recordEvaluation: recordEvaluation,
+        markEvaluationFailed: markEvaluationFailed
 
     };
 

@@ -1178,6 +1178,20 @@ Good luck with your first day!`
                         </div>
                         `;
 
+                    if (threadMessage.attachments?.length) {
+                        threadMessage.attachments.forEach(attachment => {
+                            const button = document.createElement("button");
+                            button.type = "button";
+                            button.className = "mail-download-button";
+                            button.textContent = attachment.name;
+                            button.addEventListener("click", () => {
+                                const evaluation = simulationState.getEvaluation(attachment.threadId);
+                                window.CareerGridReport?.open(evaluation, attachment.meta || {});
+                            });
+                            card.appendChild(button);
+                        });
+                    }
+
 
                     threadElement.appendChild(
                         card
@@ -1221,6 +1235,9 @@ Good luck with your first day!`
 
             message.attachments.forEach(
                 attachment => {
+
+                    const isEvaluationReport =
+                        attachment.type === "evaluation-report";
 
                     const downloaded =
                         simulationState
@@ -1299,6 +1316,24 @@ Good luck with your first day!`
                     downloadButton.addEventListener(
                         "click",
                         () => {
+
+                            if (isEvaluationReport) {
+
+                                const evaluation =
+                                    simulationState.getEvaluation(
+                                        attachment.threadId
+                                    );
+
+                                window.CareerGridReport?.open(
+                                    evaluation,
+                                    attachment.meta
+                                    ||
+                                    {}
+                                );
+
+                                return;
+
+                            }
 
                             downloadAttachment(
                                 attachment
@@ -1871,6 +1906,50 @@ Good luck with your first day!`
 
         }
 
+        async function runSubmissionEvaluation(message, assessment) {
+            if (!message.task || !assessment.submission || !assessment.validated) return;
+            const existing = simulationState.getEvaluation(message.id);
+            const pendingAge = existing?.startedAt ? Date.now() - new Date(existing.startedAt).getTime() : 0;
+            if (existing?.status === "completed" || (existing?.status === "pending" && pendingAge < 10 * 60 * 1000)) return;
+            simulationState.markEvaluationPending(message.id);
+            const repository = assessment.validated.repository;
+            const pullRequest = assessment.validated.pullRequest;
+            const base = repository.branches[pullRequest.baseBranch];
+            const compare = repository.branches[pullRequest.compareBranch];
+            const before = base?.headSnapshot || {};
+            const after = compare?.headSnapshot || {};
+            const changedFiles = Object.keys(after).filter(path => !before[path] || before[path].content !== after[path].content).map(path => ({ path, before: before[path]?.content || "", after: after[path]?.content || "" }));
+            try {
+                const response = await fetch("/api/simulation/evaluation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ evidence: { task: { title: message.subject, original_email: message.thread[0]?.body, deadline: message.deadline }, submission: assessment.submission, pull_request: pullRequest, repository: { path: repository.rootPath, commits: compare?.commits || [], pushed_branches: repository.remote.pushedBranches }, changed_files: changedFiles, conversation: message.thread } }) });
+                if (!response.ok) throw new Error("Evaluation failed");
+                const evaluation = await response.json();
+                simulationState.recordEvaluation(message.id, evaluation);
+                if (!message.thread.some(entry => entry.type === "evaluation-review")) {
+                    message.thread.push({ id: `review-${Date.now()}`, from: message.sender, role: message.senderRole || "Advisor", type: "evaluation-review", sentAt: new Date().toISOString(), body: evaluation.review_message || "I've completed my review and attached the feedback report.", attachments: [{ id: `report-${message.id}`, name: "Task Review Report.pdf", type: "evaluation-report", size: "Generated review", threadId: message.id, meta: { task: message.subject, position: positionTitle, company: companyName } }] });
+                    saveState(); renderThread(message);
+                }
+            } catch (error) { simulationState.markEvaluationFailed(message.id, error.message); }
+        }
+
+        function ensureReviewMessage(message, evaluation) {
+            if (message.thread.some(entry => entry.type === "evaluation-review")) return;
+            message.thread.push({ id: `review-${message.id}`, from: message.sender, role: message.senderRole || "Advisor", type: "evaluation-review", sentAt: evaluation.completedAt || new Date().toISOString(), body: evaluation.data?.review_message || "I've completed my review and attached the feedback report.", attachments: [{ id: `report-${message.id}`, name: "Task Review Report.pdf", type: "evaluation-report", size: "Generated review", threadId: message.id, meta: { task: message.subject, position: positionTitle, company: companyName } }] });
+            saveState();
+        }
+
+        function recoverSubmittedEvaluations() {
+            if (!simulationState) return;
+            state.inbox.filter(message => message.task).forEach(message => {
+                const submission = simulationState.getSubmission(message.id);
+                if (submission?.status !== "submitted") return;
+                const evaluation = simulationState.getEvaluation(message.id);
+                if (evaluation?.status === "completed") { ensureReviewMessage(message, evaluation); return; }
+                const assessment = assessSubmission(message, submission.rawMessage || "");
+                assessment.submission = submission;
+                runSubmissionEvaluation(message, assessment);
+            });
+        }
+
 
         // =========================================
         // SEND REPLY
@@ -2070,6 +2149,8 @@ Good luck with your first day!`
             renderSelectedMessage();
             showToast(`${message.sender} replied`);
 
+            await runSubmissionEvaluation(message, assessment);
+
         }
 
 
@@ -2165,6 +2246,8 @@ Good luck with your first day!`
         );
 
         updateCounters();
+
+        recoverSubmittedEvaluations();
 
     }
 );
