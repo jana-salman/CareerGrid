@@ -44,6 +44,14 @@
             filename='css/simulation/vscode.css'
         ) }}?v=1"
     >
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for(
+            'static',
+            filename='css/simulation/terminal.css'
+        ) }}?v=1"
+    >
 </head>
 
 <body>
@@ -342,58 +350,7 @@
         </section>
 
 
-        <!-- TERMINAL -->
-
-        <section
-            class="app-window terminal-window"
-            data-window="terminal"
-            aria-hidden="true"
-        >
-
-            <div class="window-header terminal-header">
-
-                <div class="window-title">
-
-                    <span class="mini-icon app-icon-terminal">
-                        &gt;_
-                    </span>
-
-                    <strong>Terminal</strong>
-
-                </div>
-
-                <div class="window-controls">
-
-                    <button
-                        type="button"
-                        data-window-action="minimize"
-                    >
-                        —
-                    </button>
-
-                    <button
-                        type="button"
-                        data-window-action="close"
-                    >
-                        ×
-                    </button>
-
-                </div>
-
-            </div>
-
-
-            <div class="terminal-content">
-
-                <span>
-                    careergrid@workspace:~$
-                </span>
-
-                <span class="terminal-cursor"></span>
-
-            </div>
-
-        </section>
+        {% include "simulation_apps/terminal.html" %}
 
 
         <!-- GITHUB -->
@@ -599,6 +556,14 @@
         'static',
         filename='js/simulation/vscode.js'
     ) }}?v=1"
+    defer
+></script>
+
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/terminal.js'
+    ) }}?v=2"
     defer
 ></script>
 
