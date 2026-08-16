@@ -20,6 +20,14 @@
             filename='css/simulation/desktop.css'
         ) }}?v=1"
     >
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for(
+            'static',
+            filename='css/simulation/mail.css'
+        ) }}?v=1"
+    >
 </head>
 
 <body>
@@ -98,8 +106,15 @@
                 data-app="mail"
                 type="button"
             >
-                <span class="app-icon app-icon-mail">
+                <span class="app-icon app-icon-mail mail-dock-icon">
                     ✉
+
+                    <span
+                        class="mail-unread-badge"
+                        id="mail-unread-badge"
+                    >
+                        0
+                    </span>
                 </span>
 
                 <span>Mail</span>
@@ -242,67 +257,7 @@
         </section>
 
 
-        <!-- =========================
-             MAIL PLACEHOLDER
-        ========================== -->
-
-        <section
-            class="app-window"
-            data-window="mail"
-            aria-hidden="true"
-        >
-
-            <div class="window-header">
-
-                <div class="window-title">
-                    <span class="mini-icon app-icon-mail">
-                        ✉
-                    </span>
-
-                    <strong>Mail</strong>
-                </div>
-
-                <div class="window-controls">
-
-                    <button
-                        type="button"
-                        data-window-action="minimize"
-                    >
-                        —
-                    </button>
-
-                    <button
-                        type="button"
-                        data-window-action="close"
-                    >
-                        ×
-                    </button>
-
-                </div>
-
-            </div>
-
-
-            <div class="placeholder-content">
-
-                <div class="placeholder-symbol">
-                    ✉
-                </div>
-
-                <h2>
-                    Your inbox will live here.
-                </h2>
-
-                <p>
-                    In our next branch this becomes the
-                    interactive Outlook-style inbox with
-                    tasks, deadlines, advisor conversations
-                    and attachments.
-                </p>
-
-            </div>
-
-        </section>
+        {% include "simulation_apps/mail.html" %}
 
 
         <!-- FILES -->
@@ -701,6 +656,14 @@
     src="{{ url_for(
         'static',
         filename='js/simulation/desktop.js'
+    ) }}?v=1"
+    defer
+></script>
+
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/simulation/mail.js'
     ) }}?v=1"
     defer
 ></script>
