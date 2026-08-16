@@ -113,6 +113,11 @@ document.addEventListener(
                 "mail-message-deadline"
             );
 
+        const taskStatus =
+            document.getElementById(
+                "mail-task-status"
+            );
+
         const threadElement =
             document.getElementById(
                 "mail-thread"
@@ -1446,6 +1451,31 @@ Good luck with your first day!`
             }
 
 
+            if (
+                message.task
+                &&
+                simulationState
+            ) {
+
+                const status =
+                    simulationState.getSubmissionStatus(
+                        message.id
+                    );
+
+                taskStatus.hidden = false;
+                taskStatus.textContent =
+                    status === "submitted"
+                        ? "Task status: Submitted"
+                        : "Task status: In progress";
+
+            }
+            else {
+
+                taskStatus.hidden = true;
+
+            }
+
+
             renderThread(
                 message
             );
@@ -1588,82 +1618,256 @@ Good luck with your first day!`
         // ADVISOR RESPONSE
         // =========================================
 
-        function createAdvisorResponse(
-            userMessage
+        function assessSubmission(
+            message,
+            body
         ) {
 
-            const lower =
-                userMessage.toLowerCase();
+            const submission =
+                simulationState?.getSubmission(
+                    message.id
+                );
 
-
-            const askingForHelp =
+            const urls =
                 [
-                    "help",
-                    "stuck",
-                    "clarify",
-                    "clarification",
-                    "not sure",
-                    "where should",
-                    "where do i",
-                    "guidance"
+                    ...body.matchAll(
+                        /https:\/\/github\.com\/careergrid-sim\/[^\s/]+\/pull\/\d+/gi
+                    )
                 ]
-                    .some(
-                        keyword =>
-                            lower.includes(
-                                keyword
-                            )
+                    .map(
+                        match => match[0]
                     );
 
-
-            if (askingForHelp) {
-
-                return (
-`Take a closer look at the checkout request itself and compare the data being sent with what the endpoint expects.
-
-I wouldn't change anything yet. First identify exactly where the request and expected payload stop matching.
-
-Let me know what you find.`
+            const branchMatch =
+                body.match(
+                    /(?:^|\n)\s*branch\s*:\s*([A-Za-z0-9._/-]+)/i
                 );
 
-            }
+            const reportedBranch =
+                branchMatch?.[1]
+                ||
+                "";
 
+            const repositories =
+                simulationState
+                    ?
+                    simulationState.getRepositories()
+                    :
+                    {};
 
-            const looksLikeFinalUpdate =
-                lower.includes(
-                    "branch"
-                )
-                &&
+            let validated = null;
+
+            Object.values(repositories)
+                .some(
+                    repository =>
+                        simulationState.getPullRequests(
+                            repository.rootPath
+                        )
+                            .some(
+                                pullRequest => {
+
+                                    if (
+                                        urls.includes(
+                                            pullRequest.url
+                                        )
+                                    ) {
+
+                                        validated = {
+                                            repository,
+                                            pullRequest
+                                        };
+
+                                        return true;
+
+                                    }
+
+                                    return false;
+
+                                }
+                            )
+                );
+
+            const lower =
+                body.toLowerCase();
+
+            const looksLikeSubmission =
+                urls.length > 0
+                ||
                 (
-                    lower.includes(
-                        "github"
-                    )
-                    ||
-                    lower.includes(
-                        "pull request"
-                    )
-                    ||
-                    lower.includes(
-                        "pr"
-                    )
+                    Boolean(reportedBranch)
+                    &&
+                    /pull request|github|\bpr\b|pushed/.test(lower)
                 );
 
+            const hasSummary =
+                /found|identified|changed|updated|fixed|implemented|investigated|resolved/.test(lower)
+                &&
+                body.replace(/https?:\/\/\S+/g, "").trim().split(/\s+/).length >= 8;
 
-            if (looksLikeFinalUpdate) {
+            const hasVerification =
+                /test|tested|testing|verify|verified|validation|reviewed|checked/.test(lower);
 
-                return (
-`Thanks for the update. I received your summary and branch information.
+            const errors = [];
 
-I'll review the implementation and testing details and get back to you with feedback.`
-                );
+            if (looksLikeSubmission && !urls.length) {
+
+                errors.push("missing_pull_request");
 
             }
 
+            if (urls.length && !validated) {
 
-            return (
-`Thanks for the update.
+                errors.push("invalid_pull_request");
 
-Keep me posted as you investigate, and reply here if you run into anything blocking you.`
-            );
+            }
+
+            if (validated) {
+
+                const { repository, pullRequest } = validated;
+                const branch = repository.branches[pullRequest.compareBranch];
+                const baseIds = new Set(
+                    repository.branches[pullRequest.baseBranch]?.commits.map(commit => commit.id)
+                );
+                const hasNewCommits = branch?.commits.some(
+                    commit => !baseIds.has(commit.id)
+                );
+
+                if (pullRequest.status !== "open") errors.push("pull_request_not_open");
+                if (!branch) errors.push("missing_compare_branch");
+                if (!repository.remote.pushedBranches.includes(pullRequest.compareBranch)) errors.push("branch_not_pushed");
+                if (!hasNewCommits) errors.push("no_compare_commits");
+                if (reportedBranch && reportedBranch !== pullRequest.compareBranch) errors.push("branch_mismatch");
+                if (!hasSummary) errors.push("missing_summary");
+                if (!hasVerification) errors.push("missing_verification");
+            }
+
+            const complete =
+                looksLikeSubmission
+                &&
+                Boolean(validated)
+                &&
+                errors.length === 0;
+
+            return {
+                submission,
+                urls,
+                reportedBranch,
+                validated,
+                looksLikeSubmission,
+                hasSummary,
+                hasVerification,
+                errors,
+                complete
+            };
+
+        }
+
+
+        function buildAdvisorContext(
+            message,
+            body,
+            assessment
+        ) {
+
+            const repositories =
+                simulationState
+                    ? simulationState.getRepositories()
+                    : {};
+
+            return {
+                task: {
+                    id: message.id,
+                    status: assessment.submission ? "submitted" : "in_progress",
+                    title: message.subject,
+                    deadline: message.deadline,
+                    original_email: message.thread[0]?.body || ""
+                },
+                advisor: {
+                    name: message.sender,
+                    role: message.senderRole || "Advisor"
+                },
+                workspace: { position: positionTitle, company: companyName },
+                conversation: message.thread.slice(-12).map(entry => ({
+                    from: entry.from,
+                    role: entry.role,
+                    type: entry.type,
+                    body: entry.body,
+                    sent_at: entry.sentAt
+                })),
+                user_message: body,
+                repository_context: Object.values(repositories).map(repository => ({
+                    path: repository.rootPath,
+                    current_branch: repository.currentBranch,
+                    branches: Object.keys(repository.branches),
+                    pushed_branches: repository.remote.pushedBranches,
+                    commits: Object.fromEntries(Object.entries(repository.branches).map(([name, branch]) => [name, branch.commits.map(commit => ({ id: commit.id, message: commit.message, author: commit.author }))]))
+                })),
+                pull_request_context: assessment.validated ? {
+                    detected_url: assessment.validated.pullRequest.url,
+                    exists: true,
+                    id: assessment.validated.pullRequest.id,
+                    repository: assessment.validated.repository.rootPath,
+                    base_branch: assessment.validated.pullRequest.baseBranch,
+                    compare_branch: assessment.validated.pullRequest.compareBranch,
+                    status: assessment.validated.pullRequest.status,
+                    is_pushed: assessment.validated.repository.remote.pushedBranches.includes(assessment.validated.pullRequest.compareBranch)
+                } : { detected_url: assessment.urls[0] || "", exists: false },
+                submission_context: {
+                    already_submitted: Boolean(assessment.submission),
+                    looks_like_submission: assessment.looksLikeSubmission,
+                    validation_errors: assessment.errors,
+                    missing_information: assessment.errors.filter(error => error.startsWith("missing_")),
+                    guidance_level: Math.min(3, 1 + message.thread.filter(entry => entry.type === "user" && /help|stuck|clarify|not sure/i.test(entry.body)).length)
+                }
+            };
+
+        }
+
+
+        function fallbackAdvisorResponse(
+            assessment
+        ) {
+
+            if (assessment.errors.includes("invalid_pull_request")) return "I couldn't find that pull request in the current project. Please double-check the link and send it again.";
+            if (assessment.errors.includes("branch_mismatch")) return "I found the pull request, but the branch name in your update does not match the branch attached to it. Could you confirm the correct branch?";
+            if (assessment.errors.includes("missing_pull_request")) return "Thanks for the update. Please send the pull request link once the branch is pushed and ready for review.";
+            if (assessment.errors.includes("missing_summary") || assessment.errors.includes("missing_verification")) return "Thanks. Before I review the pull request, please include a brief summary of what you changed and how you verified it.";
+            return "Thanks for the update. I’ll review the context and follow up shortly.";
+
+        }
+
+
+        async function requestAdvisorResponse(
+            advisorContext,
+            assessment
+        ) {
+
+            try {
+
+                const response = await fetch(
+                    "/api/simulation/advisor/reply",
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ advisor_context: advisorContext })
+                    }
+                );
+
+                if (!response.ok) throw new Error("Advisor request failed.");
+
+                const payload = await response.json();
+
+                if (!payload.advisor_reply) throw new Error("Advisor reply missing.");
+
+                return payload.advisor_reply;
+
+            }
+            catch (error) {
+
+                console.warn("Advisor AI unavailable:", error);
+                return fallbackAdvisorResponse(assessment);
+
+            }
 
         }
 
@@ -1672,7 +1876,7 @@ Keep me posted as you investigate, and reply here if you run into anything block
         // SEND REPLY
         // =========================================
 
-        function sendReply() {
+        async function sendReply() {
 
             const message =
                 getSelectedMessage();
@@ -1695,6 +1899,13 @@ Keep me posted as you investigate, and reply here if you run into anything block
 
                 return;
             }
+
+
+            const assessment =
+                assessSubmission(
+                    message,
+                    body
+                );
 
 
             const now =
@@ -1726,6 +1937,41 @@ Keep me posted as you investigate, and reply here if you run into anything block
             message.thread.push(
                 userThreadMessage
             );
+
+
+            if (
+                message.task
+                &&
+                assessment.complete
+                &&
+                !assessment.submission
+            ) {
+
+                const recordResult =
+                    simulationState.recordSubmission(
+                    {
+                        messageId: userThreadMessage.id,
+                        threadId: message.id,
+                        rawMessage: body,
+                        repositoryPath: assessment.validated.repository.rootPath,
+                        branch: assessment.validated.pullRequest.compareBranch,
+                        pullRequestId: assessment.validated.pullRequest.id,
+                        pullRequestUrl: assessment.validated.pullRequest.url,
+                        extracted: {
+                            hasSummary: assessment.hasSummary,
+                            hasVerification: assessment.hasVerification
+                        }
+                    }
+                );
+
+                if (recordResult.success) {
+
+                    assessment.submission =
+                        recordResult.submission;
+
+                }
+
+            }
 
 
             state.sent.unshift(
@@ -1788,61 +2034,41 @@ Keep me posted as you investigate, and reply here if you run into anything block
             );
 
 
-            const advisorResponse =
-                createAdvisorResponse(
-                    body
+            const advisorContext =
+                buildAdvisorContext(
+                    message,
+                    body,
+                    assessment
                 );
 
+            sendButton.disabled = true;
 
-            window.setTimeout(
-                () => {
+            const advisorResponse =
+                await requestAdvisorResponse(
+                    advisorContext,
+                    assessment
+                );
 
-                    message.thread.push(
-                        {
-                            id:
-                                `advisor-${Date.now()}`,
+            sendButton.disabled = false;
 
-                            from:
-                                message.sender,
-
-                            role:
-                                message.senderRole
-                                ||
-                                "Advisor",
-
-                            type:
-                                "advisor",
-
-                            sentAt:
-                                new Date()
-                                    .toISOString(),
-
-                            body:
-                                advisorResponse
-                        }
-                    );
-
-
-                    message.unread =
-                        true;
-
-
-                    saveState();
-
-                    updateCounters();
-
-                    renderThread(
-                        message
-                    );
-
-
-                    showToast(
-                        `${message.sender} replied`
-                    );
-
-                },
-                1100
+            message.thread.push(
+                {
+                    id: `advisor-${Date.now()}`,
+                    from: message.sender,
+                    role: message.senderRole || "Advisor",
+                    type: "advisor",
+                    sentAt: new Date().toISOString(),
+                    body: advisorResponse
+                }
             );
+
+            message.unread = true;
+
+            saveState();
+            updateCounters();
+            renderThread(message);
+            renderSelectedMessage();
+            showToast(`${message.sender} replied`);
 
         }
 
@@ -1890,6 +2116,20 @@ Keep me posted as you investigate, and reply here if you run into anything block
         sendButton.addEventListener(
             "click",
             sendReply
+        );
+
+
+        window.addEventListener(
+            "careergrid:filesystem-changed",
+            () => {
+
+                if (getSelectedMessage()) {
+
+                    renderSelectedMessage();
+
+                }
+
+            }
         );
 
 
