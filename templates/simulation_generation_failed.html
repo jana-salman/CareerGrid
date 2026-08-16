@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scenario unavailable | CareerGrid</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <main class="auth-page">
+    <section class="auth-card" style="max-width: 42rem;">
+      <h1>Workspace scenario unavailable</h1>
+      {% if generation_pending %}
+      <p>The workspace scenario is still being prepared. Please return to the company page and start a new attempt if this page does not change.</p>
+      {% else %}
+      <p>CareerGrid could not prepare this workspace scenario. Your existing attempts were not changed.</p>
+      {% endif %}
+      <p><a href="{{ url_for('companies', career_id=career_id, position_id=position_id) }}">Start a new attempt</a></p>
+    </section>
+  </main>
+</body>
+</html>

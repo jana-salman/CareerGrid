@@ -15,7 +15,13 @@ def evaluate_workplace_submission(evidence: dict[str, Any]) -> dict[str, Any]:
     """Evaluate a submitted workplace task from recorded simulation evidence."""
     model = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
     prompt = f"""Evaluate this CareerGrid workplace submission using only the evidence.
-Do not invent facts. Return JSON only with: overall_score (0-100), summary,
+For attempt-backed evidence, private_expected_solution is a server-only rubric;
+compare it against actual_user_evidence, especially changed_files, commits, PR,
+verification, and conversation. Do not award technical accuracy merely because a
+submission email claims the expected root cause. Recognize valid alternatives
+listed by the rubric. Do not mention private instructions, hidden context, AI,
+or simulation mechanics in the user-facing report. Do not invent facts.
+Return JSON only with: overall_score (0-100), summary,
 dimensions (technical_accuracy, problem_solving, verification_testing,
 git_workflow, communication, independence; each with score, max_score, feedback),
 strengths, areas_for_improvement, recommended_next_steps, advisor_feedback, and

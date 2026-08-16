@@ -32,6 +32,10 @@ from services.advisor_service import (
     AdvisorReplyError,
     generate_advisor_reply,
 )
+from services.scenario_generation_service import (
+    ScenarioGenerationError,
+    generate_workplace_scenario,
+)
 
 from services.simulation_storage import (
     save_simulation_step_response,
@@ -45,6 +49,9 @@ from services.simulation_storage import (
     list_completed_simulation_attempts,
     create_ui_simulation_attempt,
     create_data_analyst_simulation_attempt,
+    create_workplace_simulation_attempt,
+    mark_workplace_generation_failed,
+    save_workplace_scenario,
 )
 
 from services.incident_response_service import (
@@ -1075,9 +1082,103 @@ def simulation_workspace(career_id, position_id, company_id):
     )
 
 
+@app.post("/simulation/workplace/start")
+def start_workplace_simulation():
+    career_id = request.form.get("career_id", "")
+    position_id = request.form.get("position_id", "")
+    company_id = request.form.get("company_id", "")
+    position = POSITIONS_DATA.get(career_id, {}).get(position_id)
+    if not position:
+        return redirect(url_for("career"))
+    valid_companies = {company.get("id") for company in position.get("companies", [])}
+    if company_id not in valid_companies:
+        return redirect(url_for("companies", career_id=career_id, position_id=position_id))
+    attempt_id = None
+    try:
+        attempt_id = create_workplace_simulation_attempt(user_id=session.get("user_id"), career_id=career_id, position_id=position_id, company_id=company_id)
+        app.logger.info("Created workplace simulation attempt %s (%s/%s/%s)", attempt_id, career_id, position_id, company_id)
+        scenario, generation_attempt_count = generate_workplace_scenario(
+            career_id=career_id,
+            position_id=position_id,
+            company_id=company_id,
+            attempt_id=attempt_id,
+        )
+        save_workplace_scenario(
+            user_id=session.get("user_id"),
+            attempt_id=attempt_id,
+            public_scenario=scenario["public_scenario"],
+            private_context=scenario["private_context"],
+            generation_attempt_count=generation_attempt_count,
+        )
+        app.logger.info("Scenario generation completed for workplace attempt %s", attempt_id)
+    except ScenarioGenerationError:
+        app.logger.warning("Scenario generation failed for workplace attempt %s", attempt_id)
+        try:
+            mark_workplace_generation_failed(user_id=session.get("user_id"), attempt_id=attempt_id)
+        except Exception:
+            app.logger.exception("Could not mark workplace generation as failed")
+        return redirect(url_for("workplace_attempt_workspace", attempt_id=attempt_id))
+    except Exception:
+        app.logger.exception("Could not create workplace simulation attempt")
+        if attempt_id:
+            try:
+                mark_workplace_generation_failed(
+                    user_id=session.get("user_id"),
+                    attempt_id=attempt_id,
+                )
+            except Exception:
+                app.logger.exception("Could not mark workplace generation as failed")
+            return redirect(url_for("workplace_attempt_workspace", attempt_id=attempt_id))
+        return redirect(url_for("companies", career_id=career_id, position_id=position_id))
+    return redirect(url_for("workplace_attempt_workspace", attempt_id=attempt_id))
+
+
+@app.get("/workspace/attempt/<attempt_id>")
+def workplace_attempt_workspace(attempt_id):
+    attempt = get_simulation_attempt(user_id=session.get("user_id"), attempt_id=attempt_id)
+    if not attempt or attempt.get("simulation_mode") != "workplace":
+        return redirect(url_for("career"))
+    career_id, position_id, company_id = attempt.get("career_id"), attempt.get("position_id"), attempt.get("company_id")
+    if attempt.get("status") in {"generation_failed", "generating"}:
+        return render_template(
+            "simulation_generation_failed.html",
+            career_id=career_id,
+            position_id=position_id,
+            generation_pending=attempt.get("status") == "generating",
+        )
+    position = POSITIONS_DATA.get(career_id, {}).get(position_id)
+    if not position:
+        return redirect(url_for("career"))
+    company_name = next((company.get("name") for company in position.get("companies", []) if company.get("id") == company_id), company_id.replace("-", " ").title())
+    return render_template("desktop.html", attempt_id=attempt_id, career_id=career_id, position_id=position_id, company_id=company_id, career_name=career_id.replace("-", " ").title(), position_title=position.get("title", position_id.replace("-", " ").title()), company_name=company_name, user_name=session.get("user_name", "User"))
+
+
+@app.get("/api/simulation/attempts/<attempt_id>")
+def get_public_workplace_attempt(attempt_id):
+    """Return only browser-safe scenario data for the signed-in user."""
+    attempt = get_simulation_attempt(
+        user_id=session.get("user_id"),
+        attempt_id=attempt_id,
+    )
+    if not attempt or attempt.get("simulation_mode") != "workplace":
+        return jsonify({"error": "Simulation attempt not found."}), 404
+    return jsonify(
+        {
+            "attempt_id": attempt_id,
+            "career_id": attempt.get("career_id"),
+            "position_id": attempt.get("position_id"),
+            "company_id": attempt.get("company_id"),
+            "status": attempt.get("status"),
+            "created_at": attempt.get("created_at"),
+            "scenario_version": attempt.get("scenario_version"),
+            "public_scenario": attempt.get("public_scenario"),
+        }
+    )
+
+
 @app.post("/api/simulation/advisor/reply")
 def simulation_advisor_reply():
-    """Generate a conversational advisor reply from browser-verified state."""
+    """Generate an advisor reply using owned attempt context when available."""
     payload = request.get_json(silent=True) or {}
     advisor_context = payload.get("advisor_context")
 
@@ -1087,6 +1188,32 @@ def simulation_advisor_reply():
                 "error": "Advisor context is required.",
             }
         ), 400
+
+    attempt_id = payload.get("attempt_id")
+
+    if attempt_id:
+        attempt = get_simulation_attempt(
+            user_id=session.get("user_id"),
+            attempt_id=str(attempt_id),
+        )
+        if (
+            not attempt
+            or attempt.get("simulation_mode") != "workplace"
+            or not isinstance(attempt.get("public_scenario"), dict)
+            or not isinstance(attempt.get("private_context"), dict)
+        ):
+            return jsonify({"error": "Simulation attempt not found."}), 404
+        advisor_context = {
+            "attempt": {
+                "attempt_id": str(attempt_id),
+                "career_id": attempt.get("career_id"),
+                "position_id": attempt.get("position_id"),
+                "company_id": attempt.get("company_id"),
+                "public_scenario": attempt["public_scenario"],
+            },
+            "private_mentoring_context": attempt["private_context"],
+            "user_visible_state": advisor_context,
+        }
 
     try:
         reply = generate_advisor_reply(advisor_context)
@@ -1107,6 +1234,31 @@ def simulation_workplace_evaluation():
     evidence = payload.get("evidence")
     if not isinstance(evidence, dict):
         return jsonify({"error": "Evaluation evidence is required."}), 400
+    attempt_id = payload.get("attempt_id")
+    if attempt_id:
+        attempt = get_simulation_attempt(
+            user_id=session.get("user_id"),
+            attempt_id=str(attempt_id),
+        )
+        if (
+            not attempt
+            or attempt.get("simulation_mode") != "workplace"
+            or not isinstance(attempt.get("public_scenario"), dict)
+            or not isinstance(attempt.get("private_context"), dict)
+        ):
+            return jsonify({"error": "Simulation attempt not found."}), 404
+        evidence = {
+            "attempt": {
+                "attempt_id": str(attempt_id),
+                "career_id": attempt.get("career_id"),
+                "position_id": attempt.get("position_id"),
+                "company_id": attempt.get("company_id"),
+                "task": attempt["public_scenario"].get("task"),
+                "skill_targets": attempt["public_scenario"].get("skill_targets", []),
+            },
+            "private_expected_solution": attempt["private_context"],
+            "actual_user_evidence": evidence,
+        }
     try:
         return jsonify(evaluate_workplace_submission(evidence))
     except SimulationEvaluationError as error:

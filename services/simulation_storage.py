@@ -153,6 +153,82 @@ def get_simulation_attempt(
     return attempt
 
 
+def create_workplace_simulation_attempt(
+    *, user_id: str, career_id: str, position_id: str, company_id: str,
+) -> str:
+    """Create a workplace attempt awaiting one generated scenario."""
+    if not user_id:
+        raise ValueError("A logged-in user ID is required to create a simulation.")
+    attempts = get_database_reference(f"users/{user_id}/simulation_attempts")
+    reference = attempts.push()
+    attempt_id = reference.key
+    if not attempt_id:
+        raise RuntimeError("Firebase did not create a simulation attempt ID.")
+    record = {
+        "simulation_mode": "workplace",
+        "career_id": career_id,
+        "position_id": position_id,
+        "company_id": company_id,
+        "status": "generating",
+        "created_at": _current_utc_time(),
+        "scenario_version": 1,
+    }
+    reference.set(record)
+    return attempt_id
+
+
+def save_workplace_scenario(
+    *,
+    user_id: str,
+    attempt_id: str,
+    public_scenario: dict[str, Any],
+    private_context: dict[str, Any],
+    generation_attempt_count: int,
+) -> None:
+    """Persist the validated scenario on its existing canonical attempt."""
+    if not user_id or not attempt_id:
+        raise ValueError("A user ID and workplace attempt ID are required.")
+    if not isinstance(public_scenario, dict) or not isinstance(private_context, dict):
+        raise ValueError("Both public and private scenario data are required.")
+    reference = get_database_reference(
+        f"users/{user_id}/simulation_attempts/{attempt_id}"
+    )
+    existing_attempt = reference.get()
+    if not isinstance(existing_attempt, dict) or existing_attempt.get("simulation_mode") != "workplace":
+        raise RuntimeError("The workplace attempt could not be found.")
+    if existing_attempt.get("public_scenario") or existing_attempt.get("private_context"):
+        raise RuntimeError("The workplace attempt already has a scenario.")
+    generated_at = _current_utc_time()
+    reference.update(
+        {
+            "public_scenario": deepcopy(public_scenario),
+            "private_context": deepcopy(private_context),
+            "generation": {
+                "source": "gemini",
+                "generated_at": generated_at,
+                "attempt_count": generation_attempt_count,
+            },
+            "status": "in_progress",
+            "updated_at": generated_at,
+        }
+    )
+
+
+def mark_workplace_generation_failed(*, user_id: str, attempt_id: str) -> None:
+    """Mark a new attempt unusable when bounded scenario generation fails."""
+    if not user_id or not attempt_id:
+        raise ValueError("A user ID and workplace attempt ID are required.")
+    reference = get_database_reference(
+        f"users/{user_id}/simulation_attempts/{attempt_id}"
+    )
+    existing_attempt = reference.get()
+    if not isinstance(existing_attempt, dict) or existing_attempt.get("simulation_mode") != "workplace":
+        raise RuntimeError("The workplace attempt could not be found.")
+    if existing_attempt.get("public_scenario") or existing_attempt.get("private_context"):
+        raise RuntimeError("A generated workplace attempt cannot be marked failed.")
+    reference.update({"status": "generation_failed", "updated_at": _current_utc_time()})
+
+
 def get_backend_inbox_task(
     *,
     user_id: str,

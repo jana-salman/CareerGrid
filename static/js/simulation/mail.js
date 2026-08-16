@@ -1,6 +1,6 @@
 document.addEventListener(
     "DOMContentLoaded",
-    () => {
+    async () => {
 
         const app =
             document.getElementById(
@@ -31,9 +31,10 @@ document.addEventListener(
         const workspaceKey =
             app.dataset.workspaceKey || "default";
 
+        const attemptId = app.dataset.attemptId || "";
 
-        const storageKey =
-            `careergrid-mail-${workspaceKey}`;
+
+        const storageKey = attemptId ? `careergrid-mail-attempt-${attemptId}` : `careergrid-mail-${workspaceKey}`;
 
         const simulationState =
             window.CareerGridSimulationState;
@@ -267,6 +268,86 @@ document.addEventListener(
         // =========================================
         // INITIAL EMAIL DATA
         // =========================================
+
+        function createScenarioDeadline(minutes) {
+            return new Date(Date.now() + (Number(minutes) * 60 * 1000)).toISOString();
+        }
+
+        function previewFor(body) {
+            return String(body || "").replace(/\s+/g, " ").trim().slice(0, 140);
+        }
+
+        function buildScenarioState(scenario, attachments) {
+            const now = Date.now();
+            const advisor = scenario.advisor;
+            const task = scenario.task;
+            const deadline = createScenarioDeadline(task.deadline_minutes);
+            const taskMessage = {
+                id: task.id,
+                sender: advisor.name,
+                senderRole: advisor.title,
+                senderEmail: advisor.email,
+                subject: task.subject,
+                preview: previewFor(task.summary || task.body),
+                receivedAt: new Date(now).toISOString(),
+                unread: true,
+                priority: task.priority,
+                deadline,
+                task: true,
+                attachments,
+                thread: [{
+                    id: `${task.id}-original`,
+                    from: advisor.name,
+                    role: advisor.title,
+                    type: "advisor",
+                    sentAt: new Date(now).toISOString(),
+                    body: task.body
+                }]
+            };
+            const backgroundMessages = (scenario.background_emails || []).map((email, index) => ({
+                id: email.id || `background-${index}`,
+                sender: email.sender_name,
+                senderRole: email.sender_title,
+                senderEmail: email.sender_email,
+                subject: email.subject,
+                preview: previewFor(email.body),
+                receivedAt: new Date(now - ((index + 1) * 60000)).toISOString(),
+                unread: true,
+                priority: "normal",
+                deadline: null,
+                task: false,
+                attachments: [],
+                thread: [{
+                    id: `${email.id || `background-${index}`}-original`,
+                    from: email.sender_name,
+                    role: email.sender_title,
+                    type: "advisor",
+                    sentAt: new Date(now - ((index + 1) * 60000)).toISOString(),
+                    body: email.body
+                }]
+            }));
+            return {
+                scenarioId: scenario.scenario_id,
+                activeFolder: "inbox",
+                selectedMessageId: null,
+                downloadedAttachments: [],
+                inbox: [taskMessage, ...backgroundMessages],
+                sent: []
+            };
+        }
+
+        function showScenarioLoadError() {
+            messageList.innerHTML = '<div class="mail-empty-state"><p>Workspace mail could not be prepared. Please return to your company page and start a new attempt.</p></div>';
+            folderSubtitle.textContent = "Scenario unavailable";
+        }
+
+        async function loadPublicScenario() {
+            const response = await fetch(`/api/simulation/attempts/${encodeURIComponent(attemptId)}`, { credentials: "same-origin" });
+            if (!response.ok) throw new Error("Could not load the public scenario.");
+            const payload = await response.json();
+            if (!payload?.public_scenario) throw new Error("This attempt has no public scenario.");
+            return { scenario: payload.public_scenario, scenarioVersion: payload.scenario_version || 1 };
+        }
 
         function buildInitialState() {
 
@@ -630,7 +711,23 @@ Good luck with your first day!`
         // STATE
         // =========================================
 
-        function loadState() {
+        async function loadState() {
+
+            let scenarioData = null;
+
+            if (attemptId) {
+                try {
+                    scenarioData = await loadPublicScenario();
+                    if (!simulationState?.initializeScenarioAttachments) {
+                        throw new Error("The shared simulation state is unavailable.");
+                    }
+                }
+                catch (error) {
+                    console.warn("Unable to load public workplace scenario:", error);
+                    showScenarioLoadError();
+                    return null;
+                }
+            }
 
             try {
 
@@ -641,9 +738,16 @@ Good luck with your first day!`
 
                 if (stored) {
 
-                    return JSON.parse(
-                        stored
-                    );
+                    const parsed = JSON.parse(stored);
+                    if (!attemptId || parsed.scenarioId === scenarioData.scenario.scenario_id) {
+                        if (attemptId) {
+                            simulationState.initializeScenarioAttachments(
+                                scenarioData.scenario,
+                                scenarioData.scenarioVersion
+                            );
+                        }
+                        return parsed;
+                    }
 
                 }
 
@@ -658,8 +762,15 @@ Good luck with your first day!`
             }
 
 
-            const initial =
-                buildInitialState();
+            const initial = attemptId
+                ? buildScenarioState(
+                    scenarioData.scenario,
+                    simulationState.initializeScenarioAttachments(
+                        scenarioData.scenario,
+                        scenarioData.scenarioVersion
+                    )
+                )
+                : buildInitialState();
 
             saveState(
                 initial
@@ -682,8 +793,16 @@ Good luck with your first day!`
         }
 
 
+        messageList.innerHTML = attemptId
+            ? '<div class="mail-empty-state"><p>Preparing workspace mail...</p></div>'
+            : "";
+
         let state =
-            loadState();
+            await loadState();
+
+        if (!state) {
+            return;
+        }
 
 
 
@@ -1884,7 +2003,10 @@ Good luck with your first day!`
                     {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ advisor_context: advisorContext })
+                        body: JSON.stringify({
+                            attempt_id: attemptId || undefined,
+                            advisor_context: advisorContext
+                        })
                     }
                 );
 
@@ -1920,7 +2042,7 @@ Good luck with your first day!`
             const after = compare?.headSnapshot || {};
             const changedFiles = Object.keys(after).filter(path => !before[path] || before[path].content !== after[path].content).map(path => ({ path, before: before[path]?.content || "", after: after[path]?.content || "" }));
             try {
-                const response = await fetch("/api/simulation/evaluation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ evidence: { task: { title: message.subject, original_email: message.thread[0]?.body, deadline: message.deadline }, submission: assessment.submission, pull_request: pullRequest, repository: { path: repository.rootPath, commits: compare?.commits || [], pushed_branches: repository.remote.pushedBranches }, changed_files: changedFiles, conversation: message.thread } }) });
+                const response = await fetch("/api/simulation/evaluation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ attempt_id: attemptId || undefined, evidence: { task: { title: message.subject, original_email: message.thread[0]?.body, deadline: message.deadline }, submission: assessment.submission, pull_request: pullRequest, repository: { path: repository.rootPath, commits: compare?.commits || [], pushed_branches: repository.remote.pushedBranches }, changed_files: changedFiles, conversation: message.thread } }) });
                 if (!response.ok) throw new Error("Evaluation failed");
                 const evaluation = await response.json();
                 simulationState.recordEvaluation(message.id, evaluation);
