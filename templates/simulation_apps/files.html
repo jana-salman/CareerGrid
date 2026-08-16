@@ -1,0 +1,249 @@
+<section
+    class="app-window files-window"
+    data-window="files"
+    aria-hidden="true"
+    id="files-app"
+>
+
+    <!-- TITLE BAR -->
+
+    <div class="window-header files-window-header">
+
+        <div class="window-title">
+
+            <span class="mini-icon app-icon-files">
+                ▰
+            </span>
+
+            <strong>Files</strong>
+
+        </div>
+
+
+        <div class="window-controls">
+
+            <button
+                type="button"
+                data-window-action="minimize"
+                title="Minimize"
+            >
+                —
+            </button>
+
+            <button
+                type="button"
+                data-window-action="close"
+                title="Close"
+            >
+                ×
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <div class="files-layout">
+
+        <!-- SIDEBAR -->
+
+        <aside class="files-sidebar">
+
+            <div class="files-sidebar-heading">
+                Locations
+            </div>
+
+
+            <button
+                type="button"
+                class="files-location"
+                data-files-path="/"
+            >
+                <span>⌂</span>
+                <span>Home</span>
+            </button>
+
+
+            <button
+                type="button"
+                class="files-location"
+                data-files-path="/Desktop"
+            >
+                <span>▣</span>
+                <span>Desktop</span>
+            </button>
+
+
+            <button
+                type="button"
+                class="files-location is-active"
+                data-files-path="/Downloads"
+            >
+                <span>↓</span>
+                <span>Downloads</span>
+            </button>
+
+
+            <button
+                type="button"
+                class="files-location"
+                data-files-path="/Documents"
+            >
+                <span>▤</span>
+                <span>Documents</span>
+            </button>
+
+
+            <button
+                type="button"
+                class="files-location"
+                data-files-path="/Projects"
+            >
+                <span>⌘</span>
+                <span>Projects</span>
+            </button>
+
+        </aside>
+
+
+        <!-- MAIN -->
+
+        <section class="files-main">
+
+            <header class="files-toolbar">
+
+                <div
+                    class="files-breadcrumb"
+                    id="files-breadcrumb"
+                >
+                </div>
+
+
+                <button
+                    type="button"
+                    class="files-refresh-button"
+                    id="files-refresh-button"
+                >
+                    ↻ Refresh
+                </button>
+
+            </header>
+
+
+            <div class="files-content">
+
+                <!-- FILE LIST -->
+
+                <section class="files-list-panel">
+
+                    <div class="files-list-heading">
+
+                        <span>Name</span>
+
+                        <span>Type</span>
+
+                        <span>Size</span>
+
+                    </div>
+
+
+                    <div
+                        class="files-list"
+                        id="files-list"
+                    >
+                    </div>
+
+                </section>
+
+
+                <!-- PREVIEW -->
+
+                <aside
+                    class="files-preview"
+                    id="files-preview"
+                >
+
+                    <div
+                        class="files-preview-empty"
+                        id="files-preview-empty"
+                    >
+
+                        <div class="files-preview-empty-icon">
+                            ▰
+                        </div>
+
+                        <strong>
+                            Select a file
+                        </strong>
+
+                        <p>
+                            Choose a file to see its details.
+                        </p>
+
+                    </div>
+
+
+                    <div
+                        class="files-preview-content"
+                        id="files-preview-content"
+                        hidden
+                    >
+
+                        <div
+                            class="files-preview-icon"
+                            id="files-preview-icon"
+                        >
+                        </div>
+
+                        <h2
+                            id="files-preview-name"
+                        >
+                        </h2>
+
+                        <span
+                            class="files-preview-type"
+                            id="files-preview-type"
+                        >
+                        </span>
+
+
+                        <div
+                            class="files-preview-actions"
+                            id="files-preview-actions"
+                        >
+                        </div>
+
+
+                        <pre
+                            class="files-text-preview"
+                            id="files-text-preview"
+                            hidden
+                        ></pre>
+
+
+                        <div
+                            class="files-archive-preview"
+                            id="files-archive-preview"
+                            hidden
+                        >
+                        </div>
+
+                    </div>
+
+                </aside>
+
+            </div>
+
+        </section>
+
+    </div>
+
+
+    <div
+        class="files-toast"
+        id="files-toast"
+        hidden
+    >
+    </div>
+
+</section>
