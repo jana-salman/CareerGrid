@@ -69,17 +69,12 @@
                             Open
                         </span>
 
-                        <a
-                            href="{{ url_for(
-                                'simulation_workspace',
-                                career_id=career_id,
-                                position_id=position_id,
-                                company_id=job.company.display_name.replace(' ', '-')
-                            ) }}"
-                            class="main-btn"
-                        >
-                            Enter Workspace
-                        </a>
+                        <form method="post" action="{{ url_for('start_workplace_simulation') }}">
+                            <input type="hidden" name="career_id" value="{{ career_id }}">
+                            <input type="hidden" name="position_id" value="{{ position_id }}">
+                            <input type="hidden" name="company_id" value="{{ job.company.display_name.replace(' ', '-') }}">
+                            <button type="submit" class="main-btn">Enter Workspace</button>
+                        </form>
 
                     </div>
 
@@ -116,17 +111,12 @@
                                 Demo
                             </span>
 
-                            <a
-                                href="{{ url_for(
-                                    'simulation_workspace',
-                                    career_id=career_id,
-                                    position_id=position_id,
-                                    company_id=company.id
-                                ) }}"
-                                class="main-btn"    
-                            >
-                                Enter Workspace
-                            </a>
+                            <form method="post" action="{{ url_for('start_workplace_simulation') }}">
+                                <input type="hidden" name="career_id" value="{{ career_id }}">
+                                <input type="hidden" name="position_id" value="{{ position_id }}">
+                                <input type="hidden" name="company_id" value="{{ company.id }}">
+                                <button type="submit" class="main-btn">Enter Workspace</button>
+                            </form>
 
                         </div>
 

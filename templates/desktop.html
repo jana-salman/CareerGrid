@@ -45,6 +45,8 @@
         ) }}?v=1"
     >
 
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/simulation/browser.css') }}?v=1">
+
     <link
         rel="stylesheet"
         href="{{ url_for(
@@ -69,6 +71,7 @@
     class="workspace"
     id="careergrid-workspace"
     data-workspace-key="{{ career_id }}-{{ position_id }}-{{ company_id }}"
+    data-attempt-id="{{ attempt_id or '' }}"
 >
     <!-- =========================
          TOP BAR
@@ -301,62 +304,7 @@
         {% include "simulation_apps/vscode.html" %}
 
 
-        <!-- BROWSER -->
-
-        <section
-            class="app-window"
-            data-window="browser"
-            aria-hidden="true"
-        >
-
-            <div class="window-header">
-
-                <div class="window-title">
-                    <span class="mini-icon app-icon-browser">
-                        ◎
-                    </span>
-
-                    <strong>Browser</strong>
-                </div>
-
-                <div class="window-controls">
-
-                    <button
-                        type="button"
-                        data-window-action="minimize"
-                    >
-                        —
-                    </button>
-
-                    <button
-                        type="button"
-                        data-window-action="close"
-                    >
-                        ×
-                    </button>
-
-                </div>
-
-            </div>
-
-
-            <div class="placeholder-content">
-
-                <div class="placeholder-symbol">
-                    ◎
-                </div>
-
-                <h2>Browser & DevTools</h2>
-
-                <p>
-                    Site previews, network requests,
-                    console output and debugging tools
-                    will appear here.
-                </p>
-
-            </div>
-
-        </section>
+        {% include "simulation_apps/browser.html" %}
 
 
         {% include "simulation_apps/terminal.html" %}
@@ -478,7 +426,7 @@
     src="{{ url_for(
         'static',
         filename='js/simulation/simulation_state.js'
-    ) }}?v=1"
+    ) }}?v=2"
     defer
 ></script>
 <script src="{{ url_for('static', filename='js/simulation/report.js') }}?v=2" defer></script>
@@ -495,9 +443,10 @@
     src="{{ url_for(
         'static',
         filename='js/simulation/mail.js'
-    ) }}?v=4"
+    ) }}?v=6"
     defer
 ></script>
+<script src="{{ url_for('static', filename='js/simulation/browser.js') }}?v=1" defer></script>
 
 <script
     src="{{ url_for(
