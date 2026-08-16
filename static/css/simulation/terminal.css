@@ -1,0 +1,301 @@
+/* ========================================================
+   TERMINAL WINDOW
+======================================================== */
+
+.terminal-app-window {
+    width: min(
+        1050px,
+        calc(100vw - 240px)
+    );
+
+    height: min(
+        650px,
+        calc(100vh - 150px)
+    );
+
+    top: 65px;
+    left: 175px;
+
+    color: #d4d4d4;
+
+    background: #0d1117;
+}
+
+
+.terminal-app-header {
+    color: #d4d4d4;
+
+    border-bottom-color: #30363d;
+
+    background: #161b22;
+}
+
+
+.terminal-app-header .window-controls button {
+    color: #d4d4d4;
+}
+
+
+.terminal-app-header .window-controls button:hover {
+    background: #30363d;
+}
+
+
+.terminal-app-header .window-controls button:last-child:hover {
+    background: #c42b1c;
+}
+
+
+/* ========================================================
+   TAB BAR
+======================================================== */
+
+.terminal-tab-bar {
+    min-height: 38px;
+
+    padding-right: 14px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    border-bottom: 1px solid #21262d;
+
+    background: #161b22;
+}
+
+
+.terminal-tab {
+    height: 38px;
+
+    padding: 0 16px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+
+    color: #8b949e;
+
+    font-size: 11px;
+}
+
+
+.terminal-tab.is-active {
+    color: #f0f6fc;
+
+    border-bottom: 2px solid #2f81f7;
+
+    background: #0d1117;
+}
+
+
+.terminal-working-directory {
+    max-width: 60%;
+
+    overflow: hidden;
+
+    color: #8b949e;
+
+    font-family:
+        Consolas,
+        "Courier New",
+        monospace;
+
+    font-size: 10px;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+/* ========================================================
+   SCREEN
+======================================================== */
+
+.terminal-screen {
+    flex: 1;
+
+    min-height: 0;
+
+    padding: 16px 18px 30px;
+
+    overflow-y: auto;
+
+    color: #c9d1d9;
+
+    background: #0d1117;
+
+    font-family:
+        Consolas,
+        "Courier New",
+        monospace;
+
+    font-size: 12px;
+
+    line-height: 1.55;
+
+    cursor: text;
+}
+
+
+.terminal-welcome {
+    margin-bottom: 17px;
+
+    color: #8b949e;
+
+    white-space: pre-line;
+}
+
+
+.terminal-welcome strong {
+    color: #79c0ff;
+}
+
+
+/* ========================================================
+   HISTORY
+======================================================== */
+
+.terminal-command-block {
+    margin-bottom: 10px;
+}
+
+
+.terminal-command-line {
+    display: flex;
+
+    align-items: flex-start;
+
+    gap: 7px;
+}
+
+
+.terminal-command-prompt {
+    flex: 0 0 auto;
+
+    color: #3fb950;
+
+    font-weight: 700;
+}
+
+
+.terminal-command-text {
+    color: #f0f6fc;
+
+    white-space: pre-wrap;
+}
+
+
+.terminal-output {
+    margin-top: 3px;
+
+    color: #c9d1d9;
+
+    white-space: pre-wrap;
+
+    overflow-wrap: anywhere;
+}
+
+
+.terminal-output.is-error {
+    color: #ff7b72;
+}
+
+
+.terminal-output.is-success {
+    color: #56d364;
+}
+
+
+.terminal-output.is-muted {
+    color: #8b949e;
+}
+
+
+/* ========================================================
+   LIVE INPUT
+======================================================== */
+
+.terminal-command-bar {
+    min-height: 46px;
+
+    padding: 0 18px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+
+    flex-shrink: 0;
+
+    border-top: 1px solid #21262d;
+
+    background: #0d1117;
+
+    font-family:
+        Consolas,
+        "Courier New",
+        monospace;
+
+    font-size: 12px;
+}
+
+
+.terminal-prompt {
+    flex: 0 0 auto;
+
+    color: #3fb950;
+
+    font-weight: 700;
+}
+
+
+.terminal-input {
+    flex: 1;
+
+    min-width: 0;
+    height: 32px;
+
+    padding: 0 4px;
+
+    border: none;
+    outline: none;
+
+    color: #f0f6fc;
+
+    background: transparent;
+
+    caret-color: #f0f6fc;
+
+    font-family:
+        Consolas,
+        "Courier New",
+        monospace;
+
+    font-size: 12px;
+}
+
+
+/* ========================================================
+   SPECIAL GIT OUTPUT
+======================================================== */
+
+.terminal-git-branch {
+    color: #79c0ff;
+}
+
+
+.terminal-git-modified {
+    color: #d29922;
+}
+
+
+.terminal-git-staged {
+    color: #3fb950;
+}
+
+
+.terminal-git-untracked {
+    color: #8b949e;
+}

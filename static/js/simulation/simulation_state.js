@@ -338,7 +338,7 @@ __pycache__/
         return {
 
             version:
-                1,
+                2,
 
             filesystem: {
 
@@ -397,6 +397,23 @@ __pycache__/
 
                 }
 
+            },
+
+            git: {
+
+                repositories:
+                    {}
+
+            },
+
+            terminal: {
+
+                cwd:
+                    "/Projects",
+
+                history:
+                    []
+
             }
 
         };
@@ -425,6 +442,42 @@ __pycache__/
                     &&
                     parsed.filesystem
                 ) {
+
+                    // Upgrade older CareerGrid simulation states
+                    // without destroying the user's files.
+
+                    if (!parsed.git) {
+
+                        parsed.git = {
+                            repositories: {}
+                        };
+
+                    }
+
+
+                    if (!parsed.git.repositories) {
+
+                        parsed.git.repositories = {};
+
+                    }
+
+
+                    if (!parsed.terminal) {
+
+                        parsed.terminal = {
+                            cwd: "/Projects",
+                            history: []
+                        };
+
+                    }
+
+
+                    if (!Array.isArray(parsed.terminal.history)) {
+
+                        parsed.terminal.history = [];
+
+                    }
+
 
                     return parsed;
 
@@ -907,20 +960,1328 @@ __pycache__/
                 .split("/")[0];
 
 
+        const projectPath =
+            normalizePath(
+                `${destination}/${projectRoot}`
+            );
+
+
+        // Every extracted project begins as its own
+        // simulated Git repository.
+        ensureRepository(
+            projectPath
+        );
+
+
         return {
 
             success:
                 true,
 
             projectPath:
+                projectPath
+
+        };
+
+    }
+    // =========================================
+    // GIT HELPERS
+    // =========================================
+
+    function createCommitId() {
+
+        return (
+            Date.now()
+                .toString(16)
+                .slice(-5)
+            +
+            Math.random()
+                .toString(16)
+                .slice(2, 5)
+        );
+
+    }
+
+
+    function snapshotsEqual(
+        first,
+        second
+    ) {
+
+        if (
+            !first
+            ||
+            !second
+        ) {
+
+            return false;
+
+        }
+
+
+        return (
+            (first.content || "")
+            ===
+            (second.content || "")
+        );
+
+    }
+
+
+    function snapshotProject(
+        projectPath
+    ) {
+
+        const snapshot =
+            {};
+
+
+        function walk(
+            folderPath
+        ) {
+
+            const entries =
+                list(
+                    folderPath
+                );
+
+
+            entries.forEach(
+                entry => {
+
+                    if (
+                        entry.type
+                        ===
+                        "folder"
+                    ) {
+
+                        walk(
+                            entry.path
+                        );
+
+                        return;
+
+                    }
+
+
+                    if (
+                        entry.type
+                        ===
+                        "file"
+                    ) {
+
+                        const node =
+                            read(
+                                entry.path
+                            );
+
+
+                        snapshot[
+                            normalizePath(
+                                entry.path
+                            )
+                        ] =
+                            clone(
+                                node
+                            );
+
+                    }
+
+                }
+            );
+
+        }
+
+
+        walk(
+            normalizePath(
+                projectPath
+            )
+        );
+
+
+        return snapshot;
+
+    }
+
+
+    function restoreProjectSnapshot(
+        projectPath,
+        snapshot
+    ) {
+
+        const project =
+            getNode(
+                projectPath
+            );
+
+
+        if (
+            !project
+            ||
+            project.type
+            !==
+            "folder"
+        ) {
+
+            return false;
+
+        }
+
+
+        project.children =
+            {};
+
+
+        Object
+            .entries(
+                snapshot
+            )
+            .forEach(
+                ([path, node]) => {
+
+                    writeNode(
+                        path,
+                        node,
+                        false
+                    );
+
+                }
+            );
+
+
+        saveState();
+
+
+        return true;
+
+    }
+
+
+    // =========================================
+    // REPOSITORY CREATION
+    // =========================================
+
+    function ensureRepository(
+        projectPath
+    ) {
+
+        const normalized =
+            normalizePath(
+                projectPath
+            );
+
+
+        const project =
+            getNode(
+                normalized
+            );
+
+
+        if (
+            !project
+            ||
+            project.type
+            !==
+            "folder"
+        ) {
+
+            return null;
+
+        }
+
+
+        if (
+            state.git.repositories[
+                normalized
+            ]
+        ) {
+
+            return state.git.repositories[
+                normalized
+            ];
+
+        }
+
+
+        const initialSnapshot =
+            snapshotProject(
+                normalized
+            );
+
+
+        const initialCommit =
+            {
+                id:
+                    createCommitId(),
+
+                message:
+                    "Initial project files",
+
+                author:
+                    "CareerGrid",
+
+                timestamp:
+                    new Date()
+                        .toISOString(),
+
+                snapshot:
+                    clone(
+                        initialSnapshot
+                    )
+            };
+
+
+        const repository =
+            {
+                rootPath:
+                    normalized,
+
+                currentBranch:
+                    "main",
+
+                branches: {
+
+                    main: {
+
+                        name:
+                            "main",
+
+                        commits:
+                            [
+                                initialCommit
+                            ],
+
+                        headSnapshot:
+                            clone(
+                                initialSnapshot
+                            )
+
+                    }
+
+                },
+
+                staged:
+                    {},
+
+                remote: {
+
+                    name:
+                        "origin",
+
+                    pushedBranches:
+                        [
+                            "main"
+                        ],
+
+                    branchHeads: {
+
+                        main:
+                            initialCommit.id
+
+                    }
+
+                }
+
+            };
+
+
+        state.git.repositories[
+            normalized
+        ] =
+            repository;
+
+
+        saveState();
+
+
+        return repository;
+
+    }
+
+
+    function getRepository(
+        projectPath
+    ) {
+
+        return (
+            state.git.repositories[
                 normalizePath(
-                    `${destination}/${projectRoot}`
+                    projectPath
+                )
+            ]
+            ||
+            null
+        );
+
+    }
+
+
+    function getRepositories() {
+
+        return clone(
+            state.git.repositories
+        );
+
+    }
+
+
+    // =========================================
+    // GIT STATUS
+    // =========================================
+
+    function gitStatus(
+        projectPath
+    ) {
+
+        const repo =
+            ensureRepository(
+                projectPath
+            );
+
+
+        if (!repo) {
+
+            return null;
+
+        }
+
+
+        const branch =
+            repo.branches[
+                repo.currentBranch
+            ];
+
+
+        const headSnapshot =
+            branch.headSnapshot
+            ||
+            {};
+
+
+        const workingSnapshot =
+            snapshotProject(
+                repo.rootPath
+            );
+
+
+        const staged =
+            Object.keys(
+                repo.staged
+                ||
+                {}
+            );
+
+
+        const modified =
+            [];
+
+
+        const untracked =
+            [];
+
+
+        const deleted =
+            [];
+
+
+        const allPaths =
+            new Set(
+                [
+                    ...Object.keys(
+                        headSnapshot
+                    ),
+                    ...Object.keys(
+                        workingSnapshot
+                    )
+                ]
+            );
+
+
+        allPaths.forEach(
+            path => {
+
+                const headFile =
+                    headSnapshot[
+                        path
+                    ];
+
+
+                const workingFile =
+                    workingSnapshot[
+                        path
+                    ];
+
+
+                const stagedFile =
+                    repo.staged[
+                        path
+                    ];
+
+
+                if (
+                    !headFile
+                    &&
+                    workingFile
+                ) {
+
+                    if (!stagedFile) {
+
+                        untracked.push(
+                            path
+                        );
+
+                    }
+
+                    return;
+
+                }
+
+
+                if (
+                    headFile
+                    &&
+                    !workingFile
+                ) {
+
+                    deleted.push(
+                        path
+                    );
+
+                    return;
+
+                }
+
+
+                if (
+                    headFile
+                    &&
+                    workingFile
+                ) {
+
+                    const comparison =
+                        stagedFile
+                        ||
+                        headFile;
+
+
+                    if (
+                        !snapshotsEqual(
+                            comparison,
+                            workingFile
+                        )
+                    ) {
+
+                        modified.push(
+                            path
+                        );
+
+                    }
+
+                }
+
+            }
+        );
+
+
+        return {
+
+            branch:
+                repo.currentBranch,
+
+            staged:
+                staged,
+
+            modified:
+                modified,
+
+            untracked:
+                untracked,
+
+            deleted:
+                deleted,
+
+            clean:
+                (
+                    staged.length === 0
+                    &&
+                    modified.length === 0
+                    &&
+                    untracked.length === 0
+                    &&
+                    deleted.length === 0
                 )
 
         };
 
     }
 
+
+    // =========================================
+    // GIT BRANCH
+    // =========================================
+
+    function gitCreateBranch(
+        projectPath,
+        branchName
+    ) {
+
+        const repo =
+            ensureRepository(
+                projectPath
+            );
+
+
+        if (!repo) {
+
+            return {
+                success:
+                    false,
+
+                message:
+                    "Not a Git repository."
+            };
+
+        }
+
+
+        const cleanName =
+            String(
+                branchName
+                ||
+                ""
+            )
+                .trim();
+
+
+        if (!cleanName) {
+
+            return {
+                success:
+                    false,
+
+                message:
+                    "Branch name is required."
+            };
+
+        }
+
+
+        if (
+            !/^[A-Za-z0-9._/-]+$/
+                .test(
+                    cleanName
+                )
+        ) {
+
+            return {
+                success:
+                    false,
+
+                message:
+                    "Invalid branch name."
+            };
+
+        }
+
+
+        if (
+            repo.branches[
+                cleanName
+            ]
+        ) {
+
+            return {
+                success:
+                    false,
+
+                message:
+                    `A branch named '${cleanName}' already exists.`
+            };
+
+        }
+
+
+        const sourceBranch =
+            repo.branches[
+                repo.currentBranch
+            ];
+
+
+        repo.branches[
+            cleanName
+        ] =
+            {
+                name:
+                    cleanName,
+
+                commits:
+                    clone(
+                        sourceBranch.commits
+                    ),
+
+                headSnapshot:
+                    clone(
+                        sourceBranch.headSnapshot
+                    )
+
+            };
+
+
+        repo.currentBranch =
+            cleanName;
+
+
+        repo.staged =
+            {};
+
+
+        saveState();
+
+
+        return {
+
+            success:
+                true,
+
+            branch:
+                cleanName
+
+        };
+
+    }
+
+
+    function gitSwitchBranch(
+        projectPath,
+        branchName
+    ) {
+
+        const repo =
+            ensureRepository(
+                projectPath
+            );
+
+
+        if (!repo) {
+
+            return {
+                success:
+                    false,
+
+                message:
+                    "Not a Git repository."
+            };
+
+        }
+
+
+        if (
+            !repo.branches[
+                branchName
+            ]
+        ) {
+
+            return {
+                success:
+                    false,
+
+                message:
+                    `Branch '${branchName}' does not exist.`
+            };
+
+        }
+
+
+        const status =
+            gitStatus(
+                projectPath
+            );
+
+
+        if (
+            status
+            &&
+            !status.clean
+        ) {
+
+            return {
+                success:
+                    false,
+
+                message:
+                    "Commit or discard your changes before switching branches."
+            };
+
+        }
+
+
+        repo.currentBranch =
+            branchName;
+
+
+        repo.staged =
+            {};
+
+
+        restoreProjectSnapshot(
+            repo.rootPath,
+            repo.branches[
+                branchName
+            ].headSnapshot
+        );
+
+
+        saveState();
+
+
+        return {
+
+            success:
+                true,
+
+            branch:
+                branchName
+
+        };
+
+    }
+
+
+    // =========================================
+    // GIT ADD
+    // =========================================
+
+    function gitStage(
+        projectPath,
+        target = "."
+    ) {
+
+        const repo =
+            ensureRepository(
+                projectPath
+            );
+
+
+        if (!repo) {
+
+            return {
+                success:
+                    false,
+
+                message:
+                    "Not a Git repository."
+            };
+
+        }
+
+
+        const currentSnapshot =
+            snapshotProject(
+                repo.rootPath
+            );
+
+
+        const headSnapshot =
+            repo.branches[
+                repo.currentBranch
+            ].headSnapshot;
+
+
+        let paths =
+            [];
+
+
+        if (
+            target === "."
+            ||
+            target === "-A"
+            ||
+            target === "--all"
+        ) {
+
+            paths =
+                Object.keys(
+                    currentSnapshot
+                );
+
+        }
+        else {
+
+            const normalizedTarget =
+                normalizePath(
+                    target
+                );
+
+
+            const targetNode =
+                getNode(
+                    normalizedTarget
+                );
+
+
+            if (!targetNode) {
+
+                return {
+                    success:
+                        false,
+
+                    message:
+                        `pathspec '${target}' did not match any files`
+                };
+
+            }
+
+
+            if (
+                targetNode.type
+                ===
+                "folder"
+            ) {
+
+                paths =
+                    Object.keys(
+                        currentSnapshot
+                    )
+                        .filter(
+                            path =>
+                                path.startsWith(
+                                    normalizedTarget
+                                    + "/"
+                                )
+                        );
+
+            }
+            else {
+
+                paths =
+                    [
+                        normalizedTarget
+                    ];
+
+            }
+
+        }
+
+
+        let stagedCount =
+            0;
+
+
+        paths.forEach(
+            path => {
+
+                const workingFile =
+                    currentSnapshot[
+                        path
+                    ];
+
+
+                const headFile =
+                    headSnapshot[
+                        path
+                    ];
+
+
+                if (
+                    workingFile
+                    &&
+                    (
+                        !headFile
+                        ||
+                        !snapshotsEqual(
+                            headFile,
+                            workingFile
+                        )
+                    )
+                ) {
+
+                    repo.staged[
+                        path
+                    ] =
+                        clone(
+                            workingFile
+                        );
+
+
+                    stagedCount += 1;
+
+                }
+
+            }
+        );
+
+
+        saveState();
+
+
+        return {
+
+            success:
+                true,
+
+            count:
+                stagedCount
+
+        };
+
+    }
+
+
+    // =========================================
+    // GIT COMMIT
+    // =========================================
+
+    function gitCommit(
+        projectPath,
+        message,
+        author = "CareerGrid User"
+    ) {
+
+        const repo =
+            ensureRepository(
+                projectPath
+            );
+
+
+        if (!repo) {
+
+            return {
+                success:
+                    false,
+
+                message:
+                    "Not a Git repository."
+            };
+
+        }
+
+
+        const stagedPaths =
+            Object.keys(
+                repo.staged
+                ||
+                {}
+            );
+
+
+        if (
+            stagedPaths.length
+            === 0
+        ) {
+
+            return {
+                success:
+                    false,
+
+                message:
+                    "nothing added to commit"
+            };
+
+        }
+
+
+        const cleanMessage =
+            String(
+                message
+                ||
+                ""
+            )
+                .trim();
+
+
+        if (!cleanMessage) {
+
+            return {
+                success:
+                    false,
+
+                message:
+                    "Commit message is required."
+            };
+
+        }
+
+
+        const branch =
+            repo.branches[
+                repo.currentBranch
+            ];
+
+
+        const nextSnapshot =
+            clone(
+                branch.headSnapshot
+            );
+
+
+        stagedPaths.forEach(
+            path => {
+
+                nextSnapshot[
+                    path
+                ] =
+                    clone(
+                        repo.staged[
+                            path
+                        ]
+                    );
+
+            }
+        );
+
+
+        const commit =
+            {
+                id:
+                    createCommitId(),
+
+                message:
+                    cleanMessage,
+
+                author:
+                    author,
+
+                timestamp:
+                    new Date()
+                        .toISOString(),
+
+                snapshot:
+                    clone(
+                        nextSnapshot
+                    )
+            };
+
+
+        branch.commits.push(
+            commit
+        );
+
+
+        branch.headSnapshot =
+            nextSnapshot;
+
+
+        repo.staged =
+            {};
+
+
+        saveState();
+
+
+        return {
+
+            success:
+                true,
+
+            commit:
+                clone(
+                    commit
+                ),
+
+            branch:
+                repo.currentBranch,
+
+            filesChanged:
+                stagedPaths.length
+
+        };
+
+    }
+
+
+    // =========================================
+    // GIT PUSH
+    // =========================================
+
+    function gitPush(
+        projectPath
+    ) {
+
+        const repo =
+            ensureRepository(
+                projectPath
+            );
+
+
+        if (!repo) {
+
+            return {
+                success:
+                    false,
+
+                message:
+                    "Not a Git repository."
+            };
+
+        }
+
+
+        const branchName =
+            repo.currentBranch;
+
+
+        const branch =
+            repo.branches[
+                branchName
+            ];
+
+
+        const headCommit =
+            branch.commits[
+                branch.commits.length - 1
+            ];
+
+
+        if (
+            !repo.remote.pushedBranches
+                .includes(
+                    branchName
+                )
+        ) {
+
+            repo.remote.pushedBranches.push(
+                branchName
+            );
+
+        }
+
+
+        repo.remote.branchHeads[
+            branchName
+        ] =
+            headCommit.id;
+
+
+        saveState();
+
+
+        return {
+
+            success:
+                true,
+
+            branch:
+                branchName,
+
+            commit:
+                headCommit.id
+
+        };
+
+    }
+
+
+    // =========================================
+    // GIT LOG
+    // =========================================
+
+    function gitLog(
+        projectPath
+    ) {
+
+        const repo =
+            ensureRepository(
+                projectPath
+            );
+
+
+        if (!repo) {
+
+            return [];
+
+        }
+
+
+        return clone(
+            repo.branches[
+                repo.currentBranch
+            ].commits
+        )
+            .reverse();
+
+    }
+
+
+    // =========================================
+    // TERMINAL SESSION
+    // =========================================
+
+    function getTerminalSession() {
+
+        return clone(
+            state.terminal
+        );
+
+    }
+
+
+    function setTerminalCwd(
+        path
+    ) {
+
+        state.terminal.cwd =
+            normalizePath(
+                path
+            );
+
+
+        saveState();
+
+    }
+
+
+    function recordTerminalCommand(
+        command,
+        output = ""
+    ) {
+
+        state.terminal.history.push(
+            {
+                command:
+                    command,
+
+                output:
+                    output,
+
+                timestamp:
+                    new Date()
+                        .toISOString()
+            }
+        );
+
+
+        // Don't let development/testing create
+        // thousands of stored entries.
+        if (
+            state.terminal.history.length
+            >
+            150
+        ) {
+
+            state.terminal.history =
+                state.terminal.history
+                    .slice(
+                        -150
+                    );
+
+        }
+
+
+        saveState();
+
+    }
+
+
+    function clearTerminalHistory() {
+
+        state.terminal.history =
+            [];
+
+
+        saveState();
+
+    }
 
     // =========================================
     // EXPOSE API
@@ -956,7 +2317,58 @@ __pycache__/
             hasDownloadedAttachment,
 
         extractArchive:
-            extractArchive
+            extractArchive,
+
+        normalizePath:
+            normalizePath,
+
+        parentPath:
+            parentPath,
+
+        baseName:
+            baseName,
+
+        ensureRepository:
+            ensureRepository,
+
+        getRepository:
+            getRepository,
+
+        getRepositories:
+            getRepositories,
+
+        gitStatus:
+            gitStatus,
+
+        gitCreateBranch:
+            gitCreateBranch,
+
+        gitSwitchBranch:
+            gitSwitchBranch,
+
+        gitStage:
+            gitStage,
+
+        gitCommit:
+            gitCommit,
+
+        gitPush:
+            gitPush,
+
+        gitLog:
+            gitLog,
+
+        getTerminalSession:
+            getTerminalSession,
+
+        setTerminalCwd:
+            setTerminalCwd,
+
+        recordTerminalCommand:
+            recordTerminalCommand,
+
+        clearTerminalHistory:
+            clearTerminalHistory
 
     };
 
