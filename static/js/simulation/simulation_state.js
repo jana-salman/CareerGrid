@@ -11,9 +11,10 @@
         ||
         "default";
 
+    const attemptId = workspace?.dataset.attemptId || "";
 
-    const storageKey =
-        `careergrid-simulation-state-${workspaceKey}`;
+
+    const storageKey = attemptId ? `careergrid-simulation-attempt-${attemptId}` : `careergrid-simulation-state-${workspaceKey}`;
 
 
     // =========================================
@@ -418,7 +419,11 @@ __pycache__/
 
             submissions: {},
 
-            evaluations: {}
+            evaluations: {},
+            scenarioInitialization: {
+                initialized: false,
+                scenarioVersion: null
+            }
 
         };
 
@@ -513,6 +518,13 @@ __pycache__/
 
                         parsed.evaluations = {};
 
+                    }
+
+                    if (!parsed.scenarioInitialization) {
+                        parsed.scenarioInitialization = {
+                            initialized: false,
+                            scenarioVersion: null
+                        };
                     }
 
 
@@ -920,6 +932,60 @@ __pycache__/
             `/Downloads/${attachment.name}`
         );
 
+    }
+
+
+    function fileTypeForPath(path) {
+        const extension = String(path).split(".").pop().toLowerCase();
+        return ({ py: "Python", js: "JavaScript", ts: "TypeScript", json: "JSON", md: "Markdown", log: "Log file", txt: "Text file", csv: "CSV", yml: "YAML", yaml: "YAML" })[extension] || "Text file";
+    }
+
+
+    function initializeScenarioAttachments(publicScenario, scenarioVersion = 1) {
+        const project = publicScenario?.project;
+        const scenarioId = String(publicScenario?.scenario_id || "scenario");
+        if (!project?.name || !project?.archive_name || !Array.isArray(project.files)) {
+            throw new Error("The public scenario is missing project attachment data.");
+        }
+        const archiveId = `scenario-${scenarioId}-project`;
+        const archiveEntries = {};
+        project.files.forEach(file => {
+            if (!file?.path || typeof file.content !== "string") return;
+            archiveEntries[`${project.name}/${file.path}`] = {
+                type: "file",
+                fileType: fileTypeForPath(file.path),
+                size: `${Math.max(1, Math.ceil(file.content.length / 1024))} KB`,
+                content: file.content
+            };
+        });
+        attachmentCatalog[archiveId] = {
+            id: archiveId,
+            name: project.archive_name,
+            type: "archive",
+            fileType: "ZIP archive",
+            size: `${Math.max(1, Math.ceil(JSON.stringify(project.files).length / 1024))} KB`,
+            archiveEntries
+        };
+        const attachments = [{ id: archiveId, name: project.archive_name, type: "ZIP", size: attachmentCatalog[archiveId].size }];
+        (publicScenario.resources || []).forEach(resource => {
+            if (!resource?.id || !resource?.name || typeof resource.content !== "string") return;
+            const id = `scenario-${scenarioId}-resource-${resource.id}`;
+            const name = String(resource.name).replace(/[\\/]+/g, "-");
+            attachmentCatalog[id] = {
+                id,
+                name,
+                type: "file",
+                fileType: fileTypeForPath(name),
+                size: `${Math.max(1, Math.ceil(resource.content.length / 1024))} KB`,
+                content: resource.content
+            };
+            attachments.push({ id, name, type: fileTypeForPath(name), size: attachmentCatalog[id].size });
+        });
+        if (!state.scenarioInitialization.initialized || state.scenarioInitialization.scenarioVersion !== scenarioVersion) {
+            state.scenarioInitialization = { initialized: true, scenarioVersion };
+            saveState();
+        }
+        return attachments;
     }
 
 
@@ -2722,6 +2788,9 @@ __pycache__/
         workspaceKey:
             workspaceKey,
 
+        attemptId:
+            attemptId,
+
         storageKey:
             storageKey,
 
@@ -2745,6 +2814,9 @@ __pycache__/
 
         hasDownloadedAttachment:
             hasDownloadedAttachment,
+
+        initializeScenarioAttachments:
+            initializeScenarioAttachments,
 
         extractArchive:
             extractArchive,

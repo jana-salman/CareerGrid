@@ -1,0 +1,20 @@
+<section class="app-window browser-window" data-window="browser" aria-hidden="true" id="browser-app" data-attempt-id="{{ attempt_id or '' }}">
+    <div class="window-header">
+        <div class="window-title"><span class="mini-icon app-icon-browser">◎</span><strong>Browser / DevTools</strong></div>
+        <div class="window-controls">
+            <button type="button" data-window-action="minimize" title="Minimize">−</button>
+            <button type="button" data-window-action="close" title="Close">×</button>
+        </div>
+    </div>
+    <div class="browser-layout">
+        <div class="browser-toolbar"><span class="browser-address">Simulation debugging evidence</span></div>
+        <div class="browser-tabs" role="tablist">
+            <button type="button" class="browser-tab is-active" data-browser-tab="network">Network</button>
+            <button type="button" class="browser-tab" data-browser-tab="console">Console</button>
+            <button type="button" class="browser-tab" data-browser-tab="request">Request</button>
+        </div>
+        <div class="browser-content" id="browser-content">
+            <div class="browser-empty-state">Preparing public scenario evidence…</div>
+        </div>
+    </div>
+</section>
