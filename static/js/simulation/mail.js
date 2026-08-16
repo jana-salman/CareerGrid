@@ -35,6 +35,9 @@ document.addEventListener(
         const storageKey =
             `careergrid-mail-${workspaceKey}`;
 
+        const simulationState =
+            window.CareerGridSimulationState;
+
 
         // =========================================
         // ELEMENTS
@@ -678,6 +681,41 @@ Good luck with your first day!`
             loadState();
 
 
+
+        // =========================================
+        // LEGACY MAIL DOWNLOAD MIGRATION
+        // =========================================
+
+        if (
+            simulationState
+            &&
+            Array.isArray(
+                state.downloadedAttachments
+            )
+        ) {
+
+            state.downloadedAttachments
+                .forEach(
+                    attachmentId => {
+
+                        if (
+                            !simulationState
+                                .hasDownloadedAttachment(
+                                    attachmentId
+                                )
+                        ) {
+
+                            simulationState
+                                .saveAttachmentById(
+                                    attachmentId
+                                );
+
+                        }
+
+                    }
+                );
+
+        }
         // =========================================
         // UTILITIES
         // =========================================
@@ -1180,10 +1218,17 @@ Good luck with your first day!`
                 attachment => {
 
                     const downloaded =
-                        state.downloadedAttachments
-                            .includes(
-                                attachment.id
-                            );
+                        simulationState
+                            ?
+                            simulationState
+                                .hasDownloadedAttachment(
+                                    attachment.id
+                                )
+                            :
+                            state.downloadedAttachments
+                                .includes(
+                                    attachment.id
+                                );
 
 
                     const card =
@@ -1272,6 +1317,18 @@ Good luck with your first day!`
             attachment
         ) {
 
+            if (simulationState) {
+
+                simulationState
+                    .saveAttachmentById(
+                        attachment.id
+                    );
+
+            }
+
+
+            // Keep this temporarily for compatibility
+            // with Mail's existing local state.
             if (
                 !state.downloadedAttachments
                     .includes(
@@ -1478,7 +1535,7 @@ Good luck with your first day!`
             renderMessageList();
 
             renderSelectedMessage();
-            
+
             if (readingPane) {
 
                 readingPane.scrollTop = 0;
