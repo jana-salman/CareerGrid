@@ -474,7 +474,188 @@ def workplace_attempt_workspace(attempt_id):
         return redirect(url_for("career"))
     company_name = next((company.get("name") for company in position.get("companies", []) if company.get("id") == company_id), company_id.replace("-", " ").title())
     return render_template("desktop.html", attempt_id=attempt_id, career_id=career_id, position_id=position_id, company_id=company_id, career_name=career_id.replace("-", " ").title(), position_title=position.get("title", position_id.replace("-", " ").title()), company_name=company_name, user_name=session.get("user_name", "User"))
+def normalize_review_items(value):
+    """
+    Normalize an evaluation field into a clean list of strings.
 
+    Gemini/evaluation data may contain either:
+    - a list of strings
+    - one plain string
+    - no value
+    """
+
+    if not value:
+        return []
+
+    if isinstance(value, list):
+        return [
+            str(item).strip()
+            for item in value
+            if str(item).strip()
+        ]
+
+    if isinstance(value, str):
+        value = value.strip()
+
+        if not value:
+            return []
+
+        return [value]
+
+    return [str(value).strip()]
+@app.get("/simulation/attempts/<attempt_id>/report")
+def workplace_task_review(attempt_id):
+    """
+    Display the final persisted review for a completed
+    workplace simulation attempt.
+    """
+
+    user_id = session.get("user_id")
+
+    attempt = get_simulation_attempt(
+        user_id=user_id,
+        attempt_id=attempt_id,
+    )
+
+    if (
+        not attempt
+        or attempt.get("simulation_mode") != "workplace"
+    ):
+        return redirect(
+            url_for("career")
+        )
+
+
+    evaluation = get_user_visible_evaluation(
+        attempt.get("evaluation")
+    )
+
+    strengths = normalize_review_items(
+    evaluation.get("strengths")
+)
+
+    areas_for_improvement = normalize_review_items(
+        evaluation.get("areas_for_improvement")
+    )
+
+    recommended_next_steps = normalize_review_items(
+        evaluation.get("recommended_next_steps")
+        or evaluation.get("recommended_skills")
+    )
+    
+    if not evaluation:
+        return redirect(
+            url_for(
+                "workplace_attempt_workspace",
+                attempt_id=attempt_id,
+            )
+        )
+
+
+    career_id = attempt.get(
+        "career_id",
+        ""
+    )
+
+    position_id = attempt.get(
+        "position_id",
+        ""
+    )
+
+    company_id = attempt.get(
+        "company_id",
+        ""
+    )
+
+
+    position = (
+        POSITIONS_DATA
+        .get(career_id, {})
+        .get(position_id, {})
+    )
+
+
+    position_title = position.get(
+        "title",
+        position_id.replace(
+            "-",
+            " "
+        ).title(),
+    )
+
+
+    company_name = company_id.replace(
+        "-",
+        " "
+    ).title()
+
+    valid_demo_company_ids = set()
+
+    for company in position.get(
+        "companies",
+        []
+    ):
+        company_value = company.get("id")
+
+        if company_value:
+            valid_demo_company_ids.add(
+                company_value
+            )
+
+        if company_value == company_id:
+            company_name = company.get(
+                "name",
+                company_name,
+            )
+
+
+    job_source = (
+        "demo"
+        if company_id in valid_demo_company_ids
+        else "adzuna"
+    )
+
+
+    public_scenario = attempt.get(
+        "public_scenario",
+        {}
+    )
+
+    task = (
+        public_scenario.get(
+            "task",
+            {}
+        )
+        if isinstance(
+            public_scenario,
+            dict,
+        )
+        else {}
+    )
+
+
+    task_title = (
+        task.get("subject")
+        or task.get("title")
+        or "Workplace Task Review"
+    )
+
+
+    return render_template(
+        "task_review.html",
+        attempt_id=attempt_id,
+        evaluation=evaluation,
+        task_title=task_title,
+        career_id=career_id,
+        position_id=position_id,
+        company_id=company_id,
+        position_title=position_title,
+        company_name=company_name,
+        job_source=job_source,
+        strengths=strengths,
+        areas_for_improvement=areas_for_improvement,
+        recommended_next_steps=recommended_next_steps,
+    )
 
 @app.get("/api/simulation/attempts/<attempt_id>")
 def get_public_workplace_attempt(attempt_id):

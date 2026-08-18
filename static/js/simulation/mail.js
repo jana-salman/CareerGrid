@@ -1303,10 +1303,24 @@ Good luck with your first day!`
                             button.type = "button";
                             button.className = "mail-download-button";
                             button.textContent = attachment.name;
-                            button.addEventListener("click", () => {
-                                const evaluation = simulationState.getEvaluation(attachment.threadId);
-                                window.CareerGridReport?.open(evaluation, attachment.meta || {});
-                            });
+                            button.addEventListener(
+                                "click",
+                                () => {
+
+                                    if (!attemptId) {
+                                        return;
+                                    }
+
+                                    window.location.assign(
+                                        `/simulation/attempts/${
+                                            encodeURIComponent(
+                                                attemptId
+                                            )
+                                        }/report`
+                                    );
+                                }
+                            );
+
                             card.appendChild(button);
                         });
                     }
@@ -1438,20 +1452,19 @@ Good luck with your first day!`
 
                             if (isEvaluationReport) {
 
-                                const evaluation =
-                                    simulationState.getEvaluation(
-                                        attachment.threadId
-                                    );
+                                if (!attemptId) {
+                                    return;
+                                }
 
-                                window.CareerGridReport?.open(
-                                    evaluation,
-                                    attachment.meta
-                                    ||
-                                    {}
+                                window.location.assign(
+                                    `/simulation/attempts/${
+                                        encodeURIComponent(
+                                            attemptId
+                                        )
+                                    }/report`
                                 );
 
                                 return;
-
                             }
 
                             downloadAttachment(
@@ -2153,7 +2166,7 @@ Good luck with your first day!`
                 const evaluation = await response.json();
                 simulationState.recordEvaluation(message.id, evaluation);
                 if (!message.thread.some(entry => entry.type === "evaluation-review")) {
-                    message.thread.push({ id: `review-${Date.now()}`, from: message.sender, role: message.senderRole || "Advisor", type: "evaluation-review", sentAt: new Date().toISOString(), body: evaluation.review_message || "I've completed my review and attached the feedback report.", attachments: [{ id: `report-${message.id}`, name: "Task Review Report.pdf", type: "evaluation-report", size: "Generated review", threadId: message.id, meta: { task: message.subject, position: positionTitle, company: companyName } }] });
+                    message.thread.push({ id: `review-${Date.now()}`, from: message.sender, role: message.senderRole || "Advisor", type: "evaluation-review", sentAt: new Date().toISOString(), body: evaluation.review_message || "I've completed my review and attached the feedback report.", attachments: [{ id: `report-${message.id}`, name: "Open Task Review Report", type: "evaluation-report", size: "Generated review", threadId: message.id, meta: { task: message.subject, position: positionTitle, company: companyName } }] });
                     saveState(); renderThread(message);
                 }
             } catch (error) { simulationState.markEvaluationFailed(message.id, error.message); }

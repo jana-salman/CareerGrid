@@ -1,52 +1,411 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <title>Register | CareerGrid</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Sign Up | CareerGrid</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/auth/login.css') }}"
+    >
 </head>
-<body>
 
-    <div class="auth-page">
-        <div class="auth-card">
-            <h1>Create Account</h1>
-            <p>Sign up to explore careers through simulations.</p>
+<body class="careergrid-login">
 
-            <form action="{{ url_for('auth.register') }}" method="POST">
-                <input
-                    type="text"
-                    name="full_name"
-                    placeholder="Full name"
-                    required
+    <main class="login-shell">
+
+        <!-- LEFT SIDE -->
+        <section
+            class="login-intro"
+            aria-labelledby="careergrid-heading"
+        >
+
+            <a
+                class="careergrid-brand"
+                href="{{ url_for('home') }}"
+                aria-label="CareerGrid home"
+            >
+                <span
+                    class="brand-mark"
+                    aria-hidden="true"
+                >
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </span>
+
+                <span>
+                    <strong>CareerGrid</strong>
+                    <small>Explore. Practice. Grow.</small>
+                </span>
+            </a>
+
+
+            <!-- PUZZLE ARTWORK -->
+            <div
+                class="career-puzzle"
+                aria-label="CareerGrid puzzle pieces connecting learning, skills, and careers"
+                role="img"
+            >
+
+                <img
+                    class="puzzle-image puzzle-image--education"
+                    src="{{ url_for('static', filename='images/login-puzzle/education-piece.png') }}"
+                    alt=""
                 >
 
-                <input
-                    type="email"
-                    name="email"
-                    placeholder="Email address"
-                    required
+                <img
+                    class="puzzle-image puzzle-image--career"
+                    src="{{ url_for('static', filename='images/login-puzzle/career-piece.png') }}"
+                    alt=""
                 >
 
-                <input
-                    type="password"
-                    name="password"
-                    placeholder="Password"
-                    required
+                <img
+                    class="puzzle-image puzzle-image--science"
+                    src="{{ url_for('static', filename='images/login-puzzle/science-piece.png') }}"
+                    alt=""
                 >
 
-                {% if error %}
-                    <p class="error-message">{{ error }}</p>
-                {% endif %}
+                <img
+                    class="puzzle-image puzzle-image--center"
+                    src="{{ url_for('static', filename='images/login-puzzle/center-piece.png') }}"
+                    alt=""
+                >
 
-                <button type="submit">Sign Up</button>
-            </form>
+                <img
+                    class="puzzle-image puzzle-image--coding"
+                    src="{{ url_for('static', filename='images/login-puzzle/coding-piece.png') }}"
+                    alt=""
+                >
 
-            <p class="auth-link">
-                Already have an account?
-                <a href="/login">Login</a>
-            </p>
-        </div>
-    </div>
+                <img
+                    class="puzzle-image puzzle-image--calculator"
+                    src="{{ url_for('static', filename='images/login-puzzle/calculator-piece.png') }}"
+                    alt=""
+                >
+
+                <img
+                    class="puzzle-image puzzle-image--travel"
+                    src="{{ url_for('static', filename='images/login-puzzle/travel-piece.png') }}"
+                    alt=""
+                >
+
+                <div
+                    class="puzzle-shine"
+                    aria-hidden="true"
+                ></div>
+
+            </div>
+
+
+            <!-- INTRO TEXT -->
+            <div class="intro-copy">
+
+                <h1 id="careergrid-heading">
+                    <span>The missing piece</span>
+                    between education
+                    <em>and your career.</em>
+                </h1>
+
+                <p>
+                    Step into realistic workplace simulations,
+                    solve practical challenges, and build the
+                    skills you need for your career.
+                </p>
+
+            </div>
+
+
+            <!-- BENEFITS -->
+            <ul
+                class="login-benefits"
+                aria-label="CareerGrid benefits"
+            >
+
+                <li>
+                    <span class="benefit-icon">◈</span>
+
+                    <span>
+                        <strong>Real-World Simulations</strong>
+                        <small>
+                            Experience authentic workplace scenarios.
+                        </small>
+                    </span>
+                </li>
+
+                <li>
+                    <span class="benefit-icon">◎</span>
+
+                    <span>
+                        <strong>Skill Development</strong>
+                        <small>
+                            Build and apply skills employers value.
+                        </small>
+                    </span>
+                </li>
+
+                <li>
+                    <span class="benefit-icon">↗</span>
+
+                    <span>
+                        <strong>Career Clarity</strong>
+                        <small>
+                            Explore roles and discover what fits you.
+                        </small>
+                    </span>
+                </li>
+
+            </ul>
+
+        </section>
+
+
+        <!-- RIGHT SIDE -->
+        <section
+            class="login-panel"
+            aria-labelledby="register-title"
+        >
+
+            <div class="login-card">
+
+                <header>
+
+                    <p class="card-kicker">
+                        CareerGrid workspace
+                    </p>
+
+                    <h2 id="register-title">
+                        Create your account
+                    </h2>
+
+                    <p>
+                        Start your career journey.
+                    </p>
+
+                </header>
+
+
+                <form
+                    action="{{ url_for('auth.register') }}"
+                    method="POST"
+                >
+
+                    <!-- FULL NAME -->
+                    <label for="register-name">
+                        Full name
+                    </label>
+
+                    <div class="input-wrap">
+
+                        <svg
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <circle
+                                cx="12"
+                                cy="8"
+                                r="4"
+                            ></circle>
+
+                            <path
+                                d="M4 21a8 8 0 0 1 16 0"
+                            ></path>
+                        </svg>
+
+                        <input
+                            id="register-name"
+                            type="text"
+                            name="full_name"
+                            placeholder="Enter your full name"
+                            autocomplete="name"
+                            required
+                        >
+
+                    </div>
+
+
+                    <!-- EMAIL -->
+                    <label for="register-email">
+                        Email address
+                    </label>
+
+                    <div class="input-wrap">
+
+                        <svg
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <rect
+                                x="3"
+                                y="5"
+                                width="18"
+                                height="14"
+                                rx="2"
+                            ></rect>
+
+                            <path
+                                d="m3 7 9 6 9-6"
+                            ></path>
+                        </svg>
+
+                        <input
+                            id="register-email"
+                            type="email"
+                            name="email"
+                            placeholder="Enter your email"
+                            autocomplete="email"
+                            required
+                        >
+
+                    </div>
+
+
+                    <!-- PASSWORD -->
+                    <label for="register-password">
+                        Password
+                    </label>
+
+                    <div class="input-wrap">
+
+                        <svg
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <rect
+                                x="5"
+                                y="10"
+                                width="14"
+                                height="10"
+                                rx="2"
+                            ></rect>
+
+                            <path
+                                d="M8 10V7a4 4 0 0 1 8 0v3"
+                            ></path>
+                        </svg>
+
+                        <input
+                            id="register-password"
+                            type="password"
+                            name="password"
+                            placeholder="Create a password"
+                            autocomplete="new-password"
+                            required
+                        >
+
+                        <button
+                            class="password-toggle"
+                            type="button"
+                            data-password-toggle
+                            aria-label="Show password"
+                            aria-pressed="false"
+                        >
+
+                            <svg
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"
+                                ></path>
+
+                                <circle
+                                    cx="12"
+                                    cy="12"
+                                    r="2.5"
+                                ></circle>
+                            </svg>
+
+                        </button>
+
+                    </div>
+
+
+                    {% if error %}
+                        <p
+                            class="auth-notice auth-notice--error"
+                            role="alert"
+                        >
+                            {{ error }}
+                        </p>
+                    {% endif %}
+
+
+                    <button
+                        class="sign-in-button"
+                        type="submit"
+                    >
+                        <span>Create account</span>
+                        <span aria-hidden="true">→</span>
+                    </button>
+
+                </form>
+
+
+                <p class="auth-link">
+                    Already have an account?
+                    <a href="{{ url_for('auth.login') }}">
+                        Sign in
+                    </a>
+                </p>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <script>
+        (() => {
+            const toggle =
+                document.querySelector(
+                    "[data-password-toggle]"
+                );
+
+            const password =
+                document.getElementById(
+                    "register-password"
+                );
+
+            if (!toggle || !password) {
+                return;
+            }
+
+            toggle.addEventListener(
+                "click",
+                () => {
+
+                    const isVisible =
+                        password.type === "text";
+
+                    password.type =
+                        isVisible
+                            ? "password"
+                            : "text";
+
+                    toggle.setAttribute(
+                        "aria-pressed",
+                        String(!isVisible)
+                    );
+
+                    toggle.setAttribute(
+                        "aria-label",
+                        isVisible
+                            ? "Show password"
+                            : "Hide password"
+                    );
+                }
+            );
+        })();
+    </script>
 
 </body>
+
 </html>

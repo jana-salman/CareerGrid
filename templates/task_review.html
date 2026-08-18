@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Task Review | CareerGrid</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/task_review.css') }}"
+    >
+</head>
+
+<body>
+
+    <main class="review-page">
+
+        <!-- =========================================
+             TOP NAVIGATION
+        ========================================== -->
+
+        <nav class="review-nav">
+
+            <a
+                class="review-brand"
+                href="{{ url_for('career') }}"
+            >
+                <span class="review-brand-icon">
+                    CG
+                </span>
+
+                <span>
+                    CareerGrid
+                </span>
+            </a>
+
+
+            <a
+                class="back-workspace-link"
+                href="{{ url_for(
+                    'workplace_attempt_workspace',
+                    attempt_id=attempt_id
+                ) }}"
+            >
+                ← Back to workspace
+            </a>
+
+        </nav>
+
+
+        <!-- =========================================
+             REPORT
+        ========================================== -->
+
+        <section class="review-container">
+
+            <header class="review-header">
+
+                <span class="review-kicker">
+                    CareerGrid · Task Review Report
+                </span>
+
+                <h1>
+                    {{ task_title }}
+                </h1>
+
+                <p class="review-context">
+                    {{ position_title }}
+                    <span>·</span>
+                    {{ company_name }}
+                </p>
+
+
+                <div class="score-section">
+
+                    <div class="score-circle">
+
+                        <strong>
+                            {{ evaluation.get("overall_score", 0) }}
+                        </strong>
+
+                        <span>
+                            / 100
+                        </span>
+
+                    </div>
+
+
+                    <div class="score-copy">
+
+                        {% set score = evaluation.get("overall_score", 0) %}
+
+                        {% if score >= 80 %}
+
+                            <span class="score-label score-label--strong">
+                                Strong Performance
+                            </span>
+
+                            <h2>
+                                You're showing strong readiness for this role.
+                            </h2>
+
+                        {% elif score >= 60 %}
+
+                            <span class="score-label score-label--developing">
+                                Developing
+                            </span>
+
+                            <h2>
+                                Good progress — keep strengthening the areas below.
+                            </h2>
+
+                        {% else %}
+
+                            <span class="score-label score-label--practice">
+                                Needs More Practice
+                            </span>
+
+                            <h2>
+                                Review the feedback and try the workplace task again.
+                            </h2>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+            </header>
+
+
+            <!-- =========================================
+                 OVERALL ASSESSMENT
+            ========================================== -->
+
+            {% if evaluation.get("summary") %}
+
+                <section class="review-section">
+
+                    <div class="section-heading">
+
+                        <span>
+                            Overview
+                        </span>
+
+                        <h2>
+                            Overall Assessment
+                        </h2>
+
+                    </div>
+
+                    <p class="assessment-copy">
+                        {{ evaluation.get("summary") }}
+                    </p>
+
+                </section>
+
+            {% endif %}
+
+
+            <!-- =========================================
+                 PERFORMANCE BREAKDOWN
+            ========================================== -->
+
+            {% if evaluation.get("dimensions") %}
+
+                <section class="review-section">
+
+                    <div class="section-heading">
+
+                        <span>
+                            Detailed Evaluation
+                        </span>
+
+                        <h2>
+                            Performance Breakdown
+                        </h2>
+
+                    </div>
+
+
+                    <div class="performance-grid">
+
+                        {% for name, dimension in evaluation.get("dimensions", {}).items() %}
+
+                            <article class="performance-card">
+
+                                <div class="performance-card-header">
+
+                                    <h3>
+                                        {{ name.replace("_", " ").title() }}
+                                    </h3>
+
+                                    <strong>
+                                        {{ dimension.get("score", "—") }}
+                                        /
+                                        {{ dimension.get("max_score", 10) }}
+                                    </strong>
+
+                                </div>
+
+
+                                {% if dimension.get("feedback") %}
+
+                                    <p>
+                                        {{ dimension.get("feedback") }}
+                                    </p>
+
+                                {% endif %}
+
+                            </article>
+
+                        {% endfor %}
+
+                    </div>
+
+                </section>
+
+            {% endif %}
+
+
+            <!-- =========================================
+                 STRENGTHS + IMPROVEMENT
+            ========================================== -->
+
+            <div class="feedback-columns">
+
+                {% if strengths %}
+
+                    <section class="review-section feedback-card">
+
+                        <div class="section-heading">
+
+                            <span>
+                                What Went Well
+                            </span>
+
+                            <h2>
+                                Strengths
+                            </h2>
+
+                        </div>
+
+
+                        <ul class="feedback-list">
+
+                            {% for strength in strengths %}
+
+                                <li>
+                                    {{ strength }}
+                                </li>
+
+                            {% endfor %}
+
+                        </ul>
+
+                    </section>
+
+                {% endif %}
+
+
+                {% if areas_for_improvement %}
+
+                    <section class="review-section feedback-card">
+
+                        <div class="section-heading">
+
+                            <span>
+                                Your Next Focus
+                            </span>
+
+                            <h2>
+                                Areas for Improvement
+                            </h2>
+
+                        </div>
+
+
+                        <ul class="feedback-list">
+
+                            {% for area in areas_for_improvement %}
+
+                                <li>
+                                    {{ area }}
+                                </li>
+
+                            {% endfor %}
+
+                        </ul>
+
+                    </section>
+
+                {% endif %}
+
+            </div>
+
+
+            <!-- =========================================
+                 ADVISOR FEEDBACK
+            ========================================== -->
+
+            {% if evaluation.get("advisor_feedback") %}
+
+                <section class="review-section advisor-section">
+
+                    <div class="section-heading">
+
+                        <span>
+                            CareerGrid Advisor
+                        </span>
+
+                        <h2>
+                            Advisor Feedback
+                        </h2>
+
+                    </div>
+
+                    <p>
+                        {{ evaluation.get("advisor_feedback") }}
+                    </p>
+
+                </section>
+
+            {% endif %}
+
+
+            <!-- =========================================
+                 RECOMMENDED NEXT STEPS
+            ========================================== -->
+
+            {% if recommended_next_steps %}
+
+    <section class="review-section">
+
+        <div class="section-heading">
+            <span>Keep Growing</span>
+            <h2>Recommended Next Steps</h2>
+        </div>
+
+        <ul class="next-step-list">
+
+            {% for step in recommended_next_steps %}
+
+                <li>
+                    <span>{{ loop.index }}</span>
+
+                    <p>
+                        {{ step }}
+                    </p>
+                </li>
+
+            {% endfor %}
+
+        </ul>
+
+    </section>
+
+{% endif %}
+
+            {% if next_steps %}
+
+                <section class="review-section">
+
+                    <div class="section-heading">
+
+                        <span>
+                            Keep Growing
+                        </span>
+
+                        <h2>
+                            Recommended Next Steps
+                        </h2>
+
+                    </div>
+
+
+                    <ul class="next-step-list">
+
+                        {% for step in next_steps %}
+
+                            <li>
+
+                                <span>
+                                    {{ loop.index }}
+                                </span>
+
+                                <p>
+                                    {{ step }}
+                                </p>
+
+                            </li>
+
+                        {% endfor %}
+
+                    </ul>
+
+                </section>
+
+            {% endif %}
+
+
+            <!-- =========================================
+                 NEXT ACTIONS
+            ========================================== -->
+
+            <section class="next-actions">
+
+                <span class="next-actions-kicker">
+                    What's next?
+                </span>
+
+                <h2>
+                    Keep building your career skills.
+                </h2>
+
+                <p>
+                    Practice this role again, explore another career,
+                    or review your simulation history.
+                </p>
+
+
+                <div class="next-actions-buttons">
+
+                    <form
+                        action="{{ url_for('start_workplace_simulation') }}"
+                        method="POST"
+                    >
+
+                        <input
+                            type="hidden"
+                            name="career_id"
+                            value="{{ career_id }}"
+                        >
+
+                        <input
+                            type="hidden"
+                            name="position_id"
+                            value="{{ position_id }}"
+                        >
+
+                        <input
+                            type="hidden"
+                            name="company_id"
+                            value="{{ company_id }}"
+                        >
+
+                        <input
+                            type="hidden"
+                            name="job_source"
+                            value="{{ job_source }}"
+                        >
+
+
+                        <button
+                            class="review-button review-button--primary"
+                            type="submit"
+                        >
+                            <span>
+                                ↻
+                            </span>
+
+                            Try Again
+                        </button>
+
+                    </form>
+
+
+                    <a
+                        class="review-button review-button--secondary"
+                        href="{{ url_for('career') }}"
+                    >
+                        Explore Careers
+                    </a>
+
+                </div>
+
+
+                <a
+                    class="dashboard-link"
+                    href="{{ url_for('dashboard') }}"
+                >
+                    View Dashboard →
+                </a>
+
+            </section>
+
+        </section>
+
+    </main>
+
+</body>
+
+</html>
