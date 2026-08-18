@@ -177,7 +177,7 @@ def protect_pages():
         request.endpoint not in PUBLIC_ROUTES
         and "user_email" not in session
     ):
-        return redirect(url_for("auth.login"))
+        return redirect(url_for("home"))
 
 # =========================================================
 # SIMULATION STEP 1
@@ -979,7 +979,7 @@ def fetch_adzuna_jobs(job_title, location="", results=5):
 
 @app.route("/")
 def home():
-    return render_template("home.html")
+    return redirect(url_for("auth.login"))
 
 
 @app.route("/career")

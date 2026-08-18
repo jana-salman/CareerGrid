@@ -11,6 +11,7 @@
         rel="stylesheet"
         href="{{ url_for('static', filename='css/style.css') }}"
     >
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/careergrid-theme.css') }}">
 </head>
 
 <body>
@@ -31,11 +32,12 @@
         </nav>
 
         <div class="simulation-header">
-            <h1>{{ position_title }} Openings</h1>
+            <span class="selection-kicker">CareerGrid workspace</span>
+            <h1>{{ position_title }}</h1>
 
             <p>
-                Real listings pulled live from Adzuna
-                (United States)
+                Choose your company workspace and begin your
+                workplace simulation.
             </p>
         </div>
 
