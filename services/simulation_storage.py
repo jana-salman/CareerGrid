@@ -427,7 +427,7 @@ def save_simulation_evaluation(
     user_id: str,
     attempt_id: str,
     evaluation: dict[str, Any],
-) -> None:
+) -> dict[str, Any]:
     """
     Save Gemini's evaluation and mark the simulation as complete.
     """
@@ -458,15 +458,20 @@ def save_simulation_evaluation(
             "The simulation attempt could not be found."
         )
 
+    public_evaluation = get_user_visible_evaluation(evaluation)
+    if not public_evaluation:
+        raise ValueError("Evaluation has no user-visible report fields.")
+
     completed_at = _current_utc_time()
 
     attempt_reference.update({
-        "evaluation": deepcopy(evaluation),
+        "evaluation": public_evaluation,
         "status": "completed",
         "current_step": 5,
         "completed_at": completed_at,
         "updated_at": completed_at,
     })
+    return deepcopy(public_evaluation)
 
 def save_simulation_roadmap(
     *,
@@ -520,12 +525,58 @@ def save_simulation_roadmap(
         "roadmap": deepcopy(roadmap),
         "updated_at": updated_at,
     })
-def list_completed_simulation_attempts(
-    user_id: str,
-) -> list[dict[str, Any]]:
-    """
-    Return a user's completed simulation attempts, newest first.
-    """
+_USER_VISIBLE_EVALUATION_FIELDS = {
+    "overall_score",
+    "summary",
+    "dimensions",
+    "strengths",
+    "areas_for_improvement",
+    "advisor_feedback",
+    "recommended_next_steps",
+    "recommended_skills",
+    "review_message",
+    "step_feedback",
+}
+
+
+def get_user_visible_evaluation(evaluation: Any) -> dict[str, Any] | None:
+    """Return only report fields intended for the simulation owner."""
+    if not isinstance(evaluation, dict):
+        return None
+    if isinstance(evaluation.get("data"), dict):
+        evaluation = evaluation["data"]
+
+    public = {
+        key: deepcopy(value)
+        for key, value in evaluation.items()
+        if key in _USER_VISIBLE_EVALUATION_FIELDS
+    }
+    return public or None
+
+
+def _attempt_task_title(attempt: dict[str, Any]) -> str | None:
+    """Find the canonical public task subject across attempt generations."""
+    public_scenario = attempt.get("public_scenario")
+    if isinstance(public_scenario, dict):
+        task = public_scenario.get("task")
+        if isinstance(task, dict):
+            title = task.get("subject") or task.get("title")
+            if title:
+                return str(title).strip()
+
+    generated_tasks = attempt.get("generated_tasks")
+    if isinstance(generated_tasks, dict):
+        first_task = generated_tasks.get("step_1")
+        if isinstance(first_task, dict):
+            title = first_task.get("subject") or first_task.get("title")
+            if title:
+                return str(title).strip()
+
+    return None
+
+
+def list_user_simulation_attempts(user_id: str) -> list[dict[str, Any]]:
+    """Return safe dashboard history for one Firebase user, newest first."""
 
     if not user_id:
         return []
@@ -543,14 +594,11 @@ def list_completed_simulation_attempts(
         if not isinstance(attempt, dict):
             continue
 
-        if attempt.get("status") != "completed":
-            continue
-
-        evaluation = attempt.get("evaluation")
-        overall_score = 0
-
-        if isinstance(evaluation, dict):
-            overall_score = evaluation.get("overall_score", 0) or 0
+        status = str(attempt.get("status") or "in_progress")
+        if status not in {
+            "completed", "in_progress", "generating", "generation_failed"
+        }:
+            status = "in_progress"
 
         summaries.append(
             {
@@ -558,14 +606,42 @@ def list_completed_simulation_attempts(
                 "career_id": attempt.get("career_id"),
                 "position_id": attempt.get("position_id"),
                 "company_id": attempt.get("company_id"),
+                "simulation_mode": attempt.get("simulation_mode"),
+                "task_title": _attempt_task_title(attempt),
+                "status": status,
+                "created_at": attempt.get("created_at"),
+                "updated_at": attempt.get("updated_at"),
                 "completed_at": attempt.get("completed_at"),
-                "overall_score": overall_score,
+                "evaluation": get_user_visible_evaluation(attempt.get("evaluation")),
             }
         )
 
     summaries.sort(
-        key=lambda item: item.get("completed_at") or "",
+        key=lambda item: (
+            item.get("completed_at")
+            or item.get("updated_at")
+            or item.get("created_at")
+            or ""
+        ),
         reverse=True,
     )
 
     return summaries
+
+
+def list_completed_simulation_attempts(
+    user_id: str,
+) -> list[dict[str, Any]]:
+    """Backward-compatible completed-attempt summaries."""
+    return [
+        {
+            **attempt,
+            "overall_score": (
+                attempt.get("evaluation", {}).get("overall_score", 0)
+                if isinstance(attempt.get("evaluation"), dict)
+                else 0
+            ),
+        }
+        for attempt in list_user_simulation_attempts(user_id)
+        if attempt.get("status") == "completed"
+    ]

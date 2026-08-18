@@ -46,7 +46,8 @@ from services.simulation_storage import (
     save_simulation_evaluation,
     save_simulation_roadmap,
     get_simulation_attempt,
-    list_completed_simulation_attempts,
+    get_user_visible_evaluation,
+    list_user_simulation_attempts,
     create_ui_simulation_attempt,
     create_data_analyst_simulation_attempt,
     create_workplace_simulation_attempt,
@@ -172,6 +173,9 @@ def protect_pages():
     Redirect users to login when they try to open a private
     page without being authenticated.
     """
+
+    if request.endpoint == "dashboard" and "user_id" not in session:
+        return redirect(url_for("auth.login"))
 
     if (
         request.endpoint not in PUBLIC_ROUTES
@@ -1235,6 +1239,7 @@ def simulation_workplace_evaluation():
     if not isinstance(evidence, dict):
         return jsonify({"error": "Evaluation evidence is required."}), 400
     attempt_id = payload.get("attempt_id")
+    attempt = None
     if attempt_id:
         attempt = get_simulation_attempt(
             user_id=session.get("user_id"),
@@ -1247,6 +1252,8 @@ def simulation_workplace_evaluation():
             or not isinstance(attempt.get("private_context"), dict)
         ):
             return jsonify({"error": "Simulation attempt not found."}), 404
+        if isinstance(attempt.get("evaluation"), dict):
+            return jsonify(get_user_visible_evaluation(attempt["evaluation"]) or {})
         evidence = {
             "attempt": {
                 "attempt_id": str(attempt_id),
@@ -1260,7 +1267,14 @@ def simulation_workplace_evaluation():
             "actual_user_evidence": evidence,
         }
     try:
-        return jsonify(evaluate_workplace_submission(evidence))
+        evaluation = evaluate_workplace_submission(evidence)
+        if attempt_id and attempt:
+            evaluation = save_simulation_evaluation(
+                user_id=session.get("user_id"),
+                attempt_id=str(attempt_id),
+                evaluation=evaluation,
+            )
+        return jsonify(evaluation)
     except SimulationEvaluationError as error:
         app.logger.warning("Workplace evaluation failed: %s", error)
         return jsonify({"error": str(error)}), 503
@@ -4642,6 +4656,20 @@ def _lookup_position_title(career_id, position_id):
     return "Simulation"
 
 
+def _lookup_career_name(career_id):
+    """Return the readable career name used by selection pages."""
+    career_names = {
+        "software-developer": "Software Developer",
+        "ui-ux-designer": "UI/UX Designer",
+        "data-analyst": "Data Analyst",
+    }
+    if career_id in career_names:
+        return career_names[career_id]
+    if career_id:
+        return str(career_id).replace("-", " ").title()
+    return "Career"
+
+
 def _lookup_company_name(career_id, position_id, company_id):
     """Return the readable company name."""
 
@@ -4661,33 +4689,17 @@ def _lookup_company_name(career_id, position_id, company_id):
     return "Company"
 
 
-def _status_from_score(score):
-    """Convert the score into a status."""
-
-    if score >= 80:
-        return "Strong Match"
-
-    if score >= 60:
-        return "Developing Match"
-
-    return "Needs Practice"
-
-
-def _format_completed_date(completed_at):
-    """Format the completion date."""
-
-    if not completed_at:
+def _format_dashboard_date(timestamp):
+    """Format an ISO attempt timestamp consistently and defensively."""
+    if not timestamp:
         return "Unknown date"
 
     try:
-        cleaned = completed_at.replace("Z", "+00:00")
+        cleaned = str(timestamp).replace("Z", "+00:00")
         parsed = datetime.fromisoformat(cleaned)
-
-        # %#d is used on Windows.
-        return parsed.strftime("%B %#d, %Y")
-
+        return f"{parsed.strftime('%b')} {parsed.day}, {parsed.year}"
     except (ValueError, TypeError):
-        return completed_at
+        return str(timestamp)
 
 
 def _build_dashboard_item(summary):
@@ -4696,10 +4708,38 @@ def _build_dashboard_item(summary):
     career_id = summary.get("career_id")
     position_id = summary.get("position_id")
     company_id = summary.get("company_id")
-    score = summary.get("overall_score", 0) or 0
+    evaluation = summary.get("evaluation")
+    score = evaluation.get("overall_score") if isinstance(evaluation, dict) else None
+    if isinstance(score, bool) or not isinstance(score, (int, float)):
+        score = None
+    elif isinstance(score, float) and score.is_integer():
+        score = int(score)
+
+    raw_status = summary.get("status")
+    status_labels = {
+        "completed": "Completed",
+        "in_progress": "In Progress",
+        "generating": "In Progress",
+        "generation_failed": "Generation Failed",
+    }
+    timestamp = (
+        summary.get("completed_at")
+        or summary.get("updated_at")
+        or summary.get("created_at")
+    )
+    feedback_preview = ""
+    if isinstance(evaluation, dict):
+        feedback_preview = (
+            evaluation.get("summary")
+            or evaluation.get("advisor_feedback")
+            or evaluation.get("review_message")
+            or ""
+        )
 
     return {
         "attempt_id": summary.get("attempt_id"),
+        "task_title": summary.get("task_title") or "Workplace simulation",
+        "career_name": _lookup_career_name(career_id),
         "position_title": _lookup_position_title(
             career_id,
             position_id,
@@ -4709,11 +4749,16 @@ def _build_dashboard_item(summary):
             position_id,
             company_id,
         ),
-        "completed_date": _format_completed_date(
-            summary.get("completed_at")
-        ),
+        "date": _format_dashboard_date(timestamp),
         "score": score,
-        "status": _status_from_score(score),
+        "status": raw_status,
+        "status_label": status_labels.get(raw_status, "In Progress"),
+        "feedback_preview": str(feedback_preview).strip(),
+        "evaluation": evaluation,
+        "can_resume": (
+            raw_status == "in_progress"
+            and summary.get("simulation_mode") == "workplace"
+        ),
     }
 
 
@@ -4723,24 +4768,49 @@ def _build_dashboard_item(summary):
 
 @app.route("/dashboard")
 def dashboard():
-    """Show the user's completed simulations."""
+    """Show the signed-in user's Firebase simulation history."""
 
     user_id = session.get("user_id")
 
     if not user_id:
         return redirect(url_for("auth.login"))
 
-    summaries = list_completed_simulation_attempts(user_id)
+    summaries = list_user_simulation_attempts(user_id)
 
     attempts = [
         _build_dashboard_item(summary)
         for summary in summaries
     ]
 
+    completed_count = sum(
+        attempt["status"] == "completed" for attempt in attempts
+    )
+    scores = [
+        attempt["score"] for attempt in attempts
+        if attempt["status"] == "completed" and attempt["score"] is not None
+    ]
+    average_score = round(sum(scores) / len(scores)) if scores else None
+    reports = {
+        attempt["attempt_id"]: {
+            "evaluation": attempt["evaluation"],
+            "meta": {
+                "task": attempt["task_title"],
+                "position": attempt["position_title"],
+                "company": attempt["company_name"],
+            },
+        }
+        for attempt in attempts
+        if attempt["attempt_id"] and attempt["evaluation"]
+    }
+
     return render_template(
         "dashboard.html",
         user_name=session.get("user_name"),
         attempts=attempts,
+        simulation_count=len(attempts),
+        completed_count=completed_count,
+        average_score=average_score,
+        reports=reports,
     )
 
 

@@ -10,7 +10,7 @@ from firebase_admin import credentials, db
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load private settings from CareerGrid/.env
-load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR / ".env", override=True)
 
 
 def initialize_firebase():
