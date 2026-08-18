@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Positions | CareerGrid</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/careergrid-theme.css') }}">
 </head>
 <body>
 
@@ -14,8 +15,9 @@
         </nav>
 
         <div class="simulation-header">
-            <h1>{{ career_name }} Positions</h1>
-            <p>Choose a position to see available companies</p>
+            <span class="selection-kicker">Career path</span>
+            <h1>{{ career_name }}</h1>
+            <p>Choose your position to see available companies.</p>
         </div>
 
         <div class="career-grid">
