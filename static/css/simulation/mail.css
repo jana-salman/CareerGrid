@@ -3,6 +3,7 @@
 ======================================================== */
 
 .mail-window {
+    container-type: inline-size;
     width: min(
         1320px,
         calc(100vw - 180px)
@@ -17,6 +18,18 @@
     left: 125px;
 
     background: #ffffff;
+}
+
+@container (max-width: 760px) {
+    .mail-layout { grid-template-columns: 68px 220px minmax(0, 1fr); }
+    .mail-sidebar-title, .mail-folder > span:nth-child(2), .mail-sidebar-footer div, .folder-count { display: none; }
+    .mail-folder { grid-template-columns: 1fr; justify-items: center; }
+}
+
+@container (max-width: 560px) {
+    .mail-layout { grid-template-columns: 190px minmax(0, 1fr); }
+    .mail-sidebar { display: none; }
+    .mail-message-view { padding: 20px; }
 }
 
 

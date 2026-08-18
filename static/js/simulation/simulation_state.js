@@ -91,6 +91,49 @@
     }
 
 
+    function repositorySlug(name) {
+
+        const slug =
+            String(name || "")
+                .normalize("NFKD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/^-+|-+$/g, "");
+
+
+        return slug || "repository";
+
+    }
+
+
+    function ensureRepositoryMetadata(repository) {
+
+        if (!repository) {
+
+            return repository;
+
+        }
+
+
+        const name =
+            repository.repositoryName
+            ||
+            baseName(repository.rootPath);
+
+
+        repository.repositoryName = name;
+        repository.repositorySlug =
+            repository.repositorySlug
+            ||
+            repositorySlug(name);
+
+
+        return repository;
+
+    }
+
+
     function parentPath(path) {
 
         const parts =
@@ -419,6 +462,8 @@ __pycache__/
 
             submissions: {},
 
+            submissionCandidates: {},
+
             evaluations: {},
             scenarioInitialization: {
                 initialized: false,
@@ -477,6 +522,10 @@ __pycache__/
                         .forEach(
                             repository => {
 
+                                ensureRepositoryMetadata(
+                                    repository
+                                );
+
                                 if (
                                     !Array.isArray(
                                         repository.pullRequests
@@ -486,6 +535,26 @@ __pycache__/
                                     repository.pullRequests = [];
 
                                 }
+
+
+                                repository.pullRequests.forEach(
+                                    pullRequest => {
+
+                                        pullRequest.repositoryPath =
+                                            pullRequest.repositoryPath
+                                            ||
+                                            repository.rootPath;
+                                        pullRequest.repositoryName =
+                                            pullRequest.repositoryName
+                                            ||
+                                            repository.repositoryName;
+                                        pullRequest.repositorySlug =
+                                            pullRequest.repositorySlug
+                                            ||
+                                            repository.repositorySlug;
+
+                                    }
+                                );
 
                             }
                         );
@@ -511,6 +580,12 @@ __pycache__/
                     if (!parsed.submissions) {
 
                         parsed.submissions = {};
+
+                    }
+
+                    if (!parsed.submissionCandidates) {
+
+                        parsed.submissionCandidates = {};
 
                     }
 
@@ -1300,9 +1375,11 @@ __pycache__/
             ]
         ) {
 
-            return state.git.repositories[
-                normalized
-            ];
+            return ensureRepositoryMetadata(
+                state.git.repositories[
+                    normalized
+                ]
+            );
 
         }
 
@@ -1339,6 +1416,18 @@ __pycache__/
             {
                 rootPath:
                     normalized,
+
+                repositoryName:
+                    baseName(
+                        normalized
+                    ),
+
+                repositorySlug:
+                    repositorySlug(
+                        baseName(
+                            normalized
+                        )
+                    ),
 
                 currentBranch:
                     "main",
@@ -1677,6 +1766,9 @@ __pycache__/
 
         const pullRequest = {
             id: nextId,
+            repositoryPath: repository.rootPath,
+            repositoryName: repository.repositoryName,
+            repositorySlug: repository.repositorySlug,
             title: title,
             description: description,
             baseBranch: baseBranch,
@@ -1690,7 +1782,7 @@ __pycache__/
                 .toISOString(),
             status: "open",
             url:
-                `https://github.com/careergrid-sim/${baseName(repository.rootPath)}/pull/${nextId}`
+                `https://github.com/careergrid-sim/${repository.repositorySlug}/pull/${nextId}`
         };
 
 
@@ -2674,6 +2766,81 @@ __pycache__/
     // WORK SUBMISSIONS
     // =========================================
 
+    function getSubmissionCandidate(
+        threadId
+    ) {
+
+        return clone(
+            state.submissionCandidates[
+                String(threadId || "default")
+            ]
+            ||
+            null
+        );
+
+    }
+
+
+    function setSubmissionCandidate(
+        details = {}
+    ) {
+
+        const threadId =
+            String(
+                details.threadId
+                ||
+                "default"
+            );
+
+
+        if (state.submissions[threadId]) {
+
+            return {
+                success: false,
+                message: "This task already has a recorded submission."
+            };
+
+        }
+
+
+        const candidate = {
+            threadId: threadId,
+            repositoryPath: String(details.repositoryPath || ""),
+            branch: String(details.branch || ""),
+            pullRequestId: Number(details.pullRequestId),
+            pullRequestUrl: String(details.pullRequestUrl || ""),
+            awaitingConfirmation: true,
+            createdAt: new Date().toISOString(),
+            rawMessages: clone(details.rawMessages || []),
+            hasSummary: Boolean(details.hasSummary),
+            hasVerification: Boolean(details.hasVerification)
+        };
+
+
+        state.submissionCandidates[threadId] = candidate;
+
+        saveState();
+
+        return {
+            success: true,
+            candidate: clone(candidate)
+        };
+
+    }
+
+
+    function clearSubmissionCandidate(
+        threadId
+    ) {
+
+        delete state.submissionCandidates[
+            String(threadId || "default")
+        ];
+
+        saveState();
+
+    }
+
     function getSubmission(
         threadId
     ) {
@@ -2737,7 +2904,9 @@ __pycache__/
             branch: String(details.branch || ""),
             pullRequestId: Number(details.pullRequestId),
             pullRequestUrl: String(details.pullRequestUrl || ""),
-            extracted: clone(details.extracted || {})
+            extracted: clone(details.extracted || {}),
+            rawMessages: clone(details.rawMessages || []),
+            confirmationMessage: String(details.confirmationMessage || "")
         };
 
 
@@ -2830,6 +2999,9 @@ __pycache__/
         baseName:
             baseName,
 
+        repositorySlug:
+            repositorySlug,
+
         ensureRepository:
             ensureRepository,
 
@@ -2883,6 +3055,15 @@ __pycache__/
 
         getSubmission:
             getSubmission,
+
+        getSubmissionCandidate:
+            getSubmissionCandidate,
+
+        setSubmissionCandidate:
+            setSubmissionCandidate,
+
+        clearSubmissionCandidate:
+            clearSubmissionCandidate,
 
         getSubmissionStatus:
             getSubmissionStatus,
