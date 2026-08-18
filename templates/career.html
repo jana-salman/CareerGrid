@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Choose Career | CareerGrid</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/careergrid-theme.css') }}">
 </head>
 <body>
 
@@ -12,7 +13,7 @@
     <h2 class="logo">CareerGrid</h2>
 
     <div>
-        <a href="/">Home</a>
+        <a href="{{ url_for('career') }}">Home</a>
         <a href="{{ url_for('dashboard') }}">Dashboard</a>
     </div>
 </nav>
