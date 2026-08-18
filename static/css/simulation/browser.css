@@ -1,4 +1,4 @@
-.browser-window { width: min(920px, calc(100vw - 150px)); height: min(620px, calc(100vh - 150px)); min-width: 540px; min-height: 360px; }
+.browser-window { --window-min-width: 420px; --window-min-height: 300px; width: min(920px, calc(100vw - 150px)); height: min(620px, calc(100vh - 150px)); min-width: min(var(--window-min-width), 100%); min-height: min(var(--window-min-height), 100%); container-type: inline-size; }
 .browser-layout { height: calc(100% - 46px); display: flex; flex-direction: column; background: #f8fafc; color: #172033; }
 .browser-toolbar { padding: 10px 14px; border-bottom: 1px solid #dbe3ee; background: #fff; }
 .browser-address { display: block; padding: 7px 10px; border-radius: 6px; background: #eef2f7; color: #4a5a70; font-size: .82rem; }
@@ -16,3 +16,4 @@
 .browser-console { min-height: 100%; padding: 14px; border-radius: 6px; background: #172033; color: #dbeafe; font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre-wrap; }
 .browser-console .is-error { color: #fca5a5; }.browser-empty-state { display: grid; min-height: 180px; place-items: center; padding: 24px; text-align: center; color: #64748b; }
 @media (max-width: 720px) { .browser-window { min-width: 0; width: calc(100vw - 40px); }.browser-network { grid-template-columns: 1fr; }.browser-request-list { border-right: 0; border-bottom: 1px solid #dbe3ee; } }
+@container (max-width: 680px) { .browser-network { grid-template-columns: 1fr; }.browser-request-list { border-right: 0; border-bottom: 1px solid #dbe3ee; } }

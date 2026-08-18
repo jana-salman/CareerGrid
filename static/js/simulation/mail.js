@@ -1772,6 +1772,98 @@ Good luck with your first day!`
         // ADVISOR RESPONSE
         // =========================================
 
+        function extractSimulatedPullRequestUrls(
+            body
+        ) {
+
+            const matches =
+                String(body || "").match(
+                    /https:\/\/github\.com\/careergrid-sim\/[^\r\n]*?\/pull\/\d+(?=$|[\s)\],.!?;:])/gi
+                )
+                ||
+                [];
+
+
+            return [
+                ...new Set(
+                    matches.map(
+                        url => url.replace(
+                            /[)\],.!?;:]+$/,
+                            ""
+                        )
+                    )
+                )
+            ];
+
+        }
+
+        function isAffirmativeSubmissionConfirmation(
+            body
+        ) {
+
+            const answer =
+                String(body || "")
+                    .toLowerCase()
+                    .replace(/[^a-z0-9\s']/g, " ")
+                    .replace(/\s+/g, " ")
+                    .trim();
+
+
+            return /^(?:yes|yep|yeah|yup|correct|affirmative|submit(?: it)?|that's (?:the one|it|final)|yes (?:this is it|that's (?:the pr|it|the one)|review (?:it|this)|final))$/.test(answer);
+
+        }
+
+        function validateSubmissionCandidate(
+            candidate
+        ) {
+
+            if (!candidate || !simulationState) {
+
+                return null;
+
+            }
+
+
+            const repository =
+                simulationState.getRepository(
+                    candidate.repositoryPath
+                );
+
+            const pullRequest =
+                repository
+                &&
+                simulationState.getPullRequest(
+                    candidate.repositoryPath,
+                    candidate.pullRequestId
+                );
+
+
+            if (
+                !repository
+                ||
+                !pullRequest
+                ||
+                pullRequest.url !== candidate.pullRequestUrl
+                ||
+                !repository.branches[pullRequest.compareBranch]
+                ||
+                !repository.remote.pushedBranches.includes(pullRequest.compareBranch)
+                ||
+                pullRequest.status !== "open"
+            ) {
+
+                return null;
+
+            }
+
+
+            return {
+                repository,
+                pullRequest
+            };
+
+        }
+
         function assessSubmission(
             message,
             body
@@ -1783,14 +1875,9 @@ Good luck with your first day!`
                 );
 
             const urls =
-                [
-                    ...body.matchAll(
-                        /https:\/\/github\.com\/careergrid-sim\/[^\s/]+\/pull\/\d+/gi
-                    )
-                ]
-                    .map(
-                        match => match[0]
-                    );
+                extractSimulatedPullRequestUrls(
+                    body
+                );
 
             const branchMatch =
                 body.match(
@@ -1891,16 +1978,19 @@ Good luck with your first day!`
                 if (!repository.remote.pushedBranches.includes(pullRequest.compareBranch)) errors.push("branch_not_pushed");
                 if (!hasNewCommits) errors.push("no_compare_commits");
                 if (reportedBranch && reportedBranch !== pullRequest.compareBranch) errors.push("branch_mismatch");
-                if (!hasSummary) errors.push("missing_summary");
-                if (!hasVerification) errors.push("missing_verification");
             }
 
-            const complete =
+            const infrastructureErrors =
+                errors.filter(
+                    error => error !== "no_compare_commits"
+                );
+
+            const validCandidate =
                 looksLikeSubmission
                 &&
                 Boolean(validated)
                 &&
-                errors.length === 0;
+                infrastructureErrors.length === 0;
 
             return {
                 submission,
@@ -1911,7 +2001,8 @@ Good luck with your first day!`
                 hasSummary,
                 hasVerification,
                 errors,
-                complete
+                infrastructureErrors,
+                validCandidate
             };
 
         }
@@ -1956,21 +2047,33 @@ Good luck with your first day!`
                     pushed_branches: repository.remote.pushedBranches,
                     commits: Object.fromEntries(Object.entries(repository.branches).map(([name, branch]) => [name, branch.commits.map(commit => ({ id: commit.id, message: commit.message, author: commit.author }))]))
                 })),
-                pull_request_context: assessment.validated ? {
-                    detected_url: assessment.validated.pullRequest.url,
-                    exists: true,
-                    id: assessment.validated.pullRequest.id,
-                    repository: assessment.validated.repository.rootPath,
-                    base_branch: assessment.validated.pullRequest.baseBranch,
-                    compare_branch: assessment.validated.pullRequest.compareBranch,
-                    status: assessment.validated.pullRequest.status,
-                    is_pushed: assessment.validated.repository.remote.pushedBranches.includes(assessment.validated.pullRequest.compareBranch)
-                } : { detected_url: assessment.urls[0] || "", exists: false },
+                pull_request_context: {
+                    pr_detected: assessment.urls.length > 0,
+                    pr_exists: Boolean(assessment.validated),
+                    pr_id: assessment.validated?.pullRequest.id || null,
+                    detected_url: assessment.urls[0] || "",
+                    canonical_url: assessment.validated?.pullRequest.url || "",
+                    url_matches: Boolean(assessment.validated),
+                    repository: assessment.validated?.pullRequest.repositoryName || assessment.validated?.repository.repositoryName || "",
+                    repository_path: assessment.validated?.repository.rootPath || "",
+                    repository_slug: assessment.validated?.pullRequest.repositorySlug || assessment.validated?.repository.repositorySlug || "",
+                    base_branch: assessment.validated?.pullRequest.baseBranch || "",
+                    compare_branch: assessment.validated?.pullRequest.compareBranch || "",
+                    status: assessment.validated?.pullRequest.status || "",
+                    branch_pushed: Boolean(assessment.validated && assessment.validated.repository.remote.pushedBranches.includes(assessment.validated.pullRequest.compareBranch)),
+                    exists: Boolean(assessment.validated),
+                    id: assessment.validated?.pullRequest.id || null,
+                    is_pushed: Boolean(assessment.validated && assessment.validated.repository.remote.pushedBranches.includes(assessment.validated.pullRequest.compareBranch))
+                },
                 submission_context: {
                     already_submitted: Boolean(assessment.submission),
                     looks_like_submission: assessment.looksLikeSubmission,
                     validation_errors: assessment.errors,
-                    missing_information: assessment.errors.filter(error => error.startsWith("missing_")),
+                    missing_information: [
+                        ...(assessment.hasSummary ? [] : ["summary"]),
+                        ...(assessment.hasVerification ? [] : ["verification"])
+                    ],
+                    submission_candidate: simulationState?.getSubmissionCandidate(message.id) || null,
                     guidance_level: Math.min(3, 1 + message.thread.filter(entry => entry.type === "user" && /help|stuck|clarify|not sure/i.test(entry.body)).length)
                 }
             };
@@ -1985,7 +2088,6 @@ Good luck with your first day!`
             if (assessment.errors.includes("invalid_pull_request")) return "I couldn't find that pull request in the current project. Please double-check the link and send it again.";
             if (assessment.errors.includes("branch_mismatch")) return "I found the pull request, but the branch name in your update does not match the branch attached to it. Could you confirm the correct branch?";
             if (assessment.errors.includes("missing_pull_request")) return "Thanks for the update. Please send the pull request link once the branch is pushed and ready for review.";
-            if (assessment.errors.includes("missing_summary") || assessment.errors.includes("missing_verification")) return "Thanks. Before I review the pull request, please include a brief summary of what you changed and how you verified it.";
             return "Thanks for the update. I’ll review the context and follow up shortly.";
 
         }
@@ -2029,7 +2131,11 @@ Good luck with your first day!`
         }
 
         async function runSubmissionEvaluation(message, assessment) {
-            if (!message.task || !assessment.submission || !assessment.validated) return;
+            if (!message.task || !assessment.submission) return;
+            if (!assessment.validated) {
+                assessment.validated = validateSubmissionCandidate(assessment.submission);
+            }
+            if (!assessment.validated) return;
             const existing = simulationState.getEvaluation(message.id);
             const pendingAge = existing?.startedAt ? Date.now() - new Date(existing.startedAt).getTime() : 0;
             if (existing?.status === "completed" || (existing?.status === "pending" && pendingAge < 10 * 60 * 1000)) return;
@@ -2042,7 +2148,7 @@ Good luck with your first day!`
             const after = compare?.headSnapshot || {};
             const changedFiles = Object.keys(after).filter(path => !before[path] || before[path].content !== after[path].content).map(path => ({ path, before: before[path]?.content || "", after: after[path]?.content || "" }));
             try {
-                const response = await fetch("/api/simulation/evaluation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ attempt_id: attemptId || undefined, evidence: { task: { title: message.subject, original_email: message.thread[0]?.body, deadline: message.deadline }, submission: assessment.submission, pull_request: pullRequest, repository: { path: repository.rootPath, commits: compare?.commits || [], pushed_branches: repository.remote.pushedBranches }, changed_files: changedFiles, conversation: message.thread } }) });
+                const response = await fetch("/api/simulation/evaluation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ attempt_id: attemptId || undefined, evidence: { task: { title: message.subject, original_email: message.thread[0]?.body, deadline: message.deadline }, submission: assessment.submission, final_communication: { has_summary: assessment.submission.extracted?.hasSummary, has_verification: assessment.submission.extracted?.hasVerification, raw_messages: assessment.submission.rawMessages || [], confirmation_message: assessment.submission.confirmationMessage || "" }, pull_request: pullRequest, repository: { path: repository.rootPath, commits: compare?.commits || [], pushed_branches: repository.remote.pushedBranches }, changed_files: changedFiles, conversation: message.thread } }) });
                 if (!response.ok) throw new Error("Evaluation failed");
                 const evaluation = await response.json();
                 simulationState.recordEvaluation(message.id, evaluation);
@@ -2108,6 +2214,21 @@ Good luck with your first day!`
                     body
                 );
 
+            const pendingCandidate =
+                simulationState?.getSubmissionCandidate(
+                    message.id
+                );
+
+            const confirmedCandidate =
+                validateSubmissionCandidate(
+                    pendingCandidate
+                );
+
+            const isConfirmation =
+                Boolean(confirmedCandidate)
+                &&
+                isAffirmativeSubmissionConfirmation(body);
+
 
             const now =
                 new Date().toISOString();
@@ -2140,27 +2261,28 @@ Good luck with your first day!`
             );
 
 
-            if (
-                message.task
-                &&
-                assessment.complete
-                &&
-                !assessment.submission
-            ) {
+            let advisorResponse = "";
+
+            if (message.task && !assessment.submission && isConfirmation) {
 
                 const recordResult =
                     simulationState.recordSubmission(
                     {
                         messageId: userThreadMessage.id,
                         threadId: message.id,
-                        rawMessage: body,
-                        repositoryPath: assessment.validated.repository.rootPath,
-                        branch: assessment.validated.pullRequest.compareBranch,
-                        pullRequestId: assessment.validated.pullRequest.id,
-                        pullRequestUrl: assessment.validated.pullRequest.url,
+                        rawMessage: pendingCandidate.rawMessages.join("\n\n"),
+                        rawMessages: [
+                            ...pendingCandidate.rawMessages,
+                            body
+                        ],
+                        confirmationMessage: body,
+                        repositoryPath: confirmedCandidate.repository.rootPath,
+                        branch: confirmedCandidate.pullRequest.compareBranch,
+                        pullRequestId: confirmedCandidate.pullRequest.id,
+                        pullRequestUrl: confirmedCandidate.pullRequest.url,
                         extracted: {
-                            hasSummary: assessment.hasSummary,
-                            hasVerification: assessment.hasVerification
+                            hasSummary: pendingCandidate.hasSummary,
+                            hasVerification: pendingCandidate.hasVerification
                         }
                     }
                 );
@@ -2170,7 +2292,44 @@ Good luck with your first day!`
                     assessment.submission =
                         recordResult.submission;
 
+                    assessment.validated = confirmedCandidate;
+                    simulationState.clearSubmissionCandidate(message.id);
+                    advisorResponse = "Thanks, I will treat this pull request as your final submission and begin the review.";
+
                 }
+
+            }
+            else if (message.task && !assessment.submission && !pendingCandidate && assessment.validCandidate) {
+
+                const candidateResult =
+                    simulationState.setSubmissionCandidate(
+                        {
+                            threadId: message.id,
+                            repositoryPath: assessment.validated.repository.rootPath,
+                            branch: assessment.validated.pullRequest.compareBranch,
+                            pullRequestId: assessment.validated.pullRequest.id,
+                            pullRequestUrl: assessment.validated.pullRequest.url,
+                            rawMessages: [body],
+                            hasSummary: assessment.hasSummary,
+                            hasVerification: assessment.hasVerification
+                        }
+                    );
+
+                if (candidateResult.success) {
+
+                    advisorResponse = "Just to confirm, is this the pull request you want me to review as your final submission?";
+
+                }
+
+            }
+            else if (message.task && pendingCandidate && confirmedCandidate) {
+
+                advisorResponse = "I have the pull request you shared queued for final review. Reply yes when you want me to begin.";
+
+            }
+            else if (message.task && pendingCandidate && !confirmedCandidate) {
+
+                simulationState.clearSubmissionCandidate(message.id);
 
             }
 
@@ -2244,11 +2403,15 @@ Good luck with your first day!`
 
             sendButton.disabled = true;
 
-            const advisorResponse =
-                await requestAdvisorResponse(
-                    advisorContext,
-                    assessment
-                );
+            if (!advisorResponse) {
+
+                advisorResponse =
+                    await requestAdvisorResponse(
+                        advisorContext,
+                        assessment
+                    );
+
+            }
 
             sendButton.disabled = false;
 
