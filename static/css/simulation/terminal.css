@@ -3,6 +3,9 @@
 ======================================================== */
 
 .terminal-app-window {
+    --window-min-width: 440px;
+    --window-min-height: 300px;
+
     width: min(
         1050px,
         calc(100vw - 240px)

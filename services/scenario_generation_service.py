@@ -44,6 +44,7 @@ PRIVATE_FIELD_NAMES = {
 MAX_FILES = 12
 MAX_FILE_CONTENT_LENGTH = 20000
 MAX_SCENARIO_JSON_LENGTH = 120000
+PROJECT_NAME_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 FORBIDDEN_CONTENT_PATTERNS = (
     re.compile(r"\brm\s+-rf\b", re.IGNORECASE),
     re.compile(r"\bcurl\b[^\n|]*\|\s*(?:sh|bash)\b", re.IGNORECASE),
@@ -199,10 +200,15 @@ def validate_workplace_scenario(payload: Any) -> dict[str, dict[str, Any]]:
     _required_text(task.get("priority"), "task.priority")
     if not isinstance(task.get("deadline_minutes"), int) or task["deadline_minutes"] <= 0:
         raise ScenarioGenerationError("Task deadline_minutes must be a positive integer.")
-    _required_text(project.get("name"), "project.name")
-    archive_name = _required_text(project.get("archive_name"), "project.archive_name")
-    if not archive_name.endswith(".zip") or "/" in archive_name or "\\" in archive_name:
-        raise ScenarioGenerationError("Project archive_name must end in .zip.")
+    _required_text(project.get("display_name"), "project.display_name")
+    project_name = _required_text(project.get("name"), "project.name")
+    if not PROJECT_NAME_PATTERN.fullmatch(project_name):
+        raise ScenarioGenerationError(
+            "Project name must be a lowercase hyphenated filesystem-safe slug."
+        )
+    # Derive the archive filename from the validated technical name instead of
+    # trusting a second model-generated spelling of the project identifier.
+    project["archive_name"] = f"{project_name}.zip"
     _required_text(project.get("default_branch"), "project.default_branch")
 
     files = project.get("files")
@@ -319,7 +325,7 @@ Return only this shape: {{"public_scenario": {{"scenario_id": string, "title": s
 "priority": "high", "deadline_minutes": 240, "attachments": [string]}},
 "background_emails": [{{"id": string, "sender_name": string, "sender_title": string,
 "sender_email": string, "subject": string, "body": string}}],
-"project": {{"name": string, "archive_name": string ending .zip, "default_branch": "main",
+"project": {{"display_name": string, "name": string, "archive_name": string ending .zip, "default_branch": "main",
 "files": [{{"path": string, "content": string}}]}},
 "resources": [{{"id": string, "name": string, "type": "text", "content": string}}],
 "skill_targets": [string]}}, "private_context": {{"root_cause": string,
@@ -334,6 +340,11 @@ Use a realistic small repository (maximum 12 text files) and a focused fix. Avoi
 multiple unrelated failures, binaries, base64, path traversal, and dangerous shell content. The task email
 must not reveal the solution. Logs should be useful evidence without spelling it out. Attachments, if listed,
 must exactly match a project path, resource id, or resource name. Never include private context in public_scenario.
+
+For project naming, display_name is the concise human-friendly label, for example "User Profile Service".
+project.name is the technical folder and repository slug and MUST use only lowercase letters, digits, and single
+hyphens: no spaces, underscores, punctuation, uppercase letters, or leading/trailing hyphens. For example,
+"User Profile Service" must use project.name "user-profile-service". Set archive_name to project.name + ".zip".
 
 Do not put answer-revealing annotations in public source code or resources. In particular, never write comments
 or text such as "BUG HERE", "FIX THIS", "this line causes the crash/error", "change this line", "root cause is",

@@ -1,10 +1,17 @@
 .github-app-window {
+    container-type: inline-size;
+
     width: min(1100px, calc(100vw - 240px));
     height: min(700px, calc(100vh - 130px));
     top: 55px;
     left: 155px;
     color: #1f2328;
     background: #f6f8fa;
+}
+
+@container (max-width: 720px) {
+    .github-layout { grid-template-columns: 1fr; }
+    .github-form-grid { grid-template-columns: 1fr; }
 }
 
 .github-app-header {

@@ -3,6 +3,9 @@
 ======================================================== */
 
 .vscode-window {
+    --window-min-width: 460px;
+    container-type: inline-size;
+
     width: min(
         1320px,
         calc(100vw - 180px)
@@ -967,4 +970,13 @@
             minmax(0, 1fr);
     }
 
+}
+
+@container (max-width: 720px) {
+    .vscode-layout { grid-template-columns: 44px 180px minmax(0, 1fr); }
+}
+
+@container (max-width: 560px) {
+    .vscode-layout { grid-template-columns: 40px 145px minmax(0, 1fr); }
+    .vscode-sidebar-header { padding: 0 8px; }
 }
