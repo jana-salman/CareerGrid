@@ -43,96 +43,146 @@
 
         <div class="job-list">
 
-            {% for job in jobs %}
+    {% for job in jobs %}
 
-                <div class="job-card">
+        <div class="job-card">
 
-                    <div class="job-card-main">
+            <div class="job-card-main">
 
-                        <h3>{{ job.title }}</h3>
+                <h3>
+                    {{ job.title or position_title }}
+                </h3>
 
-                        <p class="job-company">
-                            {{ job.company.display_name }}
-                        </p>
+                <p class="job-company">
+                    {{ job.company.display_name }}
+                </p>
 
-                        <p class="job-location">
-                            {{ job.location.display_name }}
-                        </p>
+                <p class="job-location">
+                    {{ job.location.display_name }}
+                </p>
 
-                        <p class="job-description">
-                            {{ job.description[:180] }}...
-                        </p>
+                <p class="job-description">
+                    {{ job.description | striptags | truncate(230) }}
+                </p>
 
-                    </div>
+            </div>
 
-                    <div class="job-card-side">
+            <div class="job-card-side">
 
-                        <span class="job-status">
-                            Open
-                        </span>
+                <span class="job-status">
+                    Open
+                </span>
 
-                        <form method="post" action="{{ url_for('start_workplace_simulation') }}">
-                            <input type="hidden" name="career_id" value="{{ career_id }}">
-                            <input type="hidden" name="position_id" value="{{ position_id }}">
-                            <input type="hidden" name="company_id" value="{{ job.company.display_name.replace(' ', '-') }}">
-                            <button type="submit" class="main-btn">Enter Workspace</button>
-                        </form>
 
-                    </div>
+                <form
+                    method="post"
+                    action="{{ url_for('start_workplace_simulation') }}"
+                >
+                    <input
+                        type="hidden"
+                        name="career_id"
+                        value="{{ career_id }}"
+                    >
+
+                    <input
+                        type="hidden"
+                        name="position_id"
+                        value="{{ position_id }}"
+                    >
+
+                    <input
+                        type="hidden"
+                        name="company_id"
+                        value="{{ job.company.display_name }}"
+                    >
+
+                    <input
+                        type="hidden"
+                        name="job_source"
+                        value="adzuna"
+                    >
+
+                    <button type="submit" class="main-btn">
+                        Enter Workspace
+                    </button>
+                </form>
+
+            </div>
+
+        </div>
+
+    {% else %}
+
+        {% for company in local_companies %}
+
+            <div class="job-card">
+
+                <div class="job-card-main">
+
+                    <h3>{{ position_title }}</h3>
+
+                    <p class="job-company">
+                        {{ company.name }}
+                    </p>
+
+                    <p class="job-location">
+                        {{ company.location }}
+                    </p>
+
+                    <p class="job-description">
+                        Practice a simulated task for this role
+                        while live listings are unavailable.
+                    </p>
 
                 </div>
 
-            {% else %}
+                <div class="job-card-side">
 
-                {% for company in local_companies %}
+                    <span class="job-status">
+                        Demo
+                    </span>
 
-                    <div class="job-card">
+                    <form
+                        method="post"
+                        action="{{ url_for('start_workplace_simulation') }}"
+                    >
+                        <input
+                            type="hidden"
+                            name="career_id"
+                            value="{{ career_id }}"
+                        >
 
-                        <div class="job-card-main">
+                        <input
+                            type="hidden"
+                            name="position_id"
+                            value="{{ position_id }}"
+                        >
 
-                            <h3>{{ position_title }}</h3>
+                        <input
+                            type="hidden"
+                            name="company_id"
+                            value="{{ company.id }}"
+                        >
 
-                            <p class="job-company">
-                                {{ company.name }}
-                            </p>
+                        <button type="submit" class="main-btn">
+                            Enter Workspace
+                        </button>
+                    </form>
 
-                            <p class="job-location">
-                                {{ company.location }}
-                            </p>
+                </div>
 
-                            <p class="job-description">
-                                Practice a simulated task for this role
-                                while live listings are unavailable.
-                            </p>
+            </div>
 
-                        </div>
+        {% else %}
 
-                        <div class="job-card-side">
+            <p>
+                No companies available yet for this position.
+            </p>
 
-                            <span class="job-status">
-                                Demo
-                            </span>
+        {% endfor %}
 
-                            <form method="post" action="{{ url_for('start_workplace_simulation') }}">
-                                <input type="hidden" name="career_id" value="{{ career_id }}">
-                                <input type="hidden" name="position_id" value="{{ position_id }}">
-                                <input type="hidden" name="company_id" value="{{ company.id }}">
-                                <button type="submit" class="main-btn">Enter Workspace</button>
-                            </form>
+    {% endfor %}
 
-                        </div>
-
-                    </div>
-
-                {% else %}
-
-                    <p>
-                        No companies available yet for this position.
-                    </p>
-
-                {% endfor %}
-
-            {% endfor %}
 
         </div>
 

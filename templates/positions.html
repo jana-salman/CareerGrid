@@ -24,7 +24,7 @@
             {% for position_id, position in positions.items() %}
             <div class="career-card">
                 <h3>{{ position.title }}</h3>
-                <p>{{ position.companies|length }} companies offering this role</p>
+                <p>Explore companies offering this role</p>
                 <a href="/positions/{{ career_id }}/{{ position_id }}">View Companies</a>
             </div>
             {% else %}

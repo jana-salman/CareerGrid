@@ -802,6 +802,31 @@ document.addEventListener(
                     === "show-pr-form"
                 ) {
 
+                    const repository =
+                        currentRepository();
+
+                    if (
+                        app.dataset.positionId === "frontend-developer"
+                        && repository
+                        && Object.keys(repository.branches).length === 1
+                        && repository.branches.main
+                    ) {
+
+                        const branchResult =
+                            simulationState.gitCreateBranch(
+                                repository.rootPath,
+                                "fix/buy-now-checkout"
+                            );
+
+                        if (branchResult.success) {
+
+                            selectedBranch =
+                                branchResult.branch;
+
+                        }
+
+                    }
+
                     activeTab = "pulls";
                     showPullRequestForm = true;
                     selectedPullRequestId = null;

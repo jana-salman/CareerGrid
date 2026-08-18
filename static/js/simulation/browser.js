@@ -12,9 +12,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!app || !page || !devtools || !address || !tabStrip) return;
 
     const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character]);
-    const allowedUrls = new Set(["careergrid://home", "careergrid://api-status", "careergrid://logs", "careergrid://documentation", "careergrid://snake"]);
-    const titles = { "careergrid://home": "Home", "careergrid://api-status": "API Status", "careergrid://logs": "Logs", "careergrid://documentation": "Documentation", "careergrid://snake": "Snake" };
-    const state = { tabs: [], activeId: null, nextId: 1, devtoolsTab: "network", devtoolsCollapsed: false, requestFilter: "all", selectedRequest: 0, requests: [], consoleLines: [], scenario: null };
+    const allowedUrls = new Set(["careergrid://home", "careergrid://product", "careergrid://api-status", "careergrid://logs", "careergrid://documentation", "careergrid://snake"]);
+    const titles = { "careergrid://home": "Home", "careergrid://product": "Product Page", "careergrid://api-status": "API Status", "careergrid://logs": "Logs", "careergrid://documentation": "Documentation", "careergrid://snake": "Snake" };
+    const state = { tabs: [], activeId: null, nextId: 1, devtoolsTab: "network", devtoolsCollapsed: false, requestFilter: "all", selectedRequest: 0, requests: [], consoleLines: [], scenario: null, frontendPatched: false };
     let snakeInstance = null;
 
     function buildRequests(scenario) {
@@ -62,7 +62,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         app.querySelector('[data-browser-action="forward"]').disabled = !tab || tab.index >= tab.history.length - 1;
     }
     function card(url, icon, title, description) { return `<button type="button" class="internal-card" data-internal-url="${escapeHtml(url)}"><span>${icon}</span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(description)}</small></button>`; }
-    function renderHome() { return `<section class="internal-page internal-home"><div class="internal-hero"><span>CAREERGRID INTERNAL</span><h1>Developer workspace</h1><p>Inspect the simulated services, review task evidence, or take a debug break.</p></div><div class="internal-card-grid">${card("careergrid://api-status", "◉", "API Status", "Health and incident information")}${card("careergrid://documentation", "⌘", "API Documentation", "Endpoints relevant to this task")}${card("careergrid://logs", "≡", "Logs", "Scenario-derived application events")}${card("careergrid://snake", "◇", "Snake Debug Break", "Take a short break while the deployment finishes.")}</div></section>`; }
+    function renderHome() { const product = state.scenario?.scenario_kind === "frontend_workplace" ? card("careergrid://product", "▣", "Product Preview", "Reproduce the Buy Now regression") : ""; return `<section class="internal-page internal-home"><div class="internal-hero"><span>CAREERGRID INTERNAL</span><h1>Developer workspace</h1><p>Inspect the simulated services, review task evidence, or take a debug break.</p></div><div class="internal-card-grid">${product}${card("careergrid://api-status", "◉", "API Status", "Health and incident information")}${card("careergrid://documentation", "⌘", "API Documentation", "Endpoints relevant to this task")}${card("careergrid://logs", "≡", "Logs", "Scenario-derived application events")}${card("careergrid://snake", "◇", "Snake Debug Break", "Take a short break while the deployment finishes.")}</div></section>`; }
+    function renderProduct() { return `<section class="product-demo"><div class="viewport-buttons"><button type="button" data-product-viewport="desktop">Desktop</button><button type="button" data-product-viewport="tablet">Tablet</button><button type="button" data-product-viewport="mobile">Mobile</button></div><div data-product-shell><small>Everyday audio</small><h1>Everyday Headphones</h1><p>Comfortable wireless headphones for work and travel.</p><button type="button" id="buy-now-btn" data-buy-now>Buy Now</button><section class="checkout-panel" hidden data-checkout aria-live="polite">Checkout ready</section></div></section>`; }
     function renderStatus() {
         const errors = state.requests.filter(item => item.status >= 400).length, average = state.requests.length ? Math.round(state.requests.reduce((sum, item) => sum + Number.parseInt(item.duration, 10), 0) / state.requests.length) : 0;
         return `<section class="internal-page"><div class="internal-page-heading"><span>LIVE SIMULATION</span><h1>API status</h1><p>${escapeHtml(state.scenario?.task?.subject || "Generated workplace services")}</p></div><div class="status-grid"><article><small>API health</small><strong class="status-${errors ? "warning" : "good"}">${errors ? "Degraded" : "Operational"}</strong></article><article><small>Database</small><strong class="status-good">Connected</strong></article><article><small>Authentication</small><strong class="status-good">Operational</strong></article><article><small>Average response</small><strong>${average || "—"} ms</strong></article></div><div class="incident-card"><h2>Recent incidents</h2><p>${errors ? `${errors} failing request${errors === 1 ? "" : "s"} detected in the current public scenario evidence.` : "No recent incidents were found in the generated scenario evidence."}</p></div></section>`;
@@ -85,8 +86,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         state.devtoolsCollapsed = url === "careergrid://snake";
         if (url === "careergrid://snake") { page.replaceChildren(); snakeInstance = window.CareerGridSnake?.mount(page) || null; }
         else if (!allowedUrls.has(url)) page.innerHTML = renderError(url);
-        else page.innerHTML = url === "careergrid://home" ? renderHome() : url === "careergrid://api-status" ? renderStatus() : url === "careergrid://documentation" ? renderDocs() : renderLogs();
+        else page.innerHTML = url === "careergrid://home" ? renderHome() : url === "careergrid://product" ? renderProduct() : url === "careergrid://api-status" ? renderStatus() : url === "careergrid://documentation" ? renderDocs() : renderLogs();
         page.querySelectorAll("[data-internal-url]").forEach(button => button.addEventListener("click", () => navigate(button.dataset.internalUrl)));
+        page.querySelectorAll("[data-product-viewport]").forEach(button => button.addEventListener("click", () => { const shell=page.querySelector("[data-product-shell]"); shell.className=button.dataset.productViewport; }));
+        page.querySelector("[data-buy-now]")?.addEventListener("click", () => { if(state.frontendPatched){ page.querySelector("[data-checkout]").hidden=false; state.consoleLines.push({level:"success",text:"Checkout panel opened without console errors."}); } else state.consoleLines.push({level:"error",text:"TypeError: checkoutButton is null; click listener was not registered."}); renderDevtools(); });
         renderDevtools(); syncDevtools(); updateSnakeActivity();
     }
     function filteredRequests() { return state.requests.filter(item => state.requestFilter === "all" || state.requestFilter === "xhr" || state.requestFilter === "errors" && item.status >= 400 || state.requestFilter === "success" && item.status < 400); }
@@ -97,6 +100,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return `<div class="network-tools">${[["all","All"],["xhr","Fetch/XHR"],["errors","Errors"],["success","Successful"]].map(([key,label]) => `<button type="button" data-network-filter="${key}" class="${state.requestFilter === key ? "is-active" : ""}">${label}</button>`).join("")}<button type="button" data-clear-network>Clear</button></div><div class="network-table"><div class="network-columns"><span>Method</span><span>Endpoint</span><span>Status</span><span>Type</span><span>Duration</span><span>Time</span></div>${rows}</div>${details}`;
     }
     function renderConsole() { return `<div class="console-output" id="console-output">${state.consoleLines.map(line => `<div class="console-${line.level}"><b>${escapeHtml(line.level)}</b> ${escapeHtml(line.text)}</div>`).join("")}</div><form class="console-command" id="console-command"><span>›</span><input aria-label="Console command" autocomplete="off" placeholder="Type help"><button>Run</button></form>`; }
+    function renderElements() { return `<div class="element-tree">&lt;button <span class="bad">id=&quot;buy-now-btn&quot;</span> type=&quot;button&quot;&gt;Buy Now&lt;/button&gt;<br>&lt;section id=&quot;checkout-panel&quot; hidden&gt;Checkout ready&lt;/section&gt;</div>`; }
     function runCommand(command) {
         const value = command.trim().toLowerCase(); const responses = { help: "Commands: help, clear, location, show errors, show requests, open snake", location: activeTab()?.history[activeTab().index], "show errors": `${state.requests.filter(item => item.status >= 400).length} request error(s).`, "show requests": `${state.requests.length} request(s) recorded.` };
         if (value === "clear") state.consoleLines = [];
@@ -105,7 +109,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         renderDevtools();
     }
     function renderDevtools() {
-        devtools.innerHTML = state.devtoolsTab === "network" ? renderNetwork() : renderConsole();
+        devtools.innerHTML = state.devtoolsTab === "network" ? renderNetwork() : state.devtoolsTab === "elements" ? renderElements() : renderConsole();
         devtools.querySelectorAll("[data-network-filter]").forEach(button => button.addEventListener("click", () => { state.requestFilter = button.dataset.networkFilter; state.selectedRequest = 0; renderDevtools(); }));
         devtools.querySelectorAll("[data-request-index]").forEach(button => button.addEventListener("click", () => { state.selectedRequest = Number(button.dataset.requestIndex); renderDevtools(); }));
         devtools.querySelector("[data-clear-network]")?.addEventListener("click", () => { state.requests = []; state.selectedRequest = 0; renderDevtools(); });
@@ -127,6 +131,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     devtoolsToggle?.addEventListener("click", () => { state.devtoolsCollapsed = !state.devtoolsCollapsed; syncDevtools(); });
     new MutationObserver(updateSnakeActivity).observe(app, { attributes: true, attributeFilter: ["aria-hidden"] });
     window.addEventListener("beforeunload", () => snakeInstance?.destroy(), { once: true });
+    window.CareerGridBrowser = { navigate, setFrontendPatched(value){ state.frontendPatched=Boolean(value); renderPage(); } };
 
     addTab();
     if (!app.dataset.attemptId) { state.consoleLines = [{ level: "warning", text: "No generated workplace attempt is attached." }]; renderPage(); return; }

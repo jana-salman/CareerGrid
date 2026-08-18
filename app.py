@@ -23,6 +23,7 @@ from services.evaluation_service import (
     SimulationEvaluationError,
     evaluate_simulation,
     evaluate_workplace_submission,
+    evaluate_frontend_workplace_progress,
 )
 from services.inbox_response_service import (
     InboxResponseValidationError,
@@ -35,6 +36,9 @@ from services.advisor_service import (
 from services.scenario_generation_service import (
     ScenarioGenerationError,
     generate_workplace_scenario,
+)
+from services.frontend_workplace_scenario_service import (
+    generate_frontend_workplace_scenario,
 )
 
 from services.simulation_storage import (
@@ -53,6 +57,12 @@ from services.simulation_storage import (
     create_workplace_simulation_attempt,
     mark_workplace_generation_failed,
     save_workplace_scenario,
+    save_frontend_workplace_progress,
+    get_frontend_workplace_progress,
+)
+from services.frontend_workplace_progress_service import (
+    FrontendProgressValidationError,
+    validate_frontend_progress,
 )
 
 from services.incident_response_service import (
@@ -963,7 +973,7 @@ def fetch_adzuna_jobs(job_title, location="", results=5):
         response = requests.get(
             url,
             params=params,
-            timeout=5
+            timeout=15
         )
 
         response.raise_for_status()
@@ -1024,7 +1034,10 @@ def companies(career_id, position_id):
     position_title = position_data.get("title", "")
     local_companies = position_data.get("companies", [])
 
-    jobs = []  # Live jobs disabled
+    jobs = fetch_adzuna_jobs(
+    position_title,
+    results=5
+)  # Live jobs disabled
 
     return render_template(
         "companies.html",
@@ -1087,26 +1100,75 @@ def simulation_workspace(career_id, position_id, company_id):
 
 
 @app.post("/simulation/workplace/start")
+@app.post("/simulation/workplace/start")
 def start_workplace_simulation():
-    career_id = request.form.get("career_id", "")
-    position_id = request.form.get("position_id", "")
-    company_id = request.form.get("company_id", "")
+    career_id = request.form.get("career_id", "").strip()
+    position_id = request.form.get("position_id", "").strip()
+    company_id = request.form.get("company_id", "").strip()
+    job_source = request.form.get("job_source", "demo").strip().lower()
+
     position = POSITIONS_DATA.get(career_id, {}).get(position_id)
+
     if not position:
         return redirect(url_for("career"))
-    valid_companies = {company.get("id") for company in position.get("companies", [])}
-    if company_id not in valid_companies:
-        return redirect(url_for("companies", career_id=career_id, position_id=position_id))
+
+    if job_source == "adzuna":
+        # Live Adzuna jobs use the company name.
+        if not company_id or len(company_id) > 200:
+            return redirect(
+                url_for(
+                    "companies",
+                    career_id=career_id,
+                    position_id=position_id
+                )
+            )
+
+    else:
+        # Demo companies must match the IDs in POSITIONS_DATA.
+        valid_companies = {
+            company.get("id")
+            for company in position.get("companies", [])
+        }
+
+        if company_id not in valid_companies:
+            return redirect(
+                url_for(
+                    "companies",
+                    career_id=career_id,
+                    position_id=position_id
+                )
+            )
+
+    # Keep your existing function code below this line.
     attempt_id = None
+    workplace_stage = "attempt_creation"
     try:
         attempt_id = create_workplace_simulation_attempt(user_id=session.get("user_id"), career_id=career_id, position_id=position_id, company_id=company_id)
         app.logger.info("Created workplace simulation attempt %s (%s/%s/%s)", attempt_id, career_id, position_id, company_id)
-        scenario, generation_attempt_count = generate_workplace_scenario(
-            career_id=career_id,
-            position_id=position_id,
-            company_id=company_id,
-            attempt_id=attempt_id,
-        )
+        workplace_stage = "frontend_scenario_generation" if position_id == "frontend-developer" else "scenario_generation"
+        if position_id == "frontend-developer":
+            company_name = next(
+                (
+                    company.get("name")
+                    for company in position.get("companies", [])
+                    if company.get("id") == company_id
+                ),
+                company_id,
+            )
+            scenario, generation_attempt_count = (
+                generate_frontend_workplace_scenario(
+                    company_name=company_name,
+                    attempt_id=attempt_id,
+                )
+            )
+        else:
+            scenario, generation_attempt_count = generate_workplace_scenario(
+                career_id=career_id,
+                position_id=position_id,
+                company_id=company_id,
+                attempt_id=attempt_id,
+            )
+        workplace_stage = "firebase_scenario_storage"
         save_workplace_scenario(
             user_id=session.get("user_id"),
             attempt_id=attempt_id,
@@ -1122,8 +1184,11 @@ def start_workplace_simulation():
         except Exception:
             app.logger.exception("Could not mark workplace generation as failed")
         return redirect(url_for("workplace_attempt_workspace", attempt_id=attempt_id))
-    except Exception:
-        app.logger.exception("Could not create workplace simulation attempt")
+    except Exception as error:
+        app.logger.exception(
+            "Workplace attempt failed: type=%s message=%s attempt_id=%s career_id=%s position_id=%s stage=%s",
+            type(error).__name__, error, attempt_id, career_id, position_id, workplace_stage,
+        )
         if attempt_id:
             try:
                 mark_workplace_generation_failed(
@@ -1178,6 +1243,81 @@ def get_public_workplace_attempt(attempt_id):
             "public_scenario": attempt.get("public_scenario"),
         }
     )
+
+
+@app.route("/api/simulation/attempts/<attempt_id>/frontend/progress", methods=["GET", "POST"])
+def frontend_workplace_progress(attempt_id):
+    """Read or save validated progress for the signed-in attempt owner."""
+    user_id = session.get("user_id")
+    attempt = get_simulation_attempt(user_id=user_id, attempt_id=attempt_id)
+    if (
+        not attempt
+        or attempt.get("simulation_mode") != "workplace"
+        or attempt.get("position_id") != "frontend-developer"
+        or not isinstance(attempt.get("public_scenario"), dict)
+    ):
+        return jsonify({"error": "Frontend simulation attempt not found."}), 404
+
+    if request.method == "GET":
+        return jsonify(
+            get_frontend_workplace_progress(user_id=user_id, attempt_id=attempt_id)
+        )
+
+    payload = request.get_json(silent=True) or {}
+    try:
+        step = int(payload.get("step", 0))
+        response = validate_frontend_progress(
+            step=step,
+            payload=payload.get("response", {}),
+            existing_responses=attempt.get("responses", {}),
+        )
+        save_frontend_workplace_progress(
+            user_id=user_id, attempt_id=attempt_id, step=step, response=response
+        )
+    except (TypeError, ValueError, FrontendProgressValidationError) as error:
+        return jsonify({"error": str(error)}), 400
+    result = {"saved": True, "step": step, "response": response}
+    if step == 5:
+        responses = dict(attempt.get("responses", {}))
+        responses["step_5"] = response
+        evaluation = evaluate_frontend_workplace_progress(responses)
+        result["evaluation"] = save_simulation_evaluation(
+            user_id=user_id, attempt_id=attempt_id, evaluation=evaluation
+        )
+    return jsonify(result)
+
+
+@app.post("/api/simulation/attempts/<attempt_id>/frontend/restart")
+def restart_frontend_workplace(attempt_id):
+    """Create a clean Frontend attempt while retaining the old history record."""
+    user_id = session.get("user_id")
+    attempt = get_simulation_attempt(user_id=user_id, attempt_id=attempt_id)
+    if not attempt or attempt.get("position_id") != "frontend-developer":
+        return jsonify({"error": "Frontend simulation attempt not found."}), 404
+    new_attempt_id = create_workplace_simulation_attempt(
+        user_id=user_id,
+        career_id=attempt.get("career_id"),
+        position_id="frontend-developer",
+        company_id=attempt.get("company_id"),
+    )
+    public = attempt.get("public_scenario", {})
+    scenario, generation_count = generate_frontend_workplace_scenario(
+        company_name=public.get("company_name") or attempt.get("company_id", "CareerGrid Company"),
+        attempt_id=new_attempt_id,
+    )
+    save_workplace_scenario(
+        user_id=user_id,
+        attempt_id=new_attempt_id,
+        public_scenario=scenario["public_scenario"],
+        private_context=scenario["private_context"],
+        generation_attempt_count=generation_count,
+    )
+    return jsonify(
+        {
+            "attempt_id": new_attempt_id,
+            "workspace_url": url_for("workplace_attempt_workspace", attempt_id=new_attempt_id),
+        }
+    ), 201
 
 
 @app.post("/api/simulation/advisor/reply")

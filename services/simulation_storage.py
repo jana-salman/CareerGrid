@@ -536,6 +536,7 @@ _USER_VISIBLE_EVALUATION_FIELDS = {
     "recommended_skills",
     "review_message",
     "step_feedback",
+    "frontend_readiness",
 }
 
 
@@ -625,9 +626,30 @@ def list_user_simulation_attempts(user_id: str) -> list[dict[str, Any]]:
         ),
         reverse=True,
     )
-
     return summaries
 
+
+def save_frontend_workplace_progress(
+    *, user_id: str, attempt_id: str, step: int, response: dict[str, Any]
+) -> None:
+    """Persist one validated Frontend desktop task in its owned attempt."""
+    save_simulation_step_response(
+        user_id=user_id, attempt_id=attempt_id, step=step, response=response
+    )
+
+
+def get_frontend_workplace_progress(*, user_id: str, attempt_id: str) -> dict[str, Any] | None:
+    """Return only the owner's public Frontend progress and report."""
+    attempt = get_simulation_attempt(user_id=user_id, attempt_id=attempt_id)
+    if not attempt or attempt.get("position_id") != "frontend-developer":
+        return None
+    return {
+        "attempt_id": attempt_id,
+        "status": attempt.get("status"),
+        "current_step": attempt.get("current_step", 1),
+        "responses": deepcopy(attempt.get("responses", {})),
+        "evaluation": get_user_visible_evaluation(attempt.get("evaluation")),
+    }
 
 def list_completed_simulation_attempts(
     user_id: str,

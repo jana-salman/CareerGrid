@@ -43,7 +43,7 @@
                 const context = [meta.position, meta.company].filter(Boolean).map(escapeHtml).join(" · ");
                 const score = typeof evaluation.overall_score === "number"
                     ? `<div class="report-score">${escapeHtml(evaluation.overall_score)} / 100</div>` : "";
-                content.innerHTML = `<div class="report-kicker">CAREERGRID · TASK REVIEW REPORT</div><h1>${escapeHtml(meta.task || "Task Review")}</h1>${context ? `<p>${context}</p>` : ""}${score}${textSection("Overall assessment", evaluation.summary)}${dimensionsMarkup(evaluation)}${listSection("Strengths", evaluation.strengths)}${listSection("Areas for improvement", evaluation.areas_for_improvement)}${textSection("Advisor feedback", evaluation.advisor_feedback)}${listSection("Recommended next steps", evaluation.recommended_next_steps || evaluation.recommended_skills)}`;
+                content.innerHTML = `<div class="report-kicker">CAREERGRID · TASK REVIEW REPORT</div><h1>${escapeHtml(meta.task || "Task Review")}</h1>${context ? `<p>${context}</p>` : ""}${score}${textSection("Frontend readiness", evaluation.frontend_readiness)}${textSection("Overall assessment", evaluation.summary)}${dimensionsMarkup(evaluation)}${listSection("Strengths", evaluation.strengths)}${listSection("Areas for improvement", evaluation.areas_for_improvement)}${textSection("Advisor feedback", evaluation.advisor_feedback)}${listSection("Recommended next steps", evaluation.recommended_next_steps || evaluation.recommended_skills)}`;
             }
             overlay.hidden = false;
             close.focus();
