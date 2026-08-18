@@ -1,0 +1,22 @@
+.snake-game{width:100%;height:100%;min-height:0;margin:0;padding:clamp(12px,2.2cqi,24px);box-sizing:border-box;display:grid;grid-template-rows:auto minmax(0,1fr) auto auto}
+.snake-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:16px}
+.snake-heading span{color:#69c9ff;font-size:.68rem;font-weight:800;letter-spacing:.12em}
+.snake-heading h2{margin:3px 0 0;color:#f5f7ff;font-size:1.75rem}
+.snake-scores{color:#b8c7e4;font:700 .85rem ui-monospace,monospace}
+.snake-canvas-wrap{position:relative;width:auto;max-width:100%;height:100%;max-height:100%;aspect-ratio:1;margin:auto;overflow:hidden;border:1px solid rgba(101,153,255,.35);border-radius:16px;background:#071126;box-shadow:0 0 30px rgba(78,82,255,.18)}
+.snake-canvas-wrap canvas{display:block;width:100%;height:100%;aspect-ratio:1}
+.snake-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#dbe8ff;background:rgba(3,8,23,.75);backdrop-filter:blur(3px);text-align:center}
+.snake-overlay[hidden]{display:none}
+.snake-overlay strong{font-size:1.5rem}
+.snake-overlay span{padding:0 20px;color:#9cadce}
+.snake-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:16px}
+.snake-actions button,.snake-direction-pad button{border:1px solid rgba(101,153,255,.3);border-radius:9px;padding:8px 13px;color:#dce8ff;background:linear-gradient(135deg,rgba(15,88,183,.65),rgba(95,49,176,.65));font:inherit;font-size:.78rem;font-weight:700;cursor:pointer}
+.snake-direction-pad{display:none;width:150px;margin:16px auto 0;grid-template-columns:repeat(3,1fr);gap:6px}
+.snake-direction-pad button:first-child{grid-column:2}
+.snake-direction-pad button:nth-child(2){grid-column:1}
+.snake-direction-pad button:nth-child(3){grid-column:2}
+.snake-direction-pad button:nth-child(4){grid-column:3}
+@media (max-width:700px),(pointer:coarse){.snake-direction-pad{display:grid}
+.snake-game{padding:15px}
+.snake-heading{align-items:flex-start;flex-direction:column;gap:8px}
+}

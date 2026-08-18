@@ -1024,7 +1024,7 @@ def companies(career_id, position_id):
     position_title = position_data.get("title", "")
     local_companies = position_data.get("companies", [])
 
-    jobs = fetch_adzuna_jobs(position_title)
+    jobs = []  # Live jobs disabled
 
     return render_template(
         "companies.html",
