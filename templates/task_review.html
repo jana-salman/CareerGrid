@@ -424,7 +424,45 @@
                     or review your simulation history.
                 </p>
 
+                {% if interview_unlocked %}
 
+                    <form
+                        action="{{ url_for('start_interview', attempt_id=attempt_id) }}"
+                        method="POST"
+                        class="interview-launch-form"
+                    >
+
+                        <button
+                            type="submit"
+                            class="interview-launch-btn"
+                        >
+
+                            <span class="interview-launch-icon">
+                                🎙
+                            </span>
+
+                            <span class="interview-launch-content">
+
+                                <strong>
+                                    Start Job Interview
+                                </strong>
+
+                                <small>
+                                    Continue to your AI-powered interview simulation
+                                </small>
+
+                            </span>
+
+                            <span class="interview-launch-arrow">
+                                →
+                            </span>
+
+                        </button>
+
+                    </form>
+
+                {% endif %}
+                
                 <div class="next-actions-buttons">
 
                     <form
@@ -493,6 +531,38 @@
         </section>
 
     </main>
+
+
+{% if interview_unlocked %}
+
+<form
+    action="{{ url_for('start_interview', attempt_id=attempt_id) }}"
+    method="POST"
+    class="interview-launch-form"
+>
+    <button
+        type="submit"
+        class="interview-launch-btn"
+    >
+        <span class="interview-launch-icon">
+            🎙
+        </span>
+
+        <span class="interview-launch-content">
+            <strong>Start Job Interview</strong>
+
+            <small>
+                Continue to your AI-powered interview simulation
+            </small>
+        </span>
+
+        <span class="interview-launch-arrow">
+            →
+        </span>
+    </button>
+</form>
+
+{% endif %}
 
 </body>
 
