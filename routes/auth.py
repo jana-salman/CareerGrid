@@ -84,7 +84,7 @@ def login():
         session["user_email"] = user["email"]
         session["user_name"] = user["full_name"]
 
-        return redirect(url_for("career"))
+        return redirect(url_for("home"))
 
     return render_template(
         "login.html",

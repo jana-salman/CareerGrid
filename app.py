@@ -271,7 +271,13 @@ def fetch_adzuna_jobs(job_title, location="", results=5):
 
 @app.route("/")
 def home():
-    return redirect(url_for("auth.login"))
+    if "user_email" not in session:
+        return redirect(url_for("auth.login"))
+
+    return render_template(
+        "home.html",
+        user_name=session.get("user_name")
+    )
 
 
 @app.route("/career")
@@ -2148,4 +2154,3 @@ def dashboard():
 
 if __name__ == "__main__":
     app.run(debug=True)
-    

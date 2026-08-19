@@ -2,40 +2,105 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CareerGrid</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home | CareerGrid</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/careergrid-theme.css') }}">
 </head>
-<body>
+<body class="home-page">
+    <header class="home-header">
+        <nav class="home-navbar" aria-label="Primary navigation">
+            <a class="home-brand" href="{{ url_for('home') }}" aria-label="CareerGrid home">
+                <span class="home-brand-mark" aria-hidden="true">C</span>
+                <span>CareerGrid</span>
+            </a>
 
-    <div class="hero-section">
-        <nav class="navbar">
-            <h2 class="logo">CareerGrid</h2>
-            <div>
-                <a href="/login">Login</a>
-                <a href="/register" class="btn-small">Sign Up</a>
+            <div class="home-nav-links">
+                <a class="is-active" href="{{ url_for('home') }}" aria-current="page">Home</a>
+                <a href="{{ url_for('career') }}">Careers</a>
+                <a class="home-signout" href="{{ url_for('auth.logout') }}">Sign Out</a>
             </div>
         </nav>
+    </header>
 
-        <div class="hero-content">
-            <div class="hero-text">
-                <h1>Find your career path through interactive simulations</h1>
-                <p>
-                    CareerGrid helps students explore careers, test their skills,
-                    and receive personalized AI-based learning roadmaps.
+    <main>
+        <section class="home-hero" aria-labelledby="home-hero-title">
+            <div class="home-hero-copy">
+                {% if user_name %}
+                    <p class="home-welcome">Welcome back, {{ user_name }}</p>
+                {% endif %}
+                <p class="home-eyebrow">Learn by doing</p>
+                <h1 id="home-hero-title">Build confidence before the real job starts.</h1>
+                <p class="home-hero-text">
+                    Explore career paths, complete realistic workplace tasks, practice interviews,
+                    and receive personalized AI-powered feedback.
                 </p>
-
-                <a href="{{ url_for('auth.login') }}" class="main-btn">
-                    Start Exploring
+                <a class="home-button home-button-primary" href="{{ url_for('career') }}">
+                    Explore Careers
+                    <span aria-hidden="true">&rarr;</span>
                 </a>
             </div>
 
-            <div class="hero-card">
-                <div class="puzzle">🧩</div>
-                <h3>Career Simulation</h3>
-                <p>Choose a career, complete tasks, and get feedback.</p>
+            <div class="home-journey-card" aria-label="Your CareerGrid journey">
+                <div class="home-journey-heading">
+                    <span class="home-journey-label">Your journey</span>
+                    <span class="home-status-dot">Ready</span>
+                </div>
+                <h2>Turn curiosity into experience.</h2>
+                <ol class="home-journey-steps">
+                    <li>
+                        <span>01</span>
+                        <div>
+                            <strong>Choose a path</strong>
+                            <p>Explore careers that match your interests.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <span>02</span>
+                        <div>
+                            <strong>Practice real skills</strong>
+                            <p>Work through authentic tasks and interviews.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <span>03</span>
+                        <div>
+                            <strong>Grow with feedback</strong>
+                            <p>Use personalized insights to improve.</p>
+                        </div>
+                    </li>
+                </ol>
             </div>
-        </div>
-    </div>
+        </section>
 
+        <section class="home-features" aria-labelledby="home-features-title">
+            <div class="home-section-heading">
+                <p class="home-eyebrow">Built for practical growth</p>
+                <h2 id="home-features-title">Why CareerGrid?</h2>
+                <p>Develop career-ready skills in a safe space designed for learning and progress.</p>
+            </div>
+
+            <div class="home-feature-grid">
+                <article class="home-feature-card">
+                    <span class="home-feature-number" aria-hidden="true">01</span>
+                    <h3>Realistic Work Simulations</h3>
+                    <p>Practice real workplace scenarios using tools and workflows inspired by professional environments.</p>
+                </article>
+
+                <article class="home-feature-card">
+                    <span class="home-feature-number" aria-hidden="true">02</span>
+                    <h3>AI-Powered Feedback</h3>
+                    <p>Understand your strengths, identify areas for improvement, and receive actionable feedback after each simulation.</p>
+                </article>
+
+                <article class="home-feature-card">
+                    <span class="home-feature-number" aria-hidden="true">03</span>
+                    <h3>Interview Practice</h3>
+                    <p>Prepare for real interviews through interactive AI-powered interview simulations and personalized evaluation.</p>
+                </article>
+            </div>
+        </section>
+
+    </main>
 </body>
 </html>
