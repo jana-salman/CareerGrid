@@ -1,8 +1,27 @@
-from flask import Flask, jsonify, render_template, redirect, url_for, session, request
+"""CareerGrid Flask application and route registration.
+
+The application coordinates career browsing, workplace attempts, interviews,
+and dashboard reporting while service modules own persistence and AI logic.
+"""
+
+import logging
 import os
+import secrets
+from datetime import datetime
+from pathlib import Path
+
 import requests
 from dotenv import load_dotenv
-from datetime import datetime
+from flask import (
+    Flask,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+
 from routes.auth import auth_bp
 
 from services.evaluation_service import (
@@ -35,20 +54,19 @@ from services.backend_demo_interview_service import (
 )
 
 from services.simulation_storage import (
-    save_simulation_evaluation,
+    complete_interview_attempt,
+    create_interview_attempt,
+    create_workplace_simulation_attempt,
+    get_frontend_workplace_progress,
+    get_interview_attempt,
     get_simulation_attempt,
     get_user_visible_evaluation,
     list_user_simulation_attempts,
-    create_workplace_simulation_attempt,
     mark_workplace_generation_failed,
-    save_workplace_scenario,
-    save_frontend_workplace_progress,
-    get_frontend_workplace_progress,
-
-    create_interview_attempt,
-    get_interview_attempt,
     save_interview_answer,
-    complete_interview_attempt,
+    save_frontend_workplace_progress,
+    save_simulation_evaluation,
+    save_workplace_scenario,
 )
 
 from services.interview_service import (
@@ -64,19 +82,41 @@ from services.frontend_workplace_progress_service import (
     validate_frontend_progress,
 )
 
-from services.interview_service import (
-    InterviewGenerationError,
-    InterviewEvaluationError,
-    generate_interview_questions,
-    analyze_spoken_answer,
-    generate_final_interview_evaluation,
-)
-
 # ---------------------------------------------------------
 # Load environment variables
 # ---------------------------------------------------------
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env", override=False)
+
+logger = logging.getLogger(__name__)
+
+
+def _environment_flag(name: str, *, default: bool = False) -> bool:
+    """Parse a conventional boolean environment variable."""
+
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _secret_key() -> str:
+    """Return the configured key or a non-persistent development key."""
+
+    configured_key = os.getenv("SECRET_KEY")
+    if configured_key:
+        return configured_key
+
+    environment = os.getenv("CAREERGRID_ENV", "development").strip().lower()
+    if environment == "production":
+        raise RuntimeError("SECRET_KEY is required when CAREERGRID_ENV=production.")
+
+    logger.warning(
+        "SECRET_KEY is not configured; using a temporary development key. "
+        "Sessions will reset when the process restarts."
+    )
+    return secrets.token_urlsafe(32)
 
 
 # ---------------------------------------------------------
@@ -85,9 +125,9 @@ load_dotenv()
 
 app = Flask(__name__)
 
-app.config["SECRET_KEY"] = os.getenv(
-    "SECRET_KEY",
-    "careergrid-development-key"
+app.config.update(
+    SECRET_KEY=_secret_key(),
+    DEBUG=_environment_flag("FLASK_DEBUG"),
 )
 
 app.register_blueprint(auth_bp)
@@ -99,6 +139,11 @@ app.register_blueprint(auth_bp)
 
 ADZUNA_APP_ID = os.getenv("ADZUNA_APP_ID")
 ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY")
+ADZUNA_DEFAULT_RESULTS = 5
+ADZUNA_REQUEST_TIMEOUT_SECONDS = 15
+MAX_ADZUNA_COMPANY_NAME_LENGTH = 200
+INTERVIEW_UNLOCK_SCORE = 85
+MAX_INTERVIEW_AUDIO_BYTES = 15 * 1024 * 1024
 
 
 # ---------------------------------------------------------
@@ -110,7 +155,7 @@ PUBLIC_ROUTES = {
     "auth.login",
     "auth.register",
     "auth.logout",
-    "static"
+    "static",
 }
 
 
@@ -124,17 +169,43 @@ def protect_pages():
     if request.endpoint == "dashboard" and "user_id" not in session:
         return redirect(url_for("auth.login"))
 
-    if (
-        request.endpoint not in PUBLIC_ROUTES
-        and "user_email" not in session
-    ):
+    if request.endpoint not in PUBLIC_ROUTES and "user_email" not in session:
         return redirect(url_for("home"))
+
+CAREER_DISPLAY_DATA = (
+    {
+        "id": "software-developer",
+        "title": "Software Developer",
+        "icon": "💻",
+        "description": (
+            "Practice problem-solving, debugging, and coding decisions."
+        ),
+    },
+    {
+        "id": "ui-ux-designer",
+        "title": "UI/UX Designer",
+        "icon": "🎨",
+        "description": (
+            "Explore user needs, design choices, and interface decisions."
+        ),
+    },
+    {
+        "id": "data-analyst",
+        "title": "Data Analyst",
+        "icon": "📊",
+        "description": (
+            "Analyze data, understand patterns, and make recommendations."
+        ),
+    },
+)
+
 
 POSITIONS_DATA = {
     "software-developer": {
 
         "backend-developer": {
             "title": "Backend Developer",
+            "available": True,
 
             "companies": [
                 {
@@ -153,6 +224,7 @@ POSITIONS_DATA = {
 
         "frontend-developer": {
             "title": "Frontend Developer",
+            "available": True,
 
             "companies": [
                 {
@@ -174,6 +246,7 @@ POSITIONS_DATA = {
 
         "ux-designer": {
             "title": "UX Designer",
+            "available": False,
 
             "companies": [
                 {
@@ -192,6 +265,7 @@ POSITIONS_DATA = {
 
         "ui-designer": {
             "title": "UI Designer",
+            "available": False,
 
             "companies": [
                 {
@@ -213,6 +287,7 @@ POSITIONS_DATA = {
 
         "data-analyst": {
             "title": "Data Analyst",
+            "available": False,
 
             "companies": [
                 {
@@ -231,6 +306,31 @@ POSITIONS_DATA = {
     }
     
 }
+
+
+def _career_cards():
+    """Return career cards with availability derived from their positions."""
+
+    return [
+        {
+            **career,
+            "available": any(
+                position.get("available", False)
+                for position in POSITIONS_DATA.get(career["id"], {}).values()
+            ),
+        }
+        for career in CAREER_DISPLAY_DATA
+    ]
+
+
+def _position_is_available(career_id, position_id):
+    """Return whether a position has a working workplace workflow."""
+
+    return bool(
+        POSITIONS_DATA.get(career_id, {})
+        .get(position_id, {})
+        .get("available", False)
+    )
 
 
 def _company_display_name(career_id, position_id, company_id):
@@ -255,7 +355,11 @@ def _company_display_name(career_id, position_id, company_id):
 # ADZUNA JOB API
 # =========================================================
 
-def fetch_adzuna_jobs(job_title, location="", results=5):
+def fetch_adzuna_jobs(
+    job_title,
+    location="",
+    results=ADZUNA_DEFAULT_RESULTS,
+):
     """
     Retrieve job listings from Adzuna.
 
@@ -274,14 +378,14 @@ def fetch_adzuna_jobs(job_title, location="", results=5):
         "what": job_title,
         "where": location,
         "results_per_page": results,
-        "content-type": "application/json"
+        "content-type": "application/json",
     }
 
     try:
         response = requests.get(
             url,
             params=params,
-            timeout=15
+            timeout=ADZUNA_REQUEST_TIMEOUT_SECONDS,
         )
 
         response.raise_for_status()
@@ -291,7 +395,7 @@ def fetch_adzuna_jobs(job_title, location="", results=5):
         return data.get("results", [])
 
     except requests.exceptions.RequestException as error:
-        print("Adzuna API error:", error)
+        logger.warning("Adzuna job lookup failed: %s", error)
         return []
 
 
@@ -306,7 +410,7 @@ def home():
 
     return render_template(
         "home.html",
-        user_name=session.get("user_name")
+        user_name=session.get("user_name"),
     )
 
 
@@ -314,7 +418,8 @@ def home():
 def career():
     return render_template(
         "career.html",
-        user_name=session.get("user_name")
+        careers=_career_cards(),
+        user_name=session.get("user_name"),
     )
 
 
@@ -322,16 +427,13 @@ def career():
 def positions(career_id):
     career_name = career_id.replace("-", " ").title()
 
-    position_data = POSITIONS_DATA.get(
-        career_id,
-        {}
-    )
+    position_data = POSITIONS_DATA.get(career_id, {})
 
     return render_template(
         "positions.html",
         career_id=career_id,
         career_name=career_name,
-        positions=position_data
+        positions=position_data,
     )
 
 
@@ -339,19 +441,17 @@ def positions(career_id):
 def companies(career_id, position_id):
     career_name = career_id.replace("-", " ").title()
 
-    position_data = (
-        POSITIONS_DATA
-        .get(career_id, {})
-        .get(position_id, {})
-    )
+    position_data = POSITIONS_DATA.get(career_id, {}).get(position_id, {})
+    if not position_data or not _position_is_available(career_id, position_id):
+        return redirect(url_for("positions", career_id=career_id))
 
     position_title = position_data.get("title", "")
     local_companies = position_data.get("companies", [])
 
     jobs = fetch_adzuna_jobs(
-    position_title,
-    results=5
-)  # Live jobs disabled
+        position_title,
+        results=ADZUNA_DEFAULT_RESULTS,
+    )
 
     demo_job = None
     if (
@@ -378,24 +478,15 @@ def simulation_workspace(career_id, position_id, company_id):
     Display the persistent desktop workspace for a simulation.
     """
 
-    position_data = (
-        POSITIONS_DATA
-        .get(career_id, {})
-        .get(position_id, {})
-    )
+    position_data = POSITIONS_DATA.get(career_id, {}).get(position_id, {})
 
     # Invalid career/position.
-    if not position_data:
-        return redirect(
-            url_for(
-                "positions",
-                career_id=career_id
-            )
-        )
+    if not position_data or not _position_is_available(career_id, position_id):
+        return redirect(url_for("positions", career_id=career_id))
 
     position_title = position_data.get(
         "title",
-        position_id.replace("-", " ").title()
+        position_id.replace("-", " ").title(),
     )
 
     company_name = _company_display_name(
@@ -412,8 +503,9 @@ def simulation_workspace(career_id, position_id, company_id):
         career_name=career_id.replace("-", " ").title(),
         position_title=position_title,
         company_name=company_name,
-        user_name=session.get("user_name", "User")
+        user_name=session.get("user_name", "User"),
     )
+
 
 @app.post("/simulation/workplace/start")
 def start_workplace_simulation():
@@ -431,6 +523,9 @@ def start_workplace_simulation():
     if not position:
         return redirect(url_for("career"))
 
+    if not _position_is_available(career_id, position_id):
+        return redirect(url_for("positions", career_id=career_id))
+
     if job_source == BACKEND_DEMO_JOB_SOURCE:
         if not is_backend_demo(career_id, position_id, company_id):
             return redirect(
@@ -442,12 +537,15 @@ def start_workplace_simulation():
             )
     elif job_source == "adzuna":
         # Live Adzuna jobs use the company name.
-        if not company_id or len(company_id) > 200:
+        if (
+            not company_id
+            or len(company_id) > MAX_ADZUNA_COMPANY_NAME_LENGTH
+        ):
             return redirect(
                 url_for(
                     "companies",
                     career_id=career_id,
-                    position_id=position_id
+                    position_id=position_id,
                 )
             )
 
@@ -463,17 +561,32 @@ def start_workplace_simulation():
                 url_for(
                     "companies",
                     career_id=career_id,
-                    position_id=position_id
+                    position_id=position_id,
                 )
             )
 
     attempt_id = None
     workplace_stage = "attempt_creation"
     try:
-        attempt_id = create_workplace_simulation_attempt(user_id=session.get("user_id"), career_id=career_id, position_id=position_id, company_id=company_id)
-        app.logger.info("Created workplace simulation attempt %s (%s/%s/%s)", attempt_id, career_id, position_id, company_id)
+        attempt_id = create_workplace_simulation_attempt(
+            user_id=session.get("user_id"),
+            career_id=career_id,
+            position_id=position_id,
+            company_id=company_id,
+        )
+        app.logger.info(
+            "Created workplace simulation attempt %s (%s/%s/%s)",
+            attempt_id,
+            career_id,
+            position_id,
+            company_id,
+        )
         generation_source = "gemini"
-        workplace_stage = "frontend_scenario_generation" if position_id == "frontend-developer" else "scenario_generation"
+        workplace_stage = (
+            "frontend_scenario_generation"
+            if position_id == "frontend-developer"
+            else "scenario_generation"
+        )
         if is_backend_demo_request:
             workplace_stage = "predefined_demo_scenario"
             scenario = get_backend_demo_workplace_scenario(
@@ -512,18 +625,34 @@ def start_workplace_simulation():
             generation_attempt_count=generation_attempt_count,
             generation_source=generation_source,
         )
-        app.logger.info("Scenario generation completed for workplace attempt %s", attempt_id)
+        app.logger.info(
+            "Scenario generation completed for workplace attempt %s",
+            attempt_id,
+        )
     except ScenarioGenerationError:
-        app.logger.warning("Scenario generation failed for workplace attempt %s", attempt_id)
+        app.logger.warning(
+            "Scenario generation failed for workplace attempt %s",
+            attempt_id,
+        )
         try:
-            mark_workplace_generation_failed(user_id=session.get("user_id"), attempt_id=attempt_id)
+            mark_workplace_generation_failed(
+                user_id=session.get("user_id"),
+                attempt_id=attempt_id,
+            )
         except Exception:
             app.logger.exception("Could not mark workplace generation as failed")
-        return redirect(url_for("workplace_attempt_workspace", attempt_id=attempt_id))
+        return redirect(
+            url_for("workplace_attempt_workspace", attempt_id=attempt_id)
+        )
     except Exception as error:
         app.logger.exception(
-            "Workplace attempt failed: type=%s message=%s attempt_id=%s career_id=%s position_id=%s stage=%s",
-            type(error).__name__, error, attempt_id, career_id, position_id, workplace_stage,
+            "Workplace attempt failed: type=%s attempt_id=%s career_id=%s "
+            "position_id=%s stage=%s",
+            type(error).__name__,
+            attempt_id,
+            career_id,
+            position_id,
+            workplace_stage,
         )
         if attempt_id:
             try:
@@ -534,16 +663,27 @@ def start_workplace_simulation():
             except Exception:
                 app.logger.exception("Could not mark workplace generation as failed")
             return redirect(url_for("workplace_attempt_workspace", attempt_id=attempt_id))
-        return redirect(url_for("companies", career_id=career_id, position_id=position_id))
+        return redirect(
+            url_for(
+                "companies",
+                career_id=career_id,
+                position_id=position_id,
+            )
+        )
     return redirect(url_for("workplace_attempt_workspace", attempt_id=attempt_id))
 
 
 @app.get("/workspace/attempt/<attempt_id>")
 def workplace_attempt_workspace(attempt_id):
-    attempt = get_simulation_attempt(user_id=session.get("user_id"), attempt_id=attempt_id)
+    attempt = get_simulation_attempt(
+        user_id=session.get("user_id"),
+        attempt_id=attempt_id,
+    )
     if not attempt or attempt.get("simulation_mode") != "workplace":
         return redirect(url_for("career"))
-    career_id, position_id, company_id = attempt.get("career_id"), attempt.get("position_id"), attempt.get("company_id")
+    career_id = attempt.get("career_id")
+    position_id = attempt.get("position_id")
+    company_id = attempt.get("company_id")
     if attempt.get("status") in {"generation_failed", "generating"}:
         return render_template(
             "simulation_generation_failed.html",
@@ -559,7 +699,22 @@ def workplace_attempt_workspace(attempt_id):
         position_id,
         company_id,
     )
-    return render_template("desktop.html", attempt_id=attempt_id, career_id=career_id, position_id=position_id, company_id=company_id, career_name=career_id.replace("-", " ").title(), position_title=position.get("title", position_id.replace("-", " ").title()), company_name=company_name, user_name=session.get("user_name", "User"))
+    return render_template(
+        "desktop.html",
+        attempt_id=attempt_id,
+        career_id=career_id,
+        position_id=position_id,
+        company_id=company_id,
+        career_name=career_id.replace("-", " ").title(),
+        position_title=position.get(
+            "title",
+            position_id.replace("-", " ").title(),
+        ),
+        company_name=company_name,
+        user_name=session.get("user_name", "User"),
+    )
+
+
 def normalize_review_items(value):
     """
     Normalize an evaluation field into a clean list of strings.
@@ -741,7 +896,7 @@ def workplace_task_review(attempt_id):
     except (TypeError, ValueError):
         overall_score = 0
 
-    interview_unlocked = overall_score >= 85
+    interview_unlocked = overall_score >= INTERVIEW_UNLOCK_SCORE
 
 
     return render_template(
@@ -796,8 +951,7 @@ def start_interview(attempt_id):
     except (TypeError, ValueError):
         score = 0
 
-    # Interview requires at least 85%.
-    if score < 85:
+    if score < INTERVIEW_UNLOCK_SCORE:
         return redirect(
             url_for(
                 "workplace_task_review",
@@ -1096,6 +1250,53 @@ def interview_workspace(interview_id):
     )
 
 
+def _parse_interview_form_number(field_name, converter, default):
+    """Parse one numeric multipart field without propagating malformed input."""
+
+    try:
+        return converter(request.form.get(field_name, "0"))
+    except (TypeError, ValueError):
+        return default
+
+
+def _resolve_interview_rubric(rubrics, question_id):
+    """Read a private rubric from either Firebase's list or mapping shape."""
+
+    if isinstance(rubrics, list):
+        if (
+            0 <= question_id < len(rubrics)
+            and isinstance(rubrics[question_id], dict)
+        ):
+            return rubrics[question_id]
+        return {}
+
+    if isinstance(rubrics, dict):
+        return rubrics.get(str(question_id), rubrics.get(question_id, {}))
+
+    return {}
+
+
+def _normalize_speech_measurements(
+    *,
+    duration_seconds,
+    speaking_seconds,
+    silence_seconds,
+    silence_ratio,
+    long_pause_count,
+    longest_pause_seconds,
+):
+    """Clamp browser-measured speech metrics before saving them."""
+
+    return {
+        "duration_seconds": round(max(duration_seconds, 0), 2),
+        "speaking_seconds": round(max(speaking_seconds, 0), 2),
+        "silence_seconds": round(max(silence_seconds, 0), 2),
+        "silence_ratio": round(max(0, min(silence_ratio, 1)), 4),
+        "long_pause_count": max(long_pause_count, 0),
+        "longest_pause_seconds": round(max(longest_pause_seconds, 0), 2),
+    }
+
+
 @app.post("/api/interview/<interview_id>/answer")
 def submit_interview_answer(interview_id):
 
@@ -1124,15 +1325,8 @@ def submit_interview_answer(interview_id):
         ), 400
 
 
-    try:
-        question_id = int(
-            request.form.get(
-                "question_id",
-                "0",
-            )
-        )
-
-    except ValueError:
+    question_id = _parse_interview_form_number("question_id", int, None)
+    if question_id is None:
         return jsonify(
             {
                 "error":
@@ -1140,68 +1334,22 @@ def submit_interview_answer(interview_id):
             }
         ), 400
 
-
-    try:
-        duration_seconds = float(
-            request.form.get(
-                "duration_seconds",
-                "0",
-            )
-        )
-
-    except ValueError:
-        duration_seconds = 0
-
-
-    try:
-        speaking_seconds = float(
-            request.form.get(
-                "speaking_seconds",
-                "0",
-            )
-        )
-    except (TypeError, ValueError):
-        speaking_seconds = 0
-
-    try:
-        silence_seconds = float(
-            request.form.get(
-                "silence_seconds",
-                "0",
-            )
-        )
-    except (TypeError, ValueError):
-        silence_seconds = 0
-
-    try:
-        silence_ratio = float(
-            request.form.get(
-                "silence_ratio",
-                "0",
-            )
-        )
-    except (TypeError, ValueError):
-        silence_ratio = 0
-
-    try:
-        measured_long_pause_count = int(
-            request.form.get(
-                "long_pause_count",
-                "0",
-            )
-        )
-    except (TypeError, ValueError):
-        measured_long_pause_count = 0
-
-    try:
-        longest_pause_seconds = float(
-            request.form.get(
-                "longest_pause_seconds",
-                "0",
-            )
-        )
-    except (TypeError, ValueError):
-        longest_pause_seconds = 0
+    duration_seconds = _parse_interview_form_number(
+        "duration_seconds", float, 0
+    )
+    speaking_seconds = _parse_interview_form_number(
+        "speaking_seconds", float, 0
+    )
+    silence_seconds = _parse_interview_form_number(
+        "silence_seconds", float, 0
+    )
+    silence_ratio = _parse_interview_form_number("silence_ratio", float, 0)
+    measured_long_pause_count = _parse_interview_form_number(
+        "long_pause_count", int, 0
+    )
+    longest_pause_seconds = _parse_interview_form_number(
+        "longest_pause_seconds", float, 0
+    )
     audio_file = request.files.get(
         "audio"
     )
@@ -1229,7 +1377,7 @@ def submit_interview_answer(interview_id):
 
 
     # Keep uploads reasonably bounded.
-    if len(audio_bytes) > 15 * 1024 * 1024:
+    if len(audio_bytes) > MAX_INTERVIEW_AUDIO_BYTES:
         return jsonify(
             {
                 "error":
@@ -1289,35 +1437,7 @@ def submit_interview_answer(interview_id):
         "private_rubrics",
         {},
     )
-
-    # Firebase Realtime Database may deserialize
-    # sequential numeric keys as a list instead of a dict.
-    if isinstance(rubrics, list):
-
-        rubric = (
-            rubrics[question_id]
-            if (
-                0 <= question_id < len(rubrics)
-                and isinstance(
-                    rubrics[question_id],
-                    dict,
-                )
-            )
-            else {}
-        )
-
-    elif isinstance(rubrics, dict):
-
-        rubric = rubrics.get(
-            str(question_id),
-            rubrics.get(
-                question_id,
-                {},
-            ),
-        )
-
-    else:
-        rubric = {}
+    rubric = _resolve_interview_rubric(rubrics, question_id)
 
     career_id = interview.get(
         "career_id",
@@ -1376,57 +1496,14 @@ def submit_interview_answer(interview_id):
             position_title=position_title,
         )
 
-        analysis["speech_measurements"] = {
-            "duration_seconds": round(
-                max(
-                    duration_seconds,
-                    0,
-                ),
-                2,
-            ),
-
-            "speaking_seconds": round(
-                max(
-                    speaking_seconds,
-                    0,
-                ),
-                2,
-            ),
-
-            "silence_seconds": round(
-                max(
-                    silence_seconds,
-                    0,
-                ),
-                2,
-            ),
-
-            "silence_ratio": round(
-                max(
-                    0,
-                    min(
-                        silence_ratio,
-                        1,
-                    ),
-                ),
-                4,
-            ),
-
-            "long_pause_count":
-                max(
-                    measured_long_pause_count,
-                    0,
-                ),
-
-            "longest_pause_seconds":
-                round(
-                    max(
-                        longest_pause_seconds,
-                        0,
-                    ),
-                    2,
-                ),
-        }
+        analysis["speech_measurements"] = _normalize_speech_measurements(
+            duration_seconds=duration_seconds,
+            speaking_seconds=speaking_seconds,
+            silence_seconds=silence_seconds,
+            silence_ratio=silence_ratio,
+            long_pause_count=measured_long_pause_count,
+            longest_pause_seconds=longest_pause_seconds,
+        )
 
         # Prefer actual browser-measured pauses over
         # the model's estimate from the recording.
@@ -1462,15 +1539,13 @@ def submit_interview_answer(interview_id):
     except Exception as error:
 
         app.logger.exception(
-            "Could not save interview answer."
+            "Could not save interview answer (type=%s).",
+            type(error).__name__,
         )
 
         return jsonify(
             {
-                "error": (
-                    "Could not save your interview answer: "
-                    f"{type(error).__name__}: {error}"
-                )
+                "error": "Could not save your interview answer. Please try again."
             }
         ), 500
 
@@ -2168,4 +2243,4 @@ def dashboard():
 # =========================================================
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=app.config["DEBUG"])

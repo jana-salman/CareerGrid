@@ -1,3 +1,5 @@
+"""Authentication routes for registration, login, and logout."""
+
 from flask import (
     Blueprint,
     redirect,
@@ -29,55 +31,33 @@ def login():
     message = None
 
     if request.args.get("registered") == "1":
-        message = (
-            "Account created successfully. Please log in."
-        )
+        message = "Account created successfully. Please log in."
 
     if request.method == "POST":
-        email = normalize_email(
-            request.form.get("email", "")
-        )
+        email = normalize_email(request.form.get("email", ""))
         password = request.form.get("password", "")
 
         if not email or not password:
             error = "Please enter your email and password."
 
-            return render_template(
-                "login.html",
-                error=error,
-                message=message
-            )
+            return render_template("login.html", error=error, message=message)
 
         user = get_user_by_email(email)
 
         if user is None:
             error = "Incorrect email or password."
 
-            return render_template(
-                "login.html",
-                error=error,
-                message=message
-            )
+            return render_template("login.html", error=error, message=message)
 
-        stored_password_hash = user.get(
-            "password_hash",
-            ""
-        )
+        stored_password_hash = user.get("password_hash", "")
 
         if (
             not stored_password_hash
-            or not check_password_hash(
-                stored_password_hash,
-                password
-            )
+            or not check_password_hash(stored_password_hash, password)
         ):
             error = "Incorrect email or password."
 
-            return render_template(
-                "login.html",
-                error=error,
-                message=message
-            )
+            return render_template("login.html", error=error, message=message)
 
         # Save only the information needed for the login session.
         session["user_id"] = user["id"]
@@ -86,11 +66,7 @@ def login():
 
         return redirect(url_for("home"))
 
-    return render_template(
-        "login.html",
-        error=error,
-        message=message
-    )
+    return render_template("login.html", error=error, message=message)
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
@@ -100,64 +76,35 @@ def register():
     error = None
 
     if request.method == "POST":
-        full_name = request.form.get(
-            "full_name",
-            ""
-        ).strip()
-
-        email = normalize_email(
-            request.form.get("email", "")
-        )
-
+        full_name = request.form.get("full_name", "").strip()
+        email = normalize_email(request.form.get("email", ""))
         password = request.form.get("password", "")
 
         if not full_name or not email or not password:
             error = "Please complete all fields."
 
-            return render_template(
-                "register.html",
-                error=error
-            )
+            return render_template("register.html", error=error)
 
         existing_user = get_user_by_email(email)
 
         if existing_user is not None:
-            error = (
-                "An account with this email already exists."
-            )
+            error = "An account with this email already exists."
+            return render_template("register.html", error=error)
 
-            return render_template(
-                "register.html",
-                error=error
-            )
-
-        password_hash = generate_password_hash(
-            password
-        )
+        password_hash = generate_password_hash(password)
 
         try:
             create_user(
                 full_name=full_name,
                 email=email,
-                password_hash=password_hash
+                password_hash=password_hash,
             )
         except ValueError as exception:
-            return render_template(
-                "register.html",
-                error=str(exception)
-            )
+            return render_template("register.html", error=str(exception))
 
-        return redirect(
-            url_for(
-                "auth.login",
-                registered="1"
-            )
-        )
+        return redirect(url_for("auth.login", registered="1"))
 
-    return render_template(
-        "register.html",
-        error=error
-    )
+    return render_template("register.html", error=error)
 
 
 @auth_bp.route("/logout")

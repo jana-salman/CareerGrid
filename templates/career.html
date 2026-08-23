@@ -24,28 +24,24 @@
         </div>
 
         <div class="career-grid">
-
-            <div class="career-card">
-                <div class="career-icon">💻</div>
-                <h3>Software Developer</h3>
-                <p>Practice problem-solving, debugging, and coding decisions.</p>
-                <a href="/positions/software-developer">View Positions</a>
+            {% for career in careers %}
+            <div class="career-card{% if not career.available %} career-card--unavailable{% endif %}">
+                <div class="career-icon">{{ career.icon }}</div>
+                <h3>{{ career.title }}</h3>
+                <p>{{ career.description }}</p>
+                {% if career.available %}
+                <a href="{{ url_for('positions', career_id=career.id) }}">
+                    View Positions
+                </a>
+                {% else %}
+                <button
+                    class="coming-soon-control"
+                    type="button"
+                    disabled
+                >Coming Soon</button>
+                {% endif %}
             </div>
-
-            <div class="career-card">
-                <div class="career-icon">🎨</div>
-                <h3>UI/UX Designer</h3>
-                <p>Explore user needs, design choices, and interface decisions.</p>
-                <a href="/positions/ui-ux-designer">View Positions</a>
-            </div>
-
-            <div class="career-card">
-                <div class="career-icon">📊</div>
-                <h3>Data Analyst</h3>
-                <p>Analyze data, understand patterns, and make recommendations.</p>
-                <a href="/positions/data-analyst">View Positions</a>
-            </div>
-
+            {% endfor %}
         </div>
     </div>
 

@@ -567,3 +567,44 @@ body:has(.workspace) {
         align-items: flex-start;
     }
 }
+
+
+.career-page .career-card--unavailable:hover {
+    cursor: default;
+    transform: none;
+
+    border-color: var(--cg-border);
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(15, 29, 72, .88),
+            rgba(8, 15, 44, .84)
+        );
+}
+
+
+.career-page .coming-soon-control {
+    min-width: 136px;
+
+    padding: 13px 24px;
+
+    color: rgba(211, 220, 255, .72);
+    font: inherit;
+    font-weight: 700;
+
+    cursor: not-allowed;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(65, 103, 174, .3),
+            rgba(104, 68, 156, .3)
+        );
+
+    border: 1px solid rgba(134, 153, 218, .32);
+    border-radius: 25px;
+
+    box-shadow: none;
+    opacity: .82;
+}

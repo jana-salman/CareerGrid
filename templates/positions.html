@@ -22,10 +22,18 @@
 
         <div class="career-grid">
             {% for position_id, position in positions.items() %}
-            <div class="career-card">
+            <div class="career-card{% if not position.available %} career-card--unavailable{% endif %}">
                 <h3>{{ position.title }}</h3>
                 <p>Explore companies offering this role</p>
+                {% if position.available %}
                 <a href="/positions/{{ career_id }}/{{ position_id }}">View Companies</a>
+                {% else %}
+                <button
+                    class="coming-soon-control"
+                    type="button"
+                    disabled
+                >Coming Soon</button>
+                {% endif %}
             </div>
             {% else %}
             <p>No positions available yet for this career.</p>

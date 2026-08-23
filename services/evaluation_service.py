@@ -1,3 +1,5 @@
+"""Evaluate workplace evidence while keeping private rubrics server-side."""
+
 import json
 import os
 from typing import Any
@@ -24,35 +26,102 @@ def evaluate_frontend_workplace_progress(responses: dict[str, Any]) -> dict[str,
         return round(10 * sum(bool(item) for item in conditions) / max(len(conditions), 1))
 
     dimensions = {
-        "triage_and_prioritization": score(bool(responses.get("step_1", {}).get("written_response")), responses.get("step_1", {}).get("selected_priority") == "Critical"),
-        "investigation": score(len(investigation.get("viewports_tested", [])) >= 2, bool(investigation.get("evidence_opened")), bool(investigation.get("investigation_summary"))),
-        "root_cause_reasoning": score("selector" in investigation.get("selected_root_cause", "").lower(), "buy" in investigation.get("investigation_summary", "").lower()),
-        "implementation_quality": score(checks.get("correct_selector"), checks.get("safe_initialization"), checks.get("null_guard"), checks.get("click_handler"), checks.get("semantic_button")),
-        "testing_and_verification": score(bool(verification.get("commands_run")), len(verification.get("viewport_checks", [])) >= 2, bool(verification.get("accessibility_checks")), all(test_results.values()) if test_results else False),
-        "accessibility": score(test_results.get("keyboard_activation"), test_results.get("focus_visibility"), checks.get("semantic_button")),
-        "regression_awareness": score(test_results.get("regression"), test_results.get("repeated_clicks"), test_results.get("console_clean")),
-        "git_and_pr_workflow": score(bool(delivery.get("commit_message")), bool(delivery.get("pr_title")), len(delivery.get("pr_description", "")) >= 40, bool(delivery.get("testing_checklist"))),
-        "communication": score(len(delivery.get("final_team_message", "")) >= 40, bool(delivery.get("release_recommendation")), len(responses.get("step_1", {}).get("written_response", "")) >= 30),
-        "scope_and_independence": score(set(delivery.get("reviewed_files", [])) == set(delivery.get("source_step_3_files", [])), len(implementation.get("changed_files", {})) <= 2, bool(investigation.get("proposed_next_action"))),
+        "triage_and_prioritization": score(
+            bool(responses.get("step_1", {}).get("written_response")),
+            responses.get("step_1", {}).get("selected_priority") == "Critical",
+        ),
+        "investigation": score(
+            len(investigation.get("viewports_tested", [])) >= 2,
+            bool(investigation.get("evidence_opened")),
+            bool(investigation.get("investigation_summary")),
+        ),
+        "root_cause_reasoning": score(
+            "selector" in investigation.get("selected_root_cause", "").lower(),
+            "buy" in investigation.get("investigation_summary", "").lower(),
+        ),
+        "implementation_quality": score(
+            checks.get("correct_selector"),
+            checks.get("safe_initialization"),
+            checks.get("null_guard"),
+            checks.get("click_handler"),
+            checks.get("semantic_button"),
+        ),
+        "testing_and_verification": score(
+            bool(verification.get("commands_run")),
+            len(verification.get("viewport_checks", [])) >= 2,
+            bool(verification.get("accessibility_checks")),
+            all(test_results.values()) if test_results else False,
+        ),
+        "accessibility": score(
+            test_results.get("keyboard_activation"),
+            test_results.get("focus_visibility"),
+            checks.get("semantic_button"),
+        ),
+        "regression_awareness": score(
+            test_results.get("regression"),
+            test_results.get("repeated_clicks"),
+            test_results.get("console_clean"),
+        ),
+        "git_and_pr_workflow": score(
+            bool(delivery.get("commit_message")),
+            bool(delivery.get("pr_title")),
+            len(delivery.get("pr_description", "")) >= 40,
+            bool(delivery.get("testing_checklist")),
+        ),
+        "communication": score(
+            len(delivery.get("final_team_message", "")) >= 40,
+            bool(delivery.get("release_recommendation")),
+            len(responses.get("step_1", {}).get("written_response", "")) >= 30,
+        ),
+        "scope_and_independence": score(
+            set(delivery.get("reviewed_files", []))
+            == set(delivery.get("source_step_3_files", [])),
+            len(implementation.get("changed_files", {})) <= 2,
+            bool(investigation.get("proposed_next_action")),
+        ),
     }
     labels = {
-        "triage_and_prioritization": "Triage and prioritization", "investigation": "Investigation", "root_cause_reasoning": "Root-cause reasoning", "implementation_quality": "Implementation quality", "testing_and_verification": "Testing and verification", "accessibility": "Accessibility", "regression_awareness": "Regression awareness", "git_and_pr_workflow": "Git and PR workflow", "communication": "Communication", "scope_and_independence": "Scope and independence",
+        "triage_and_prioritization": "Triage and prioritization",
+        "investigation": "Investigation",
+        "root_cause_reasoning": "Root-cause reasoning",
+        "implementation_quality": "Implementation quality",
+        "testing_and_verification": "Testing and verification",
+        "accessibility": "Accessibility",
+        "regression_awareness": "Regression awareness",
+        "git_and_pr_workflow": "Git and PR workflow",
+        "communication": "Communication",
+        "scope_and_independence": "Scope and independence",
     }
     normalized = {
-        key: {"score": value, "max_score": 10, "feedback": f"{labels[key]} evidence earned {value}/10."}
+        key: {
+            "score": value,
+            "max_score": 10,
+            "feedback": f"{labels[key]} evidence earned {value}/10.",
+        }
         for key, value in dimensions.items()
     }
     overall = round(sum(dimensions.values()))
-    strengths = [labels[key] for key, value in dimensions.items() if value >= 8] or ["Completed the full workplace workflow"]
-    improvements = [labels[key] for key, value in dimensions.items() if value < 7] or ["Keep documenting edge-case verification"]
-    readiness = "Ready for guided junior frontend work" if overall >= 75 else "Developing junior frontend readiness"
+    strengths = [
+        labels[key] for key, value in dimensions.items() if value >= 8
+    ] or ["Completed the full workplace workflow"]
+    improvements = [
+        labels[key] for key, value in dimensions.items() if value < 7
+    ] or ["Keep documenting edge-case verification"]
+    readiness = (
+        "Ready for guided junior frontend work"
+        if overall >= 75
+        else "Developing junior frontend readiness"
+    )
     return {
         "overall_score": overall,
         "summary": f"You completed the Buy Now incident workflow with a score of {overall}/100.",
         "dimensions": normalized,
         "strengths": strengths,
         "areas_for_improvement": improvements,
-        "recommended_next_steps": ["Practice DOM debugging across responsive viewports.", "Keep PR test evidence concise and reproducible."],
+        "recommended_next_steps": [
+            "Practice DOM debugging across responsive viewports.",
+            "Keep PR test evidence concise and reproducible.",
+        ],
         "advisor_feedback": "Use the evidence trail—from report to selector, patch, and regression checks—to make each decision auditable.",
         "review_message": "Your frontend workplace review is ready. Open the report for the evidence-based score and next steps.",
         "frontend_readiness": readiness,

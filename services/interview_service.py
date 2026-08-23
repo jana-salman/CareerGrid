@@ -1,3 +1,5 @@
+"""Generate, time, analyze, and evaluate CareerGrid interview responses."""
+
 import json
 import math
 import os

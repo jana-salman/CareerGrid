@@ -1,3 +1,5 @@
+"""Create configured Google Gemini clients for CareerGrid AI services."""
+
 import os
 
 from dotenv import load_dotenv
@@ -25,9 +27,12 @@ def get_gemini_client():
     return genai.Client(api_key=api_key)
 
 
-def test_gemini_connection() -> str:
+def check_gemini_connection() -> str:
     """
-    Send a small request to confirm that Gemini is connected.
+    Send a manual diagnostic request to confirm Gemini connectivity.
+
+    This is intentionally not an automated test because it consumes an external
+    API and requires credentials and network access.
     """
     model = os.getenv(
         "GEMINI_MODEL",

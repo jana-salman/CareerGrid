@@ -1,3 +1,5 @@
+"""Persist owned workplace and interview attempts in Firebase."""
+
 from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any

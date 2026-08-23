@@ -1,9 +1,11 @@
-from services.gemini_service import test_gemini_connection
+"""Manual Gemini connectivity check; not part of the offline test suite."""
+
+from services.gemini_service import check_gemini_connection
 
 
 if __name__ == "__main__":
     try:
-        result = test_gemini_connection()
+        result = check_gemini_connection()
 
         print("SUCCESS:")
         print(result)

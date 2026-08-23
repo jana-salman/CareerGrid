@@ -1,3 +1,5 @@
+"""Initialize Firebase Admin and provide Realtime Database references."""
+
 import os
 from pathlib import Path
 
@@ -9,8 +11,9 @@ from firebase_admin import credentials, db
 # Main CareerGrid folder
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load private settings from CareerGrid/.env
-load_dotenv(BASE_DIR / ".env", override=True)
+# Process-level environment variables take precedence over local development
+# settings, matching conventional deployment behavior.
+load_dotenv(BASE_DIR / ".env", override=False)
 
 
 def initialize_firebase():
@@ -24,13 +27,11 @@ def initialize_firebase():
 
     if not credentials_filename:
         raise RuntimeError(
-            "GOOGLE_APPLICATION_CREDENTIALS is missing from the .env file."
+            "GOOGLE_APPLICATION_CREDENTIALS is not configured."
         )
 
     if not database_url:
-        raise RuntimeError(
-            "FIREBASE_DATABASE_URL is missing from the .env file."
-        )
+        raise RuntimeError("FIREBASE_DATABASE_URL is not configured.")
 
     credentials_path = Path(credentials_filename)
 
@@ -47,9 +48,7 @@ def initialize_firebase():
 
     return firebase_admin.initialize_app(
         firebase_credentials,
-        {
-            "databaseURL": database_url
-        }
+        {"databaseURL": database_url},
     )
 
 

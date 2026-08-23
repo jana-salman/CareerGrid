@@ -1,10 +1,24 @@
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
+.pytest_cache/
+.coverage
+htmlcov/
+
 venv/
+.venv/
+env/
+
 .env
+.env.*
+!.env.example
+
 instance/
 *.db
+*.log
 .DS_Store
+Thumbs.db
 
 # Firebase private credentials
 firebase-service-account.json

@@ -530,6 +530,53 @@ def test_fourth_demo_answer_completes_interview_using_actual_question_count(
     complete_attempt.assert_called_once()
 
 
+def test_interview_storage_failure_does_not_expose_internal_exception(
+    client,
+    monkeypatch,
+):
+    interview = get_backend_demo_interview()
+    interview.update(
+        {
+            "status": "in_progress",
+            "career_id": "software-developer",
+            "position_id": "backend-developer",
+            "company_id": BACKEND_DEMO_COMPANY_ID,
+            "answers": {},
+            "current_question": 1,
+        }
+    )
+    monkeypatch.setattr(
+        careergrid_app,
+        "get_interview_attempt",
+        lambda **kwargs: interview,
+    )
+    monkeypatch.setattr(
+        careergrid_app,
+        "analyze_spoken_answer",
+        Mock(return_value={"question_score": 75, "transcript": "Answer"}),
+    )
+    monkeypatch.setattr(
+        careergrid_app,
+        "save_interview_answer",
+        Mock(side_effect=RuntimeError("private database detail")),
+    )
+
+    response = client.post(
+        "/api/interview/interview-demo/answer",
+        data={
+            "question_id": "1",
+            "duration_seconds": "20",
+            "audio": (io.BytesIO(b"demo audio"), "answer.webm"),
+        },
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 500
+    message = response.get_json()["error"]
+    assert message == "Could not save your interview answer. Please try again."
+    assert "private database detail" not in message
+
+
 def test_normal_interview_question_count_remains_seven():
     assert INTERVIEW_QUESTION_COUNT == 7
 

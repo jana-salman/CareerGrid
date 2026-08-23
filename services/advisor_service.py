@@ -1,3 +1,5 @@
+"""Generate progressive, scenario-aware advisor guidance with Gemini."""
+
 import json
 import os
 from typing import Any

@@ -4,6 +4,7 @@ import json
 import os
 import posixpath
 import re
+from collections.abc import Callable, Collection
 from copy import deepcopy
 from typing import Any
 
@@ -39,11 +40,11 @@ ALLOWED_EXTENSIONS = {
 PRIVATE_FIELD_NAMES = {
     "root_cause", "expected_changes", "acceptable_alternatives",
     "verification_expectations", "progressive_guidance", "evaluation_notes",
-    "private_context",
+    "expected_patch", "scoring_notes", "private_context",
 }
 MAX_FILES = 12
-MAX_FILE_CONTENT_LENGTH = 20000
-MAX_SCENARIO_JSON_LENGTH = 120000
+MAX_FILE_CONTENT_LENGTH = 20_000
+MAX_SCENARIO_JSON_LENGTH = 120_000
 PROJECT_NAME_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 FORBIDDEN_CONTENT_PATTERNS = (
     re.compile(r"\brm\s+-rf\b", re.IGNORECASE),
@@ -174,8 +175,57 @@ def _validate_resource_line_references(
                 )
 
 
-def validate_workplace_scenario(payload: Any) -> dict[str, dict[str, Any]]:
-    """Validate and normalize the one public/private Gemini scenario object."""
+PrivateContextValidator = Callable[[dict[str, Any], set[str]], None]
+
+
+def _validate_standard_private_context(
+    private: dict[str, Any],
+    file_paths: set[str],
+) -> None:
+    """Validate the standard Backend workplace evaluation contract."""
+
+    expected_changes = private.get("expected_changes")
+    if not isinstance(expected_changes, list) or not expected_changes:
+        raise ScenarioGenerationError("Private context needs expected changes.")
+    for change in expected_changes:
+        if not isinstance(change, dict):
+            raise ScenarioGenerationError("Every expected change must be an object.")
+        path = _safe_relative_path(change.get("path"))
+        if path not in file_paths:
+            raise ScenarioGenerationError("Expected change refers to a missing project file.")
+        _required_text(change.get("expectation"), "expected_changes.expectation")
+
+    guidance = private.get("progressive_guidance")
+    if not isinstance(guidance, list) or not guidance:
+        raise ScenarioGenerationError("Private context needs progressive guidance.")
+    levels = set()
+    for item in guidance:
+        if not isinstance(item, dict) or item.get("level") not in {1, 2, 3}:
+            raise ScenarioGenerationError("Guidance must use levels 1 through 3.")
+        _required_text(item.get("guidance"), "progressive_guidance.guidance")
+        levels.add(item["level"])
+    if levels != {1, 2, 3}:
+        raise ScenarioGenerationError(
+            "Private context needs guidance for levels 1, 2, and 3."
+        )
+
+    if not isinstance(private.get("evaluation_notes"), dict):
+        raise ScenarioGenerationError("Private context needs evaluation notes.")
+
+
+def validate_workplace_scenario(
+    payload: Any,
+    *,
+    private_context_validator: PrivateContextValidator | None = None,
+    allowed_extensions: Collection[str] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Validate shared public data and the selected private-context contract.
+
+    The default private contract is used by generated and predefined Backend
+    scenarios. Career-specific services may supply a narrow private validator
+    and file allowlist while retaining all shared path, file, resource, and
+    leak protections.
+    """
     if not isinstance(payload, dict):
         raise ScenarioGenerationError("Scenario must be a JSON object.")
     public = payload.get("public_scenario")
@@ -216,12 +266,17 @@ def validate_workplace_scenario(payload: Any) -> dict[str, dict[str, Any]]:
         raise ScenarioGenerationError("Project must contain between 1 and 12 files.")
     file_paths: set[str] = set()
     file_contents: dict[str, str] = {}
+    accepted_extensions = (
+        ALLOWED_EXTENSIONS
+        if allowed_extensions is None
+        else allowed_extensions
+    )
     for file_item in files:
         if not isinstance(file_item, dict):
             raise ScenarioGenerationError("Every project file must be an object.")
         path = _safe_relative_path(file_item.get("path"))
         suffix = ".env.example" if path.endswith(".env.example") else os.path.splitext(path)[1]
-        if suffix not in ALLOWED_EXTENSIONS:
+        if suffix not in accepted_extensions:
             raise ScenarioGenerationError("Scenario contains an unsupported file type.")
         if path in file_paths:
             raise ScenarioGenerationError("Scenario contains duplicate project file paths.")
@@ -275,32 +330,15 @@ def validate_workplace_scenario(payload: Any) -> dict[str, dict[str, Any]]:
                 raise ScenarioGenerationError("Task attachment does not match a generated file or resource.")
 
     _required_text(private.get("root_cause"), "private_context.root_cause")
-    expected_changes = private.get("expected_changes")
-    if not isinstance(expected_changes, list) or not expected_changes:
-        raise ScenarioGenerationError("Private context needs expected changes.")
-    for change in expected_changes:
-        if not isinstance(change, dict):
-            raise ScenarioGenerationError("Every expected change must be an object.")
-        path = _safe_relative_path(change.get("path"))
-        if path not in file_paths:
-            raise ScenarioGenerationError("Expected change refers to a missing project file.")
-        _required_text(change.get("expectation"), "expected_changes.expectation")
-    guidance = private.get("progressive_guidance")
-    if not isinstance(guidance, list) or not guidance:
-        raise ScenarioGenerationError("Private context needs progressive guidance.")
-    levels = set()
-    for item in guidance:
-        if not isinstance(item, dict) or item.get("level") not in {1, 2, 3}:
-            raise ScenarioGenerationError("Guidance must use levels 1 through 3.")
-        _required_text(item.get("guidance"), "progressive_guidance.guidance")
-        levels.add(item["level"])
-    if levels != {1, 2, 3}:
-        raise ScenarioGenerationError("Private context needs guidance for levels 1, 2, and 3.")
     for field in ("acceptable_alternatives", "verification_expectations"):
         if not isinstance(private.get(field), list):
             raise ScenarioGenerationError(f"Private context field '{field}' must be a list.")
-    if not isinstance(private.get("evaluation_notes"), dict):
-        raise ScenarioGenerationError("Private context needs evaluation notes.")
+
+    if private_context_validator is None:
+        _validate_standard_private_context(private, file_paths)
+    else:
+        private_context_validator(private, file_paths)
+
     if len(json.dumps(payload, ensure_ascii=False)) > MAX_SCENARIO_JSON_LENGTH:
         raise ScenarioGenerationError("Scenario payload is too large.")
     return {"public_scenario": deepcopy(public), "private_context": deepcopy(private)}
