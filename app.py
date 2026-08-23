@@ -21,6 +21,18 @@ from services.scenario_generation_service import (
 from services.frontend_workplace_scenario_service import (
     generate_frontend_workplace_scenario,
 )
+from services.backend_demo_scenario_service import (
+    BACKEND_DEMO_CAREER_ID,
+    BACKEND_DEMO_COMPANY_NAME,
+    BACKEND_DEMO_JOB_SOURCE,
+    BACKEND_DEMO_POSITION_ID,
+    get_backend_demo_job,
+    get_backend_demo_workplace_scenario,
+    is_backend_demo,
+)
+from services.backend_demo_interview_service import (
+    get_backend_demo_interview,
+)
 
 from services.simulation_storage import (
     save_simulation_evaluation,
@@ -221,6 +233,24 @@ POSITIONS_DATA = {
 }
 
 
+def _company_display_name(career_id, position_id, company_id):
+    """Resolve a stable user-facing company name for all attempt pages."""
+
+    if is_backend_demo(career_id, position_id, company_id):
+        return BACKEND_DEMO_COMPANY_NAME
+
+    position = POSITIONS_DATA.get(career_id, {}).get(position_id, {})
+
+    for company in position.get("companies", []):
+        if company.get("id") == company_id:
+            return company.get("name", company_id)
+
+    if company_id:
+        return company_id.replace("-", " ").title()
+
+    return "Company"
+
+
 # =========================================================
 # ADZUNA JOB API
 # =========================================================
@@ -323,6 +353,13 @@ def companies(career_id, position_id):
     results=5
 )  # Live jobs disabled
 
+    demo_job = None
+    if (
+        career_id == BACKEND_DEMO_CAREER_ID
+        and position_id == BACKEND_DEMO_POSITION_ID
+    ):
+        demo_job = get_backend_demo_job()
+
     return render_template(
         "companies.html",
         career_id=career_id,
@@ -330,7 +367,8 @@ def companies(career_id, position_id):
         position_id=position_id,
         position_title=position_title,
         jobs=jobs,
-        local_companies=local_companies
+        local_companies=local_companies,
+        demo_job=demo_job,
     )
 
 
@@ -360,18 +398,11 @@ def simulation_workspace(career_id, position_id, company_id):
         position_id.replace("-", " ").title()
     )
 
-    # Default company name for live Adzuna listings.
-    company_name = company_id.replace("-", " ").title()
-
-    # If this is one of our local/demo companies,
-    # use its proper display name.
-    for company in position_data.get("companies", []):
-        if company.get("id") == company_id:
-            company_name = company.get(
-                "name",
-                company_name
-            )
-            break
+    company_name = _company_display_name(
+        career_id,
+        position_id,
+        company_id,
+    )
 
     return render_template(
         "desktop.html",
@@ -390,13 +421,26 @@ def start_workplace_simulation():
     position_id = request.form.get("position_id", "").strip()
     company_id = request.form.get("company_id", "").strip()
     job_source = request.form.get("job_source", "demo").strip().lower()
+    is_backend_demo_request = (
+        job_source == BACKEND_DEMO_JOB_SOURCE
+        and is_backend_demo(career_id, position_id, company_id)
+    )
 
     position = POSITIONS_DATA.get(career_id, {}).get(position_id)
 
     if not position:
         return redirect(url_for("career"))
 
-    if job_source == "adzuna":
+    if job_source == BACKEND_DEMO_JOB_SOURCE:
+        if not is_backend_demo(career_id, position_id, company_id):
+            return redirect(
+                url_for(
+                    "companies",
+                    career_id=career_id,
+                    position_id=position_id,
+                )
+            )
+    elif job_source == "adzuna":
         # Live Adzuna jobs use the company name.
         if not company_id or len(company_id) > 200:
             return redirect(
@@ -428,8 +472,16 @@ def start_workplace_simulation():
     try:
         attempt_id = create_workplace_simulation_attempt(user_id=session.get("user_id"), career_id=career_id, position_id=position_id, company_id=company_id)
         app.logger.info("Created workplace simulation attempt %s (%s/%s/%s)", attempt_id, career_id, position_id, company_id)
+        generation_source = "gemini"
         workplace_stage = "frontend_scenario_generation" if position_id == "frontend-developer" else "scenario_generation"
-        if position_id == "frontend-developer":
+        if is_backend_demo_request:
+            workplace_stage = "predefined_demo_scenario"
+            scenario = get_backend_demo_workplace_scenario(
+                attempt_id=attempt_id,
+            )
+            generation_attempt_count = 1
+            generation_source = "predefined_demo"
+        elif position_id == "frontend-developer":
             company_name = next(
                 (
                     company.get("name")
@@ -458,6 +510,7 @@ def start_workplace_simulation():
             public_scenario=scenario["public_scenario"],
             private_context=scenario["private_context"],
             generation_attempt_count=generation_attempt_count,
+            generation_source=generation_source,
         )
         app.logger.info("Scenario generation completed for workplace attempt %s", attempt_id)
     except ScenarioGenerationError:
@@ -501,7 +554,11 @@ def workplace_attempt_workspace(attempt_id):
     position = POSITIONS_DATA.get(career_id, {}).get(position_id)
     if not position:
         return redirect(url_for("career"))
-    company_name = next((company.get("name") for company in position.get("companies", []) if company.get("id") == company_id), company_id.replace("-", " ").title())
+    company_name = _company_display_name(
+        career_id,
+        position_id,
+        company_id,
+    )
     return render_template("desktop.html", attempt_id=attempt_id, career_id=career_id, position_id=position_id, company_id=company_id, career_name=career_id.replace("-", " ").title(), position_title=position.get("title", position_id.replace("-", " ").title()), company_name=company_name, user_name=session.get("user_name", "User"))
 def normalize_review_items(value):
     """
@@ -613,10 +670,11 @@ def workplace_task_review(attempt_id):
     )
 
 
-    company_name = company_id.replace(
-        "-",
-        " "
-    ).title()
+    company_name = _company_display_name(
+        career_id,
+        position_id,
+        company_id,
+    )
 
     valid_demo_company_ids = set()
 
@@ -638,11 +696,14 @@ def workplace_task_review(attempt_id):
             )
 
 
-    job_source = (
-        "demo"
-        if company_id in valid_demo_company_ids
-        else "adzuna"
-    )
+    if is_backend_demo(career_id, position_id, company_id):
+        job_source = BACKEND_DEMO_JOB_SOURCE
+    else:
+        job_source = (
+            "demo"
+            if company_id in valid_demo_company_ids
+            else "adzuna"
+        )
 
 
     public_scenario = attempt.get(
@@ -702,8 +763,7 @@ def workplace_task_review(attempt_id):
 @app.post("/simulation/attempts/<attempt_id>/interview/start")
 def start_interview(attempt_id):
     """
-    Start a fresh AI-generated interview from a completed
-    workplace simulation.
+    Start a fresh interview from a completed workplace simulation.
     """
 
     user_id = session.get("user_id")
@@ -763,16 +823,10 @@ def start_interview(attempt_id):
         position_id.replace("-", " ").title(),
     )
 
-    company_name = next(
-        (
-            company.get("name")
-            for company in position.get(
-                "companies",
-                [],
-            )
-            if company.get("id") == company_id
-        ),
-        company_id.replace("-", " ").title(),
+    company_name = _company_display_name(
+        career_id,
+        position_id,
+        company_id,
     )
 
     career_title = (
@@ -782,12 +836,15 @@ def start_interview(attempt_id):
     )
 
     try:
-        generated = generate_interview_questions(
-            workplace_attempt=attempt,
-            career_title=career_title,
-            position_title=position_title,
-            company_name=company_name,
-        )
+        if is_backend_demo(career_id, position_id, company_id):
+            generated = get_backend_demo_interview()
+        else:
+            generated = generate_interview_questions(
+                workplace_attempt=attempt,
+                career_title=career_title,
+                position_title=position_title,
+                company_name=company_name,
+            )
 
         interview_id = create_interview_attempt(
             user_id=user_id,
@@ -902,19 +959,10 @@ def interview_workspace(interview_id):
         ).title(),
     )
 
-    company_name = next(
-        (
-            company.get("name")
-            for company in position.get(
-                "companies",
-                [],
-            )
-            if company.get("id") == company_id
-        ),
-        company_id.replace(
-            "-",
-            " ",
-        ).title(),
+    company_name = _company_display_name(
+        career_id,
+        position_id,
+        company_id,
     )
 
 
@@ -1303,21 +1351,10 @@ def submit_interview_answer(interview_id):
     )
 
 
-    company_name = next(
-        (
-            company.get("name")
-            for company in position.get(
-                "companies",
-                [],
-            )
-            if company.get(
-                "id"
-            ) == company_id
-        ),
-        company_id.replace(
-            "-",
-            " ",
-        ).title(),
+    company_name = _company_display_name(
+        career_id,
+        position_id,
+        company_id,
     )
 
 
@@ -1638,19 +1675,10 @@ def interview_review(interview_id):
     )
 
 
-    company_name = next(
-        (
-            company.get("name")
-            for company in position.get(
-                "companies",
-                [],
-            )
-            if company.get("id") == company_id
-        ),
-        company_id.replace(
-            "-",
-            " ",
-        ).title(),
+    company_name = _company_display_name(
+        career_id,
+        position_id,
+        company_id,
     )
 
 
@@ -2003,20 +2031,7 @@ def _lookup_career_name(career_id):
 def _lookup_company_name(career_id, position_id, company_id):
     """Return the readable company name."""
 
-    position = (
-        POSITIONS_DATA
-        .get(career_id, {})
-        .get(position_id, {})
-    )
-
-    for company in position.get("companies", []):
-        if company.get("id") == company_id:
-            return company.get("name", company_id)
-
-    if company_id:
-        return company_id.replace("-", " ").title()
-
-    return "Company"
+    return _company_display_name(career_id, position_id, company_id)
 
 
 def _format_dashboard_date(timestamp):

@@ -78,6 +78,7 @@ def save_workplace_scenario(
     public_scenario: dict[str, Any],
     private_context: dict[str, Any],
     generation_attempt_count: int,
+    generation_source: str = "gemini",
 ) -> None:
     """Persist the validated scenario on its existing canonical attempt."""
 
@@ -93,6 +94,9 @@ def save_workplace_scenario(
         raise ValueError(
             "Both public and private scenario data are required."
         )
+
+    if not isinstance(generation_source, str) or not generation_source.strip():
+        raise ValueError("A scenario generation source is required.")
 
     reference = get_database_reference(
         f"users/{user_id}/simulation_attempts/{attempt_id}"
@@ -123,7 +127,7 @@ def save_workplace_scenario(
             "public_scenario": deepcopy(public_scenario),
             "private_context": deepcopy(private_context),
             "generation": {
-                "source": "gemini",
+                "source": generation_source.strip(),
                 "generated_at": generated_at,
                 "attempt_count": generation_attempt_count,
             },
