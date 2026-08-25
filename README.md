@@ -1,4 +1,5 @@
 # CareerGrid
+CareerGrid — an AI-powered career simulation platform for practicing realistic workplace tasks and job interviews.
 
 CareerGrid is a Flask-based career-readiness platform that lets students
 practice realistic workplace tasks and structured job interviews. It combines
@@ -20,6 +21,36 @@ grading material.
 - Timed microphone-based interviews with transcription and speech analysis
 - Server-side interview rubrics and final AI evaluation
 - Dashboard history for saved attempts and reports
+
+
+## How CareerGrid works
+
+CareerGrid guides the user through a complete career-practice journey:
+
+1. Register or log in to an account.
+2. Choose a career, position, and company.
+3. Complete a realistic workplace simulation using the simulated desktop tools.
+4. Submit the work and receive an AI-generated performance evaluation.
+5. Achieve a workplace score of at least **85** to unlock the interview stage.
+6. Complete the timed microphone-based job interview.
+7. Receive the final AI evaluation and review saved results from the dashboard.
+
+```text
+Register / Login
+      ↓
+Choose Career, Position & Company
+      ↓
+Complete Workplace Simulation
+      ↓
+Receive AI Evaluation
+      ↓
+Score ≥ 85
+      ↓
+Complete Job Interview
+      ↓
+View Final Report & Dashboard History
+```
+
 
 ## Technology stack
 
