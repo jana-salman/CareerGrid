@@ -214,8 +214,7 @@ python -m pip install -r requirements-dev.txt
 
 ## Environment variables
 
-Copy `.env.example` to `.env` and replace every required placeholder. Never
-commit `.env` or the Firebase service-account JSON file.
+Never commit `.env` or the Firebase service-account JSON file.
 
 ```env
 CAREERGRID_ENV=development
