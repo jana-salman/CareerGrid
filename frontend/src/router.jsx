@@ -5,6 +5,8 @@ import CareerPage from './pages/CareerPage.jsx'
 import CompanyPage from './pages/CompanyPage.jsx'
 import HomePage from './pages/HomePage.jsx'
 import PositionPage from './pages/PositionPage.jsx'
+import DashboardPage from './pages/DashboardPage.jsx'
+import WorkplaceReportPage from './pages/WorkplaceReportPage.jsx'
 import routeDefinitions from './routeDefinitions.js'
 
 function CareerGridRoutes() {
@@ -14,11 +16,15 @@ function CareerGridRoutes() {
       <Route path="/career" element={<CareerPage />} />
       <Route path="/positions/:careerId" element={<PositionPage />} />
       <Route path="/positions/:careerId/:positionId" element={<CompanyPage />} />
+      <Route path="/dashboard" element={<DashboardPage />} />
+      <Route path="/simulation/attempts/:attemptId/report" element={<WorkplaceReportPage />} />
       {routeDefinitions.filter(({ path }) => ![
         '/',
         '/career',
         '/positions/:careerId',
         '/positions/:careerId/:positionId',
+        '/dashboard',
+        '/simulation/attempts/:attemptId/report',
       ].includes(path)).map(({ path, title }) => (
         <Route
           key={path}
