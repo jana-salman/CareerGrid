@@ -13,6 +13,7 @@ from typing import Any
 
 from google.genai import types
 
+from ai.prompts.scenario_v1 import build_frontend_scenario_prompt
 from config import get_gemini_model
 from constants import WORKPLACE_FINAL_STEP
 from services.gemini_service import get_gemini_client
@@ -575,11 +576,10 @@ def generate_frontend_workplace_scenario(
 ) -> tuple[dict, int]:
     """Generate a validated scenario, using the stable fallback on failure."""
 
-    prompt = f"""Create a fictional Junior Frontend Developer CareerGrid scenario for display company {company_name!r}.
-Use issue FE-4021 and one coherent Buy Now checkout-panel regression. Produce exactly five tasks: Mail prioritization,
-Browser investigation, VS Code patch, Browser/Terminal verification, and GitHub/final communication. Use only HTML,
-CSS, JavaScript, JSON, and Markdown. Do not reveal root_cause or expected_patch in public_scenario. Return JSON matching
-the established Frontend workplace scenario structure. Attempt identifier: {attempt_id}."""
+    prompt = build_frontend_scenario_prompt(
+        company_name=company_name,
+        attempt_id=attempt_id,
+    )
 
     try:
         with get_gemini_client() as client:
