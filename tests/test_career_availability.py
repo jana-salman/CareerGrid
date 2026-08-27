@@ -3,6 +3,8 @@ from unittest.mock import Mock
 import pytest
 
 import app as careergrid_app
+import routes.careers as career_routes
+import routes.simulations as simulation_routes
 
 
 @pytest.fixture
@@ -96,7 +98,7 @@ def test_unfinished_position_cannot_create_an_attempt(client, monkeypatch):
         side_effect=AssertionError("Coming Soon role created an attempt")
     )
     monkeypatch.setattr(
-        careergrid_app,
+        simulation_routes,
         "create_workplace_simulation_attempt",
         create_attempt,
     )
@@ -127,7 +129,7 @@ def test_implemented_company_routes_still_render(
     monkeypatch,
     position_id,
 ):
-    monkeypatch.setattr(careergrid_app, "fetch_adzuna_jobs", lambda *args, **kwargs: [])
+    monkeypatch.setattr(career_routes, "fetch_adzuna_jobs", lambda *args, **kwargs: [])
 
     response = client.get(
         f"/positions/software-developer/{position_id}"

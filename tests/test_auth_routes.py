@@ -38,6 +38,24 @@ def test_configured_secret_key_is_used_without_transformation(monkeypatch):
     assert careergrid_app._secret_key() == "test-only-explicit-key"
 
 
+def test_application_factory_registers_blueprints_and_accepts_overrides():
+    application = careergrid_app.create_app(
+        {"TESTING": True, "SECRET_KEY": "factory-test-key"}
+    )
+
+    endpoints = {rule.endpoint for rule in application.url_map.iter_rules()}
+
+    assert application.config["TESTING"] is True
+    assert application.config["SECRET_KEY"] == "factory-test-key"
+    assert {
+        "auth.login",
+        "careers.career",
+        "dashboard.dashboard",
+        "simulations.start_workplace_simulation",
+        "interviews.submit_interview_answer",
+    } <= endpoints
+
+
 def test_registration_normalizes_email_and_hashes_password(client, monkeypatch):
     create_user = Mock()
     monkeypatch.setattr(auth_routes, "get_user_by_email", lambda email: None)

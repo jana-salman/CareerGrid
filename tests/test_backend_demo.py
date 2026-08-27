@@ -5,6 +5,10 @@ from unittest.mock import Mock
 import pytest
 
 import app as careergrid_app
+import routes.careers as career_routes
+import routes.interviews as interview_routes
+import routes.simulations as simulation_routes
+from services.career_service import get_company_display_name
 from services.backend_demo_interview_service import (
     get_backend_demo_interview,
 )
@@ -65,7 +69,7 @@ def _project_file(scenario, path):
 
 def test_backend_companies_page_shows_demo_before_live_jobs(client, monkeypatch):
     monkeypatch.setattr(
-        careergrid_app,
+        career_routes,
         "fetch_adzuna_jobs",
         lambda *args, **kwargs: [
             {
@@ -94,7 +98,7 @@ def test_backend_companies_page_shows_demo_before_live_jobs(client, monkeypatch)
 
 def test_frontend_companies_page_does_not_offer_backend_demo(client, monkeypatch):
     monkeypatch.setattr(
-        careergrid_app,
+        career_routes,
         "fetch_adzuna_jobs",
         lambda *args, **kwargs: [],
     )
@@ -113,17 +117,17 @@ def test_frontend_companies_page_does_not_offer_backend_demo(client, monkeypatch
 def test_demo_start_uses_predefined_scenario_without_gemini(client, monkeypatch):
     saved = {}
     monkeypatch.setattr(
-        careergrid_app,
+        simulation_routes,
         "create_workplace_simulation_attempt",
         lambda **kwargs: "attempt-demo",
     )
     monkeypatch.setattr(
-        careergrid_app,
+        simulation_routes,
         "generate_workplace_scenario",
         Mock(side_effect=AssertionError("Gemini generator must not be called")),
     )
     monkeypatch.setattr(
-        careergrid_app,
+        simulation_routes,
         "save_workplace_scenario",
         lambda **kwargs: saved.update(kwargs),
     )
@@ -236,22 +240,22 @@ def test_normal_backend_start_still_uses_gemini_generator(client, monkeypatch):
     generated = Mock(return_value=(scenario, 2))
     saved = {}
     monkeypatch.setattr(
-        careergrid_app,
+        simulation_routes,
         "create_workplace_simulation_attempt",
         lambda **kwargs: "attempt-normal",
     )
     monkeypatch.setattr(
-        careergrid_app,
+        simulation_routes,
         "generate_workplace_scenario",
         generated,
     )
     monkeypatch.setattr(
-        careergrid_app,
+        simulation_routes,
         "get_backend_demo_workplace_scenario",
         Mock(side_effect=AssertionError("Demo scenario must not be used")),
     )
     monkeypatch.setattr(
-        careergrid_app,
+        simulation_routes,
         "save_workplace_scenario",
         lambda **kwargs: saved.update(kwargs),
     )
@@ -283,27 +287,27 @@ def test_frontend_start_still_uses_its_dedicated_generator(client, monkeypatch):
     }
     frontend_generator = Mock(return_value=(frontend_scenario, 1))
     monkeypatch.setattr(
-        careergrid_app,
+        simulation_routes,
         "create_workplace_simulation_attempt",
         lambda **kwargs: "attempt-frontend",
     )
     monkeypatch.setattr(
-        careergrid_app,
+        simulation_routes,
         "generate_frontend_workplace_scenario",
         frontend_generator,
     )
     monkeypatch.setattr(
-        careergrid_app,
+        simulation_routes,
         "generate_workplace_scenario",
         Mock(side_effect=AssertionError("Generic Backend generator must not run")),
     )
     monkeypatch.setattr(
-        careergrid_app,
+        simulation_routes,
         "get_backend_demo_workplace_scenario",
         Mock(side_effect=AssertionError("Backend demo scenario must not run")),
     )
     monkeypatch.setattr(
-        careergrid_app,
+        simulation_routes,
         "save_workplace_scenario",
         Mock(),
     )
@@ -328,17 +332,17 @@ def test_frontend_start_still_uses_its_dedicated_generator(client, monkeypatch):
 def test_demo_attempt_uses_predefined_interview_without_gemini(client, monkeypatch):
     created = {}
     monkeypatch.setattr(
-        careergrid_app,
+        interview_routes,
         "get_simulation_attempt",
         lambda **kwargs: _completed_attempt(),
     )
     monkeypatch.setattr(
-        careergrid_app,
+        interview_routes,
         "generate_interview_questions",
         Mock(side_effect=AssertionError("Gemini question generation must not run")),
     )
     monkeypatch.setattr(
-        careergrid_app,
+        interview_routes,
         "create_interview_attempt",
         lambda **kwargs: created.update(kwargs) or "interview-demo",
     )
@@ -361,22 +365,22 @@ def test_normal_attempt_still_calls_gemini_interview_generation(client, monkeypa
     generated_interview = get_backend_demo_interview()
     generator = Mock(return_value=generated_interview)
     monkeypatch.setattr(
-        careergrid_app,
+        interview_routes,
         "get_simulation_attempt",
         lambda **kwargs: _completed_attempt(company_id="technova"),
     )
     monkeypatch.setattr(
-        careergrid_app,
+        interview_routes,
         "generate_interview_questions",
         generator,
     )
     monkeypatch.setattr(
-        careergrid_app,
+        interview_routes,
         "get_backend_demo_interview",
         Mock(side_effect=AssertionError("Demo interview must not be used")),
     )
     monkeypatch.setattr(
-        careergrid_app,
+        interview_routes,
         "create_interview_attempt",
         lambda **kwargs: "interview-normal",
     )
@@ -447,7 +451,7 @@ def test_private_rubrics_are_not_rendered_in_interview_browser_page(
         }
     )
     monkeypatch.setattr(
-        careergrid_app,
+        interview_routes,
         "get_interview_attempt",
         lambda **kwargs: interview,
     )
@@ -496,20 +500,20 @@ def test_fourth_demo_answer_completes_interview_using_actual_question_count(
         }
     )
     complete_attempt = Mock()
-    monkeypatch.setattr(careergrid_app, "get_interview_attempt", get_attempt)
+    monkeypatch.setattr(interview_routes, "get_interview_attempt", get_attempt)
     monkeypatch.setattr(
-        careergrid_app,
+        interview_routes,
         "analyze_spoken_answer",
         Mock(return_value={"question_score": 84, "transcript": "Answer four"}),
     )
-    monkeypatch.setattr(careergrid_app, "save_interview_answer", Mock())
+    monkeypatch.setattr(interview_routes, "save_interview_answer", Mock())
     monkeypatch.setattr(
-        careergrid_app,
+        interview_routes,
         "generate_final_interview_evaluation",
         final_evaluation,
     )
     monkeypatch.setattr(
-        careergrid_app,
+        interview_routes,
         "complete_interview_attempt",
         complete_attempt,
     )
@@ -546,17 +550,17 @@ def test_interview_storage_failure_does_not_expose_internal_exception(
         }
     )
     monkeypatch.setattr(
-        careergrid_app,
+        interview_routes,
         "get_interview_attempt",
         lambda **kwargs: interview,
     )
     monkeypatch.setattr(
-        careergrid_app,
+        interview_routes,
         "analyze_spoken_answer",
         Mock(return_value={"question_score": 75, "transcript": "Answer"}),
     )
     monkeypatch.setattr(
-        careergrid_app,
+        interview_routes,
         "save_interview_answer",
         Mock(side_effect=RuntimeError("private database detail")),
     )
@@ -637,7 +641,7 @@ def test_invalid_backend_demo_source_combinations_are_rejected(
         side_effect=AssertionError("Invalid demo request created an attempt")
     )
     monkeypatch.setattr(
-        careergrid_app,
+        simulation_routes,
         "create_workplace_simulation_attempt",
         create_attempt,
     )
@@ -652,7 +656,7 @@ def test_invalid_backend_demo_source_combinations_are_rejected(
 
 
 def test_demo_company_display_name_is_consistent():
-    assert careergrid_app._company_display_name(
+    assert get_company_display_name(
         "software-developer",
         "backend-developer",
         BACKEND_DEMO_COMPANY_ID,

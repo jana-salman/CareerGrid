@@ -1,6 +1,7 @@
 from unittest.mock import Mock
 
 import app as careergrid_app
+import routes.simulations as simulation_routes
 from services.simulation_storage import get_user_visible_evaluation
 
 
@@ -32,7 +33,7 @@ def test_public_attempt_api_never_returns_private_context(monkeypatch):
             },
         }
     )
-    monkeypatch.setattr(careergrid_app, "get_simulation_attempt", get_attempt)
+    monkeypatch.setattr(simulation_routes, "get_simulation_attempt", get_attempt)
     careergrid_app.app.config.update(TESTING=True)
 
     with careergrid_app.app.test_client() as client:

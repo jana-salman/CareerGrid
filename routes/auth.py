@@ -22,6 +22,25 @@ from services.user_service import (
 
 auth_bp = Blueprint("auth", __name__)
 
+PUBLIC_ENDPOINTS = {
+    "careers.home",
+    "auth.login",
+    "auth.register",
+    "auth.logout",
+    "static",
+}
+
+
+@auth_bp.before_app_request
+def protect_pages():
+    """Redirect anonymous visitors away from private CareerGrid pages."""
+
+    if request.endpoint == "dashboard.dashboard" and "user_id" not in session:
+        return redirect(url_for("auth.login"))
+
+    if request.endpoint not in PUBLIC_ENDPOINTS and "user_email" not in session:
+        return redirect(url_for("careers.home"))
+
 
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
@@ -64,7 +83,7 @@ def login():
         session["user_email"] = user["email"]
         session["user_name"] = user["full_name"]
 
-        return redirect(url_for("home"))
+        return redirect(url_for("careers.home"))
 
     return render_template("login.html", error=error, message=message)
 
@@ -113,4 +132,4 @@ def logout():
 
     session.clear()
 
-    return redirect(url_for("home"))
+    return redirect(url_for("careers.home"))

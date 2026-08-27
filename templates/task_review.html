@@ -29,7 +29,7 @@
 
             <a
                 class="review-brand"
-                href="{{ url_for('career') }}"
+                href="{{ url_for('careers.career') }}"
             >
                 <span class="review-brand-icon">
                     CG
@@ -44,7 +44,7 @@
             <a
                 class="back-workspace-link"
                 href="{{ url_for(
-                    'workplace_attempt_workspace',
+                    'simulations.workplace_attempt_workspace',
                     attempt_id=attempt_id
                 ) }}"
             >
@@ -427,7 +427,7 @@
                 {% if interview_unlocked %}
 
                     <form
-                        action="{{ url_for('start_interview', attempt_id=attempt_id) }}"
+                        action="{{ url_for('interviews.start_interview', attempt_id=attempt_id) }}"
                         method="POST"
                         class="interview-launch-form"
                     >
@@ -466,7 +466,7 @@
                 <div class="next-actions-buttons">
 
                     <form
-                        action="{{ url_for('start_workplace_simulation') }}"
+                        action="{{ url_for('simulations.start_workplace_simulation') }}"
                         method="POST"
                     >
 
@@ -511,7 +511,7 @@
 
                     <a
                         class="review-button review-button--secondary"
-                        href="{{ url_for('career') }}"
+                        href="{{ url_for('careers.career') }}"
                     >
                         Explore Careers
                     </a>
@@ -521,7 +521,7 @@
 
                 <a
                     class="dashboard-link"
-                    href="{{ url_for('dashboard') }}"
+                    href="{{ url_for('dashboard.dashboard') }}"
                 >
                     View Dashboard →
                 </a>
@@ -536,7 +536,7 @@
 {% if interview_unlocked %}
 
 <form
-    action="{{ url_for('start_interview', attempt_id=attempt_id) }}"
+    action="{{ url_for('interviews.start_interview', attempt_id=attempt_id) }}"
     method="POST"
     class="interview-launch-form"
 >

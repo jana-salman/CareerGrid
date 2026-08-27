@@ -10,14 +10,14 @@
 <body class="home-page">
     <header class="home-header">
         <nav class="home-navbar" aria-label="Primary navigation">
-            <a class="home-brand" href="{{ url_for('home') }}" aria-label="CareerGrid home">
+            <a class="home-brand" href="{{ url_for('careers.home') }}" aria-label="CareerGrid home">
                 <span class="home-brand-mark" aria-hidden="true">C</span>
                 <span>CareerGrid</span>
             </a>
 
             <div class="home-nav-links">
-                <a class="is-active" href="{{ url_for('home') }}" aria-current="page">Home</a>
-                <a href="{{ url_for('career') }}">Careers</a>
+                <a class="is-active" href="{{ url_for('careers.home') }}" aria-current="page">Home</a>
+                <a href="{{ url_for('careers.career') }}">Careers</a>
                 <a class="home-signout" href="{{ url_for('auth.logout') }}">Sign Out</a>
             </div>
         </nav>
@@ -35,7 +35,7 @@
                     Explore career paths, complete realistic workplace tasks, practice interviews,
                     and receive personalized AI-powered feedback.
                 </p>
-                <a class="home-button home-button-primary" href="{{ url_for('career') }}">
+                <a class="home-button home-button-primary" href="{{ url_for('careers.career') }}">
                     Explore Careers
                     <span aria-hidden="true">&rarr;</span>
                 </a>

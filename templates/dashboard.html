@@ -18,12 +18,12 @@
 <body>
     <div class="career-page dashboard-page">
         <nav class="navbar dashboard-nav" aria-label="Main navigation">
-            <a class="dashboard-brand" href="{{ url_for('career') }}">CareerGrid</a>
+            <a class="dashboard-brand" href="{{ url_for('careers.career') }}">CareerGrid</a>
             <div class="dashboard-nav-links">
-                <a href="{{ url_for('career') }}">Home</a>
+                <a href="{{ url_for('careers.career') }}">Home</a>
                 <a
                     class="is-active"
-                    href="{{ url_for('dashboard') }}"
+                    href="{{ url_for('dashboard.dashboard') }}"
                     aria-current="page"
                 >Dashboard</a>
                 <a href="{{ url_for('auth.logout') }}">Log out</a>
@@ -151,7 +151,7 @@
                             {% elif attempt.can_resume %}
                             <a
                                 class="dashboard-action dashboard-action--primary"
-                                href="{{ url_for('workplace_attempt_workspace', attempt_id=attempt.attempt_id) }}"
+                                href="{{ url_for('simulations.workplace_attempt_workspace', attempt_id=attempt.attempt_id) }}"
                             >Resume Workspace</a>
                             {% else %}
                             <span class="review-unavailable">No review available</span>
@@ -175,7 +175,7 @@
                     </p>
                     <a
                         class="dashboard-action dashboard-action--primary"
-                        href="{{ url_for('career') }}"
+                        href="{{ url_for('careers.career') }}"
                     >Explore Careers</a>
                 </div>
                 {% endif %}
