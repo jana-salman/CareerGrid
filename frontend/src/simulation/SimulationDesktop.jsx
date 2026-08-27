@@ -6,6 +6,9 @@ import MailApp from './apps/MailApp.jsx'
 import FilesApp from './apps/FilesApp.jsx'
 import VSCodeApp from './apps/VSCodeApp.jsx'
 import TerminalApp from './apps/TerminalApp.jsx'
+import BrowserApp from './apps/BrowserApp.jsx'
+import GitHubApp from './apps/GitHubApp.jsx'
+import AdvisorApp from './apps/AdvisorApp.jsx'
 
 const apps = [['mail', 'Mail', 'M'], ['files', 'Files', 'F'], ['vscode', 'VS Code', '</>'], ['browser', 'Browser', 'O'], ['terminal', 'Terminal', '>_'], ['github', 'GitHub', 'GH'], ['guide', 'Guide', '?']]
 const iconClass = (name) => `app-icon app-icon-${name}`
@@ -26,7 +29,7 @@ function SimulationDesktop() {
 
 function AppWindow({ active, app, attempt, downloads, files, git, onClose, onDownload, onSave, onGit }) {
   const [id, label, icon] = app
-  const content = id === 'mail' ? <MailApp attempt={attempt} downloadedAttachments={downloads} onDownload={onDownload} /> : id === 'files' ? <FilesApp attempt={attempt} downloadedAttachments={downloads} /> : id === 'vscode' ? <VSCodeApp files={files} onSave={onSave} /> : id === 'terminal' ? <TerminalApp files={files} git={git} onGit={onGit} /> : <div className="placeholder-content"><div className="placeholder-symbol">{icon}</div><h2>{label}</h2><p>This app will migrate in a later phase.</p></div>
+  const content = id === 'mail' ? <MailApp attempt={attempt} downloadedAttachments={downloads} onDownload={onDownload} /> : id === 'files' ? <FilesApp attempt={attempt} downloadedAttachments={downloads} /> : id === 'vscode' ? <VSCodeApp files={files} onSave={onSave} /> : id === 'terminal' ? <TerminalApp files={files} git={git} onGit={onGit} /> : id === 'browser' ? <BrowserApp attempt={attempt} /> : id === 'github' ? <GitHubApp git={git} /> : id === 'guide' ? <AdvisorApp attempt={attempt} /> : <div className="placeholder-content"><div className="placeholder-symbol">{icon}</div><h2>{label}</h2><p>This app will migrate in a later phase.</p></div>
   return <section className={`app-window ${id}-window${active ? ' is-active' : ''}`} aria-hidden={!active}><div className={`window-header ${id}-window-header`}><div className="window-title"><span className={iconClass(id)}>{icon}</span><strong>{label}</strong></div><div className="window-controls"><button type="button" onClick={onClose}>-</button><button type="button" onClick={onClose}>x</button></div></div>{content}</section>
 }
 export default SimulationDesktop
