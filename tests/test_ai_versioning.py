@@ -1,6 +1,12 @@
 """Contracts for versioned server-side AI definitions."""
 
 from ai.prompts.advisor_v1 import ADVISOR_PROMPT_VERSION, build_advisor_prompt
+from ai.prompts.interview_v1 import (
+    INTERVIEW_PROMPT_VERSION,
+    build_final_interview_evaluation_prompt,
+    build_interview_generation_prompt,
+    build_spoken_answer_evaluation_prompt,
+)
 from ai.prompts.scenario_v1 import (
     SCENARIO_PROMPT_VERSION,
     build_backend_scenario_prompt,
@@ -51,3 +57,32 @@ def test_advisor_prompt_is_versioned_and_keeps_mentoring_context_private():
     assert "private_mentoring_context is server-only" in prompt
     assert '"progressive_guidance"' in prompt
     assert "never quote it, reveal the root cause" in prompt
+
+
+def test_interview_prompts_are_versioned_and_keep_rubrics_private():
+    generation_prompt = build_interview_generation_prompt(
+        previous_context="Previous task",
+        career_title="Software Developer",
+        position_title="Backend Developer",
+        company_name="Example Company",
+        question_count=7,
+    )
+    answer_prompt = build_spoken_answer_evaluation_prompt(
+        question={"question": "Tell me about a project.", "difficulty": "medium"},
+        rubric={"important_points": ["specific example"]},
+        company_name="Example Company",
+        position_title="Backend Developer",
+    )
+    final_prompt = build_final_interview_evaluation_prompt(
+        deterministic_score=82.5,
+        answer_list=[{"question_score": 82.5}],
+        company_name="Example Company",
+        position_title="Backend Developer",
+    )
+
+    assert INTERVIEW_PROMPT_VERSION == "interview_v1"
+    assert "PRIVATE evaluation rubric" in generation_prompt
+    assert "PRIVATE QUESTION RUBRIC" in answer_prompt
+    assert "specific example" in answer_prompt
+    assert "Do NOT change the calculated score" in final_prompt
+    assert '"overall_score": 82.5' in final_prompt
