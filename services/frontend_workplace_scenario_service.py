@@ -14,6 +14,7 @@ from typing import Any
 from google.genai import types
 
 from ai.prompts.scenario_v1 import build_frontend_scenario_prompt
+from ai.rubrics.workplace_v1 import build_frontend_demo_private_rubric
 from config import get_gemini_model
 from constants import WORKPLACE_FINAL_STEP
 from services.gemini_service import get_gemini_client
@@ -317,36 +318,7 @@ checkoutButton.addEventListener('click', openCheckoutPanel);""",
         ],
         "viewport_presets": {"desktop": 1440, "tablet": 768, "mobile": 375},
     }
-    private = {
-        "root_cause": (
-            "product.js queries #checkout-btn while the semantic button uses "
-            "#buy-now-btn, leaving checkoutButton null."
-        ),
-        "expected_patch": {
-            "product_js": (
-                "Select #buy-now-btn after DOM readiness, guard missing elements, "
-                "and retain native button keyboard behavior."
-            )
-        },
-        "acceptable_alternatives": [
-            "getElementById('buy-now-btn')",
-            "deferred script with a null guard",
-            "DOMContentLoaded initialization with a null guard",
-        ],
-        "verification_expectations": [
-            "desktop click",
-            "375px mobile",
-            "Enter and Space",
-            "visible focus",
-            "no console errors",
-            "repeated clicks",
-            "build and lint",
-        ],
-        "scoring_notes": {
-            "difficulty": "junior",
-            "scope": "focused frontend regression",
-        },
-    }
+    private = build_frontend_demo_private_rubric()
 
     return validate_frontend_workplace_scenario(
         {"public_scenario": public, "private_context": private}

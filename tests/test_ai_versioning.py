@@ -16,6 +16,14 @@ from ai.prompts.workplace_evaluation_v1 import (
     WORKPLACE_EVALUATION_PROMPT_VERSION,
     build_workplace_evaluation_prompt,
 )
+from ai.rubrics.interview_v1 import (
+    INTERVIEW_RUBRIC_VERSION,
+    build_backend_demo_interview_rubrics,
+)
+from ai.rubrics.workplace_v1 import (
+    WORKPLACE_RUBRIC_VERSION,
+    build_frontend_demo_private_rubric,
+)
 
 
 def test_scenario_prompt_version_and_private_boundaries_are_explicit():
@@ -86,3 +94,28 @@ def test_interview_prompts_are_versioned_and_keep_rubrics_private():
     assert "specific example" in answer_prompt
     assert "Do NOT change the calculated score" in final_prompt
     assert '"overall_score": 82.5' in final_prompt
+
+
+def test_workplace_rubric_is_versioned_and_contains_private_demo_criteria():
+    rubric = build_frontend_demo_private_rubric()
+
+    assert WORKPLACE_RUBRIC_VERSION == "workplace_v1"
+    assert "#checkout-btn" in rubric["root_cause"]
+    assert "product_js" in rubric["expected_patch"]
+    assert "verification_expectations" in rubric
+
+
+def test_interview_rubric_is_versioned_and_matches_all_demo_questions():
+    rubrics = build_backend_demo_interview_rubrics()
+
+    assert INTERVIEW_RUBRIC_VERSION == "interview_v1"
+    assert set(rubrics) == {"1", "2", "3", "4"}
+    assert all(
+        set(rubric)
+        == {
+            "excellent_answer_should_include",
+            "important_points",
+            "red_flags",
+        }
+        for rubric in rubrics.values()
+    )
