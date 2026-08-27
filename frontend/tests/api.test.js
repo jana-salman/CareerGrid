@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
 
 import { ApiError, apiRequest } from '../src/services/api.js'
+import { getAuthenticatedSession } from '../src/services/authApi.js'
 import { submitInterviewAnswer } from '../src/services/interviewApi.js'
 import {
   getSimulationAttempt,
@@ -85,6 +86,29 @@ test('health service calls the real relative API endpoint', async () => {
 
   assert.equal(capturedPath, '/api/health')
   assert.equal(result.status, 'ok')
+})
+
+test('authentication service uses the protected session endpoint', async () => {
+  let capturedPath
+  globalThis.fetch = async (path) => {
+    capturedPath = path
+    return new Response(
+      JSON.stringify({
+        authenticated: true,
+        user: { email: 'student@example.com', id: 'user-1', name: 'Student' },
+      }),
+      {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+      },
+    )
+  }
+
+  const result = await getAuthenticatedSession()
+
+  assert.equal(capturedPath, '/api/auth/session')
+  assert.equal(result.authenticated, true)
+  assert.equal(result.user.id, 'user-1')
 })
 
 test('simulation services encode identifiers and use the backend payload contract', async () => {

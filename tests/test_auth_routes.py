@@ -107,3 +107,17 @@ def test_login_creates_only_the_expected_session_identity(client, monkeypatch):
             "user_id": "user-123",
             "user_name": "Ada Student",
         }
+
+
+def test_logout_clears_the_existing_flask_session(client):
+    with client.session_transaction() as user_session:
+        user_session["user_id"] = "user-123"
+        user_session["user_email"] = "student@example.com"
+        user_session["user_name"] = "Student User"
+
+    response = client.get("/logout")
+
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/")
+    with client.session_transaction() as user_session:
+        assert dict(user_session) == {}

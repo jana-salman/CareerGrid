@@ -2,6 +2,7 @@
 
 from flask import (
     Blueprint,
+    jsonify,
     redirect,
     render_template,
     request,
@@ -36,10 +37,23 @@ PUBLIC_ENDPOINTS = {
 def protect_pages():
     """Redirect anonymous visitors away from private CareerGrid pages."""
 
+    if request.endpoint in PUBLIC_ENDPOINTS:
+        return None
+
+    if request.path.startswith("/api/") and (
+        "user_id" not in session or "user_email" not in session
+    ):
+        return jsonify(
+            {
+                "authenticated": False,
+                "error": "Authentication required.",
+            }
+        ), 401
+
     if request.endpoint == "dashboard.dashboard" and "user_id" not in session:
         return redirect(url_for("auth.login"))
 
-    if request.endpoint not in PUBLIC_ENDPOINTS and "user_email" not in session:
+    if "user_email" not in session:
         return redirect(url_for("careers.home"))
 
 
