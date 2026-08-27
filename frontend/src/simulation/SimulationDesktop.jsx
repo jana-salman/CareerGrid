@@ -1,55 +1,32 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-
 import { getFrontendSimulationProgress, getSimulationAttempt } from '../services/simulationApi.js'
 import TaskPanel from './TaskPanel.jsx'
 import MailApp from './apps/MailApp.jsx'
 import FilesApp from './apps/FilesApp.jsx'
+import VSCodeApp from './apps/VSCodeApp.jsx'
+import TerminalApp from './apps/TerminalApp.jsx'
 
-const apps = [
-  ['mail', 'Mail', 'M'], ['files', 'Files', 'F'], ['vscode', 'VS Code', '</>'],
-  ['browser', 'Browser', 'O'], ['terminal', 'Terminal', '>_'], ['github', 'GitHub', 'GH'], ['guide', 'Guide', '?'],
-]
-
-function iconClass(name) { return `app-icon app-icon-${name === 'vscode' ? 'vscode' : name}` }
+const apps = [['mail', 'Mail', 'M'], ['files', 'Files', 'F'], ['vscode', 'VS Code', '</>'], ['browser', 'Browser', 'O'], ['terminal', 'Terminal', '>_'], ['github', 'GitHub', 'GH'], ['guide', 'Guide', '?']]
+const iconClass = (name) => `app-icon app-icon-${name}`
 
 function SimulationDesktop() {
   const { attemptId } = useParams()
-  const [attempt, setAttempt] = useState(null)
-  const [progress, setProgress] = useState(null)
-  const [activeApp, setActiveApp] = useState(null)
-  const [now, setNow] = useState(new Date())
-  const [error, setError] = useState('')
-  const [downloadedAttachments, setDownloadedAttachments] = useState([])
-
-  useEffect(() => {
-    let active = true
-    getSimulationAttempt(attemptId)
-      .then(async (loadedAttempt) => {
-        const loadedProgress = loadedAttempt.position_id === 'frontend-developer'
-          ? await getFrontendSimulationProgress(attemptId)
-          : { current_step: 1, status: loadedAttempt.status }
-        if (active) { setAttempt(loadedAttempt); setProgress(loadedProgress) }
-      })
-      .catch((requestError) => active && setError(requestError.message))
-    return () => { active = false }
-  }, [attemptId])
-  useEffect(() => { const timer = window.setInterval(() => setNow(new Date()), 30000); return () => window.clearInterval(timer) }, [])
-
+  const [attempt, setAttempt] = useState(null); const [progress, setProgress] = useState(null); const [activeApp, setActiveApp] = useState(null); const [error, setError] = useState('')
+  const [downloads, setDownloads] = useState([]); const [files, setFiles] = useState([]); const [git, setGit] = useState({ branch: 'main', modified: [], staged: [], commits: [], pushed: false })
+  useEffect(() => { let active = true; getSimulationAttempt(attemptId).then(async (loaded) => { const loadedProgress = loaded.position_id === 'frontend-developer' ? await getFrontendSimulationProgress(attemptId) : { current_step: 1, status: loaded.status }; if (active) { setAttempt(loaded); setProgress(loadedProgress); setFiles(loaded.public_scenario?.project?.files || []) } }).catch((err) => active && setError(err.message)); return () => { active = false } }, [attemptId])
   if (error) return <main className="workspace"><p>{error}</p></main>
   if (!attempt || !progress) return <main className="workspace"><p>Loading workspace...</p></main>
-  const scenario = attempt.public_scenario || {}
-  const title = scenario.position_title || attempt.position_id?.replaceAll('-', ' ') || 'CareerGrid'
-  const company = scenario.company_name || attempt.company_id || 'your company'
-  const app = apps.find(([id]) => id === activeApp)
-  const download = (attachment) => setDownloadedAttachments((items) => items.some((item) => item.name === attachment.name) ? items : [...items, attachment])
-  return <main className="workspace" id="careergrid-workspace"><header className="workspace-topbar"><div className="workspace-brand"><div className="brand-icon">CG</div><div className="brand-text"><strong>CareerGrid</strong><span>Interactive Career Simulation</span></div></div><div className="workspace-user"><div className="workspace-clock"><strong>{now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong><span>{now.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}</span></div><div className="user-avatar">U</div><div className="user-information"><strong>User</strong><span>{title}</span></div></div></header><section className={`desktop${activeApp ? ' has-active-app' : ''}`}><aside className="app-dock">{apps.map(([id, label, icon]) => <button className={`dock-app${activeApp === id ? ' is-open is-active' : ''}`} type="button" key={id} aria-pressed={activeApp === id} onClick={() => setActiveApp(id)}><span className={iconClass(id)}>{icon}</span><span>{label}</span></button>)}</aside><section className="desktop-home"><div className="welcome-card"><span className="welcome-label">Workspace ready</span><h1>Welcome to your {title} workspace.</h1><p>You're working with <strong>{company}</strong>. Check your inbox to see what needs your attention today.</p><button type="button" className="open-mail-btn" onClick={() => setActiveApp('mail')}>Open Mail</button></div><div className="role-card"><span>Role</span><strong>{title}</strong><span>Company</span><strong>{company}</strong></div></section>{apps.map((item) => <AppWindow active={activeApp === item[0]} app={item} attempt={attempt} downloadedAttachments={downloadedAttachments} key={item[0]} onDownload={download} onClose={() => setActiveApp(null)} />)}{attempt.position_id === 'frontend-developer' && <TaskPanel attempt={attempt} progress={progress} />}</section></main>
+  const scenario = attempt.public_scenario || {}; const title = attempt.position_id?.replaceAll('-', ' ') || 'CareerGrid'; const company = scenario.company_name || attempt.company_id || 'your company'
+  const download = (item) => setDownloads((items) => items.some((entry) => entry.name === item.name) ? items : [...items, item])
+  const save = (path, content) => { setFiles((items) => items.map((file) => file.path === path ? { ...file, content } : file)); setGit((state) => ({ ...state, modified: state.modified.includes(path) ? state.modified : [...state.modified, path] })) }
+  const gitAction = (action, value) => setGit((state) => action === 'branch' ? { ...state, branch: value || state.branch } : action === 'stage' ? { ...state, staged: [...new Set([...state.staged, ...value])] } : action === 'commit' && value ? { ...state, modified: state.modified.filter((path) => !state.staged.includes(path)), staged: [], commits: [...state.commits, value] } : action === 'push' ? { ...state, pushed: true } : state)
+  return <main className="workspace"><header className="workspace-topbar"><div className="workspace-brand"><div className="brand-icon">CG</div><div className="brand-text"><strong>CareerGrid</strong><span>Interactive Career Simulation</span></div></div><div className="workspace-user"><div className="user-avatar">U</div><div className="user-information"><strong>User</strong><span>{title}</span></div></div></header><section className={`desktop${activeApp ? ' has-active-app' : ''}`}><aside className="app-dock">{apps.map(([id, label, icon]) => <button className={`dock-app${activeApp === id ? ' is-open is-active' : ''}`} type="button" key={id} onClick={() => setActiveApp(id)}><span className={iconClass(id)}>{icon}</span><span>{label}</span></button>)}</aside><section className="desktop-home"><div className="welcome-card"><span className="welcome-label">Workspace ready</span><h1>Welcome to your {title} workspace.</h1><p>You're working with <strong>{company}</strong>.</p><button className="open-mail-btn" type="button" onClick={() => setActiveApp('mail')}>Open Mail</button></div></section>{apps.map((app) => <AppWindow active={activeApp === app[0]} app={app} attempt={attempt} downloads={downloads} files={files} git={git} key={app[0]} onClose={() => setActiveApp(null)} onDownload={download} onSave={save} onGit={gitAction} />)}{attempt.position_id === 'frontend-developer' && <TaskPanel attempt={attempt} progress={progress} />}</section></main>
 }
 
-function AppWindow({ active, app, attempt, downloadedAttachments, onDownload, onClose }) {
-  const [, label, icon] = app
-  const content = app[0] === 'mail' ? <MailApp attempt={attempt} downloadedAttachments={downloadedAttachments} onDownload={onDownload} /> : app[0] === 'files' ? <FilesApp attempt={attempt} downloadedAttachments={downloadedAttachments} /> : <div className="placeholder-content"><div className="placeholder-symbol">{icon}</div><h2>{label}</h2><p>This app shell is ready. Its existing workspace behavior will remain available during its dedicated migration phase.</p></div>
-  return <section className={`app-window ${app[0]}-window${active ? ' is-active' : ''}`} aria-hidden={!active}><div className={`window-header ${app[0]}-window-header`}><div className="window-title"><span className={iconClass(app[0])}>{icon}</span><strong>{label}</strong></div><div className="window-controls"><button type="button" aria-label={`Minimize ${label}`} onClick={onClose}>-</button><button type="button" aria-label={`Close ${label}`} onClick={onClose}>x</button></div></div>{content}</section>
+function AppWindow({ active, app, attempt, downloads, files, git, onClose, onDownload, onSave, onGit }) {
+  const [id, label, icon] = app
+  const content = id === 'mail' ? <MailApp attempt={attempt} downloadedAttachments={downloads} onDownload={onDownload} /> : id === 'files' ? <FilesApp attempt={attempt} downloadedAttachments={downloads} /> : id === 'vscode' ? <VSCodeApp files={files} onSave={onSave} /> : id === 'terminal' ? <TerminalApp files={files} git={git} onGit={onGit} /> : <div className="placeholder-content"><div className="placeholder-symbol">{icon}</div><h2>{label}</h2><p>This app will migrate in a later phase.</p></div>
+  return <section className={`app-window ${id}-window${active ? ' is-active' : ''}`} aria-hidden={!active}><div className={`window-header ${id}-window-header`}><div className="window-title"><span className={iconClass(id)}>{icon}</span><strong>{label}</strong></div><div className="window-controls"><button type="button" onClick={onClose}>-</button><button type="button" onClick={onClose}>x</button></div></div>{content}</section>
 }
-
 export default SimulationDesktop
