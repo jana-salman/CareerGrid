@@ -24,3 +24,7 @@ Thumbs.db
 firebase-service-account.json
 firebase-service-account*.json
 *firebase-adminsdk*.json
+
+# React/Vite build artifacts
+frontend/node_modules/
+frontend/dist/
