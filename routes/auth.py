@@ -23,6 +23,7 @@ from services.user_service import (
 auth_bp = Blueprint("auth", __name__)
 
 PUBLIC_ENDPOINTS = {
+    "api.health",
     "careers.home",
     "auth.login",
     "auth.register",

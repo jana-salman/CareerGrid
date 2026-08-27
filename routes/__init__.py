@@ -2,6 +2,7 @@
 
 from flask import Flask
 
+from routes.api import api_bp
 from routes.auth import auth_bp
 from routes.careers import careers_bp
 from routes.dashboard import dashboard_bp
@@ -13,6 +14,7 @@ def register_blueprints(app: Flask) -> None:
     """Attach all route groups to a CareerGrid application."""
 
     app.register_blueprint(auth_bp)
+    app.register_blueprint(api_bp)
     app.register_blueprint(careers_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(simulations_bp)
