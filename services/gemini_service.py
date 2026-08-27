@@ -2,12 +2,9 @@
 
 import os
 
-from dotenv import load_dotenv
 from google import genai
 
-
-# Load variables from the .env file.
-load_dotenv()
+from config import get_gemini_model
 
 
 def get_gemini_client():
@@ -34,10 +31,7 @@ def check_gemini_connection() -> str:
     This is intentionally not an automated test because it consumes an external
     API and requires credentials and network access.
     """
-    model = os.getenv(
-        "GEMINI_MODEL",
-        "gemini-3.1-flash-lite"
-    )
+    model = get_gemini_model()
 
     client = get_gemini_client()
 

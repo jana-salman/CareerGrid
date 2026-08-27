@@ -10,6 +10,7 @@ from typing import Any
 
 from google.genai import types
 
+from config import get_gemini_model
 from services.gemini_service import get_gemini_client
 
 
@@ -352,7 +353,7 @@ def generate_workplace_scenario(
     blueprint = SCENARIO_BLUEPRINTS.get((career_id, position_id))
     if not blueprint:
         raise ScenarioGenerationError("No scenario blueprint is available for this role.")
-    model = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
+    model = get_gemini_model()
     prompt = f"""Create ONE strict JSON object for a CareerGrid educational workplace simulation.
 Role: {blueprint['role']}; company identifier: {company_id}; attempt identifier: {attempt_id}.
 Target competencies: {', '.join(blueprint['competencies'])}.

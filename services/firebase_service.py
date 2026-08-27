@@ -4,16 +4,10 @@ import os
 from pathlib import Path
 
 import firebase_admin
-from dotenv import load_dotenv
 from firebase_admin import credentials, db
 
+from config import BASE_DIR
 
-# Main CareerGrid folder
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-# Process-level environment variables take precedence over local development
-# settings, matching conventional deployment behavior.
-load_dotenv(BASE_DIR / ".env", override=False)
 
 
 def initialize_firebase():

@@ -1,11 +1,11 @@
 """Evaluate workplace evidence while keeping private rubrics server-side."""
 
 import json
-import os
 from typing import Any
 
 from google.genai import types
 
+from config import get_gemini_model
 from services.gemini_service import get_gemini_client
 
 
@@ -130,7 +130,7 @@ def evaluate_frontend_workplace_progress(responses: dict[str, Any]) -> dict[str,
 
 def evaluate_workplace_submission(evidence: dict[str, Any]) -> dict[str, Any]:
     """Evaluate a submitted workplace task from recorded simulation evidence."""
-    model = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
+    model = get_gemini_model()
     prompt = f"""Evaluate this CareerGrid workplace submission using only the evidence.
 For attempt-backed evidence, private_expected_solution is a server-only rubric;
 compare it against actual_user_evidence, especially changed_files, commits, PR,

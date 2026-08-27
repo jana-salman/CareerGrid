@@ -1,11 +1,11 @@
 """Generate progressive, scenario-aware advisor guidance with Gemini."""
 
 import json
-import os
 from typing import Any
 
 from google.genai import types
 
+from config import get_gemini_model
 from services.gemini_service import get_gemini_client
 
 
@@ -40,7 +40,7 @@ def generate_advisor_reply(
     advisor_context: dict[str, Any],
 ) -> dict[str, Any]:
     """Generate a structured, conversational advisor response from verified context."""
-    model = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
+    model = get_gemini_model()
     context_json = json.dumps(
         advisor_context,
         ensure_ascii=False,

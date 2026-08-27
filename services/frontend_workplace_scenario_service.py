@@ -7,13 +7,14 @@ that are specific to the Frontend Developer experience.
 
 import json
 import logging
-import os
 import re
 from copy import deepcopy
 from typing import Any
 
 from google.genai import types
 
+from config import get_gemini_model
+from constants import WORKPLACE_FINAL_STEP
 from services.gemini_service import get_gemini_client
 from services.scenario_generation_service import (
     ScenarioGenerationError,
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 FRONTEND_SCENARIO_KIND = "frontend_workplace"
 FRONTEND_ISSUE_ID = "FE-4021"
-FRONTEND_TASK_COUNT = 5
+FRONTEND_TASK_COUNT = WORKPLACE_FINAL_STEP
 FRONTEND_BACKGROUND_EMAIL_COUNT = 4
 FRONTEND_INBOX_EMAIL_COUNT = 5
 FRONTEND_MIN_PROJECT_FILES = 4
@@ -583,7 +584,7 @@ the established Frontend workplace scenario structure. Attempt identifier: {atte
     try:
         with get_gemini_client() as client:
             response = client.models.generate_content(
-                model=os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite"),
+                model=get_gemini_model(),
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
