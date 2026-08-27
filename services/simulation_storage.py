@@ -4,6 +4,12 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any
 
+from constants import (
+    FRONTEND_DEVELOPER_POSITION_ID,
+    WORKPLACE_FINAL_STEP,
+    WORKPLACE_SCENARIO_VERSION,
+    WORKPLACE_SIMULATION_MODE,
+)
 from services.firebase_service import get_database_reference
 
 
@@ -59,13 +65,13 @@ def create_workplace_simulation_attempt(
         )
 
     record = {
-        "simulation_mode": "workplace",
+        "simulation_mode": WORKPLACE_SIMULATION_MODE,
         "career_id": career_id,
         "position_id": position_id,
         "company_id": company_id,
         "status": "generating",
         "created_at": _current_utc_time(),
-        "scenario_version": 1,
+        "scenario_version": WORKPLACE_SCENARIO_VERSION,
     }
 
     reference.set(record)
@@ -108,7 +114,7 @@ def save_workplace_scenario(
 
     if (
         not isinstance(existing_attempt, dict)
-        or existing_attempt.get("simulation_mode") != "workplace"
+        or existing_attempt.get("simulation_mode") != WORKPLACE_SIMULATION_MODE
     ):
         raise RuntimeError(
             "The workplace attempt could not be found."
@@ -159,7 +165,7 @@ def mark_workplace_generation_failed(
 
     if (
         not isinstance(existing_attempt, dict)
-        or existing_attempt.get("simulation_mode") != "workplace"
+        or existing_attempt.get("simulation_mode") != WORKPLACE_SIMULATION_MODE
     ):
         raise RuntimeError(
             "The workplace attempt could not be found."
@@ -204,7 +210,7 @@ def save_simulation_step_response(
             "A simulation attempt ID is required."
         )
 
-    if step < 1 or step > 5:
+    if step < 1 or step > WORKPLACE_FINAL_STEP:
         raise ValueError(
             "Simulation step must be between 1 and 5."
         )
@@ -235,7 +241,7 @@ def save_simulation_step_response(
     stored_response = deepcopy(response)
     stored_response["submitted_at"] = submitted_at
 
-    next_step = min(step + 1, 5)
+    next_step = min(step + 1, WORKPLACE_FINAL_STEP)
 
     attempt_reference.update(
         {
@@ -297,7 +303,7 @@ def save_simulation_evaluation(
         {
             "evaluation": public_evaluation,
             "status": "completed",
-            "current_step": 5,
+            "current_step": WORKPLACE_FINAL_STEP,
             "completed_at": completed_at,
             "updated_at": completed_at,
         }
@@ -498,7 +504,7 @@ def get_frontend_workplace_progress(
     if (
         not attempt
         or attempt.get("position_id")
-        != "frontend-developer"
+        != FRONTEND_DEVELOPER_POSITION_ID
     ):
         return None
 
