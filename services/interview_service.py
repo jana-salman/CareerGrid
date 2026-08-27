@@ -2,12 +2,13 @@
 
 import json
 import math
-import os
 import re
 from typing import Any
 
 from google.genai import types
 
+from config import get_gemini_model
+from constants import LEGACY_INTERVIEW_GEMINI_MODEL
 from services.gemini_service import get_gemini_client
 
 
@@ -38,10 +39,7 @@ TARGET_ANSWER_COVERAGE = 0.90
 # ============================================================
 
 def _gemini_model() -> str:
-    return os.getenv(
-        "GEMINI_MODEL",
-        "gemini-2.5-flash",
-    )
+    return get_gemini_model(LEGACY_INTERVIEW_GEMINI_MODEL)
 
 
 def _extract_json(text: str) -> dict[str, Any]:
@@ -1109,7 +1107,7 @@ Do not invent words the candidate did not say.
             ),
     }
 
-def _normalize_indexed_data(
+def normalize_interview_answers(
     value: Any,
 ) -> dict[str, Any]:
     """
@@ -1154,7 +1152,7 @@ def generate_final_interview_evaluation(
     Produce the final interview report after all seven
     questions have been completed.
     """
-    answers = _normalize_indexed_data(
+    answers = normalize_interview_answers(
         answers
     )
     answer_list = []
