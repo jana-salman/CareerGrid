@@ -12,7 +12,6 @@ export default defineConfig({
       '/login': 'http://127.0.0.1:5000',
       '/register': 'http://127.0.0.1:5000',
       '/logout': 'http://127.0.0.1:5000',
-      '/workspace': 'http://127.0.0.1:5000',
       '/simulation/workplace/start': 'http://127.0.0.1:5000',
       '/static': 'http://127.0.0.1:5000',
     },
