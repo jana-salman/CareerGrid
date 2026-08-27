@@ -487,6 +487,56 @@ def workplace_task_review(attempt_id):
     )
 
 
+@simulations_bp.get("/api/simulation/attempts/<attempt_id>/report")
+def workplace_report_api(attempt_id):
+    """Return the final, user-visible report for its signed-in owner only."""
+
+    attempt = get_simulation_attempt(
+        user_id=session.get("user_id"),
+        attempt_id=attempt_id,
+    )
+    if (
+        not attempt
+        or attempt.get("simulation_mode") != WORKPLACE_SIMULATION_MODE
+    ):
+        return jsonify({"error": "Simulation attempt not found."}), 404
+
+    evaluation = get_user_visible_evaluation(attempt.get("evaluation"))
+    if not evaluation:
+        return jsonify({"error": "Simulation report not found."}), 404
+
+    career_id = attempt.get("career_id", "")
+    position_id = attempt.get("position_id", "")
+    company_id = attempt.get("company_id", "")
+    position = POSITIONS_DATA.get(career_id, {}).get(position_id, {})
+    public_scenario = attempt.get("public_scenario", {})
+    task = public_scenario.get("task", {}) if isinstance(public_scenario, dict) else {}
+    overall_score = evaluation.get("overall_score", 0)
+    try:
+        interview_unlocked = float(overall_score) >= current_app.config["INTERVIEW_UNLOCK_SCORE"]
+    except (TypeError, ValueError):
+        interview_unlocked = False
+
+    return jsonify(
+        {
+            "attempt_id": attempt_id,
+            "evaluation": evaluation,
+            "task_title": task.get("subject") or task.get("title") or "Workplace Task Review",
+            "career_id": career_id,
+            "position_id": position_id,
+            "company_id": company_id,
+            "position_title": position.get("title", position_id.replace("-", " ").title()),
+            "company_name": get_company_display_name(career_id, position_id, company_id),
+            "strengths": normalize_review_items(evaluation.get("strengths")),
+            "areas_for_improvement": normalize_review_items(evaluation.get("areas_for_improvement")),
+            "recommended_next_steps": normalize_review_items(
+                evaluation.get("recommended_next_steps") or evaluation.get("recommended_skills")
+            ),
+            "interview_unlocked": interview_unlocked,
+        }
+    )
+
+
 @simulations_bp.get("/api/simulation/attempts/<attempt_id>")
 def get_public_workplace_attempt(attempt_id):
     """Return only browser-safe scenario data for the signed-in user."""

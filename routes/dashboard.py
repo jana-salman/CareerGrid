@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from flask import Blueprint, redirect, render_template, session, url_for
+from flask import Blueprint, jsonify, redirect, render_template, session, url_for
 
 from constants import WORKPLACE_SIMULATION_MODE
 from services.career_service import (
@@ -92,6 +92,23 @@ def _build_dashboard_item(summary):
     }
 
 
+def _dashboard_payload(user_id):
+    """Build the display-safe dashboard response for one signed-in user."""
+
+    summaries = [summary for summary in list_user_simulation_attempts(user_id)
+                 if summary.get("simulation_mode") == WORKPLACE_SIMULATION_MODE]
+    attempts = [_build_dashboard_item(summary) for summary in summaries]
+    scores = [attempt["score"] for attempt in attempts
+              if attempt["status"] == "completed" and attempt["score"] is not None]
+    return {
+        "user_name": session.get("user_name"),
+        "attempts": attempts,
+        "simulation_count": len(attempts),
+        "completed_count": sum(attempt["status"] == "completed" for attempt in attempts),
+        "average_score": round(sum(scores) / len(scores)) if scores else None,
+    }
+
+
 # =========================================================
 # DASHBOARD ROUTES
 # =========================================================
@@ -105,25 +122,8 @@ def dashboard():
     if not user_id:
         return redirect(url_for("auth.login"))
 
-    summaries = [
-        summary
-        for summary in list_user_simulation_attempts(user_id)
-        if summary.get("simulation_mode") == WORKPLACE_SIMULATION_MODE
-    ]
-
-    attempts = [
-        _build_dashboard_item(summary)
-        for summary in summaries
-    ]
-
-    completed_count = sum(
-        attempt["status"] == "completed" for attempt in attempts
-    )
-    scores = [
-        attempt["score"] for attempt in attempts
-        if attempt["status"] == "completed" and attempt["score"] is not None
-    ]
-    average_score = round(sum(scores) / len(scores)) if scores else None
+    payload = _dashboard_payload(user_id)
+    attempts = payload["attempts"]
     reports = {
         attempt["attempt_id"]: {
             "evaluation": attempt["evaluation"],
@@ -139,10 +139,20 @@ def dashboard():
 
     return render_template(
         "dashboard.html",
-        user_name=session.get("user_name"),
+        user_name=payload["user_name"],
         attempts=attempts,
-        simulation_count=len(attempts),
-        completed_count=completed_count,
-        average_score=average_score,
+        simulation_count=payload["simulation_count"],
+        completed_count=payload["completed_count"],
+        average_score=payload["average_score"],
         reports=reports,
     )
+
+
+@dashboard_bp.get("/api/dashboard")
+def dashboard_api():
+    """Return the signed-in user's display-safe dashboard data."""
+
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Authentication required."}), 401
+    return jsonify(_dashboard_payload(user_id))
