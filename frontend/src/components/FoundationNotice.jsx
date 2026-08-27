@@ -1,8 +1,8 @@
-function FoundationNotice() {
+function FoundationNotice({ title = 'CareerGrid' }) {
   return (
     <section aria-labelledby="foundation-title">
-      <h1 id="foundation-title">CareerGrid</h1>
-      <p>The React migration foundation is ready.</p>
+      <h1 id="foundation-title">{title}</h1>
+      <p>This route is prepared for a future React migration.</p>
     </section>
   )
 }

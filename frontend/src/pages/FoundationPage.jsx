@@ -1,9 +1,9 @@
 import FoundationNotice from '../components/FoundationNotice.jsx'
 
-function FoundationPage() {
+function FoundationPage({ title }) {
   return (
     <main>
-      <FoundationNotice />
+      <FoundationNotice title={title} />
     </main>
   )
 }

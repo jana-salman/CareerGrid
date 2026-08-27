@@ -1,7 +1,7 @@
-import FoundationPage from './pages/FoundationPage.jsx'
+import AppRouter from './router.jsx'
 
 function App() {
-  return <FoundationPage />
+  return <AppRouter />
 }
 
 export default App
