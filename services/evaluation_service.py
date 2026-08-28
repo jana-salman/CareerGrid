@@ -152,3 +152,17 @@ def evaluate_workplace_submission(evidence: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(evaluation, dict) or not isinstance(evaluation.get("dimensions"), dict):
         raise SimulationEvaluationError("Gemini returned an invalid workplace evaluation.")
     return evaluation
+
+
+def normalize_review_items(value) -> list[str]:
+    """Normalize an evaluation field into a clean list of strings."""
+    if not value:
+        return []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str):
+        value = value.strip()
+        if not value:
+            return []
+        return [value]
+    return [str(value).strip()]

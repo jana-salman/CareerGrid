@@ -22,6 +22,7 @@ from services.evaluation_service import (
     SimulationEvaluationError,
     evaluate_frontend_workplace_progress,
     evaluate_workplace_submission,
+    normalize_review_items,
 )
 from services.frontend_workplace_progress_service import (
     FrontendProgressValidationError,
@@ -229,35 +230,6 @@ def workplace_attempt_workspace(attempt_id):
     return serve_react_app()
 
 
-def normalize_review_items(value):
-    """
-    Normalize an evaluation field into a clean list of strings.
-
-    Gemini/evaluation data may contain either:
-    - a list of strings
-    - one plain string
-    - no value
-    """
-
-    if not value:
-        return []
-
-    if isinstance(value, list):
-        return [
-            str(item).strip()
-            for item in value
-            if str(item).strip()
-        ]
-
-    if isinstance(value, str):
-        value = value.strip()
-
-        if not value:
-            return []
-
-        return [value]
-
-    return [str(value).strip()]
 @simulations_bp.get("/simulation/attempts/<attempt_id>/report")
 def workplace_task_review(attempt_id):
     """Serve the React workplace report route."""
