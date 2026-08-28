@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
+import { getAuthenticatedSession } from '../services/authApi.js'
 import { getFrontendSimulationProgress, getSimulationAttempt } from '../services/simulationApi.js'
 import TaskPanel from './TaskPanel.jsx'
 import AdvisorApp from './apps/AdvisorApp.jsx'
@@ -39,6 +40,12 @@ function SimulationDesktop() {
   const [repository, setRepository] = useState(null)
   const [unreadCount, setUnreadCount] = useState(0)
   const [now, setNow] = useState(() => new Date())
+  const [userIdentity, setUserIdentity] = useState(null)
+
+  useEffect(() => {
+    document.body.classList.add('simulation-route')
+    return () => document.body.classList.remove('simulation-route')
+  }, [])
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 30_000)
@@ -60,8 +67,8 @@ function SimulationDesktop() {
 
   useEffect(() => {
     let active = true
-    getSimulationAttempt(attemptId)
-      .then(async (loaded) => {
+    Promise.all([getSimulationAttempt(attemptId), getAuthenticatedSession()])
+      .then(async ([loaded, authenticatedSession]) => {
         const loadedProgress = loaded.position_id === 'frontend-developer'
           ? await getFrontendSimulationProgress(attemptId)
           : { current_step: 1, status: loaded.status }
@@ -69,6 +76,7 @@ function SimulationDesktop() {
         const project = loaded.public_scenario?.project || {}
         setAttempt(loaded)
         setProgress(loadedProgress)
+        setUserIdentity(authenticatedSession.user)
         setRepository(loadRepository(attemptId, project.files || [], {
           archiveName: project.archive_name,
           name: project.name || 'careergrid-workspace',
@@ -76,7 +84,11 @@ function SimulationDesktop() {
           requireExtraction: loaded.position_id !== 'frontend-developer',
         }))
       })
-      .catch((requestError) => active && setError(requestError.message))
+      .catch((requestError) => {
+        if (!active) return
+        if (requestError.status === 401) window.location.assign('/login')
+        else setError(requestError.message)
+      })
     return () => { active = false }
   }, [attemptId])
 
@@ -85,11 +97,15 @@ function SimulationDesktop() {
   }, [attemptId, repository])
 
   if (error) return <main className="workspace"><p>{error}</p></main>
-  if (!attempt || !progress || !repository) return <main className="workspace"><p>Loading workspace...</p></main>
+  if (!attempt || !progress || !repository || !userIdentity) return <main className="workspace"><p>Loading workspace...</p></main>
 
   const scenario = attempt.public_scenario || {}
-  const title = attempt.position_id?.replaceAll('-', ' ') || 'CareerGrid'
+  const title = attempt.position_id
+    ?.replaceAll('-', ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase()) || 'CareerGrid'
   const company = scenario.company_name || attempt.company_id || 'your company'
+  const userName = userIdentity.name?.trim() || userIdentity.email?.split('@')[0] || 'CareerGrid User'
+  const userInitial = userName.charAt(0).toUpperCase()
   const downloads = repository.workspace?.downloadedAttachments || []
   const files = repository.workspace?.projectExtracted
     ? Object.values(repository.branches[repository.currentBranch].workingTree)
@@ -122,8 +138,8 @@ function SimulationDesktop() {
             <strong>{now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
             <span>{now.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })}</span>
           </div>
-          <div className="user-avatar">U</div>
-          <div className="user-information"><strong>User</strong><span>{title}</span></div>
+          <div className="user-avatar">{userInitial}</div>
+          <div className="user-information"><strong>{userName}</strong><span>{title}</span></div>
         </div>
       </header>
 
@@ -165,6 +181,7 @@ function SimulationDesktop() {
             downloads={downloads}
             files={files}
             repository={repository}
+            userIdentity={userIdentity}
             key={app.id}
             onClose={() => setActiveApp(null)}
             onDownload={download}
@@ -180,9 +197,9 @@ function SimulationDesktop() {
   )
 }
 
-function AppWindow({ active, app, attempt, downloads, files, repository, onClose, onDownload, onExtract, onSave, onRepositoryChange, onUnreadChange }) {
+function AppWindow({ active, app, attempt, downloads, files, repository, userIdentity, onClose, onDownload, onExtract, onSave, onRepositoryChange, onUnreadChange }) {
   const content = app.id === 'mail'
-    ? <MailApp attempt={attempt} downloadedAttachments={downloads} repository={repository} onDownload={onDownload} onRepositoryChange={onRepositoryChange} onUnreadChange={onUnreadChange} />
+    ? <MailApp attempt={attempt} downloadedAttachments={downloads} repository={repository} userIdentity={userIdentity} onDownload={onDownload} onRepositoryChange={onRepositoryChange} onUnreadChange={onUnreadChange} />
     : app.id === 'files'
       ? <FilesApp downloadedAttachments={downloads} projectFiles={files} repository={repository} onExtract={onExtract} />
       : app.id === 'vscode'

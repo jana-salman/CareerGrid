@@ -35,7 +35,7 @@ function createMessages(scenario) {
   }))]
 }
 
-function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRepositoryChange, onUnreadChange }) {
+function MailApp({ attempt, downloadedAttachments, repository, userIdentity, onDownload, onRepositoryChange, onUnreadChange }) {
   const navigate = useNavigate()
   const scenario = attempt.public_scenario || {}
   const [messages, setMessages] = useState(() => createMessages(scenario))
@@ -49,6 +49,11 @@ function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRep
   const submissionLock = useRef(false)
   const [error, setError] = useState('')
   const completionEnabled = attempt.position_id !== 'frontend-developer'
+  const userName = userIdentity.name?.trim() || userIdentity.email?.split('@')[0] || 'CareerGrid User'
+  const userInitial = userName.charAt(0).toUpperCase()
+  const positionTitle = attempt.position_id
+    ?.replaceAll('-', ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase()) || 'CareerGrid User'
   const visible = useMemo(() => messages.filter((message) => (
     (folder === 'sent' ? message.sent : !message.sent)
     && `${message.sender} ${message.subject}`.toLowerCase().includes(query.toLowerCase())
@@ -121,7 +126,7 @@ function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRep
     setSending(true)
     setError('')
     const body = draft.trim()
-    const userMessage = { body, id: `sent-${Date.now()}`, role: 'You', sender: 'You', sent: true }
+    const userMessage = { body, id: `sent-${Date.now()}`, role: positionTitle, sender: userName, sent: true }
     let advisorReply = ''
     let reportMessage = null
     let nextRepository = repository
@@ -187,8 +192,8 @@ function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRep
           </button>
         </nav>
         <div className="mail-sidebar-footer">
-          <span className="mail-account-avatar">U</span>
-          <div><strong>User</strong><small>{attempt.position_id?.replaceAll('-', ' ')}</small></div>
+          <span className="mail-account-avatar">{userInitial}</span>
+          <div><strong>{userName}</strong><small>{positionTitle}</small></div>
         </div>
       </aside>
 
@@ -277,7 +282,7 @@ function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRep
 }
 
 function ThreadMessage({ message, onOpenReport }) {
-  const isUser = message.sent || message.sender === 'You'
+  const isUser = message.sent
   return (
     <article className={`mail-thread-message${isUser ? ' is-user' : ''}`}>
       <header className="mail-thread-message-header">
