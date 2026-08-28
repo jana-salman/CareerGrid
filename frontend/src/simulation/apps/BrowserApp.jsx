@@ -1,4 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+
+import {
+  GRID_SIZE,
+  pauseSnakeGame,
+  queueSnakeMove,
+  resetSnakeGame,
+  resumeSnakeGame,
+  snakeTickDelay,
+  startSnakeGame,
+  tickSnakeGame,
+} from '../state/snakeGame.js'
+
+const SNAKE_HIGH_SCORE_KEY = 'careergrid-snake-high-score'
 
 const titles = {
   'careergrid://api-status': 'API Status',
@@ -9,11 +22,12 @@ const titles = {
   'careergrid://snake': 'Snake',
 }
 
-function BrowserApp({ attempt }) {
+function BrowserApp({ active, attempt }) {
   const [address, setAddress] = useState('careergrid://home')
   const [draftAddress, setDraftAddress] = useState(address)
   const [devtoolsTab, setDevtoolsTab] = useState('network')
   const [collapsed, setCollapsed] = useState(false)
+  const [pageVersion, setPageVersion] = useState(0)
   const scenario = attempt.public_scenario || {}
 
   const navigate = (nextAddress) => {
@@ -21,6 +35,7 @@ function BrowserApp({ attempt }) {
     const target = normalized.startsWith('careergrid://') ? normalized : `careergrid://${normalized || 'home'}`
     setAddress(target)
     setDraftAddress(target)
+    setCollapsed(target === 'careergrid://snake')
   }
   const go = (event) => {
     event.preventDefault()
@@ -40,7 +55,7 @@ function BrowserApp({ attempt }) {
         <div className="browser-navigation" aria-label="Browser navigation">
           <button type="button" title="Back" aria-label="Back" disabled>←</button>
           <button type="button" title="Forward" aria-label="Forward" disabled>→</button>
-          <button type="button" title="Reload" aria-label="Reload" onClick={() => navigate(address)}>↻</button>
+          <button type="button" title="Reload" aria-label="Reload" onClick={() => setPageVersion((value) => value + 1)}>↻</button>
           <button type="button" title="Home" aria-label="Home" onClick={() => navigate('careergrid://home')}>⌂</button>
         </div>
         <form className="browser-address-form" onSubmit={go}>
@@ -53,7 +68,7 @@ function BrowserApp({ attempt }) {
       <div className="browser-loading" aria-hidden="true" />
       <div className={`browser-viewport${collapsed ? ' is-devtools-collapsed' : ''}`}>
         <main className="browser-page" tabIndex="-1">
-          <BrowserPage address={address} navigate={navigate} scenario={scenario} />
+          <BrowserPage active={active} address={address} key={`${address}:${pageVersion}`} navigate={navigate} scenario={scenario} />
         </main>
         <aside className="browser-devtools" aria-label="Developer tools">
           <div className="browser-devtools-tabs" role="tablist">
@@ -71,8 +86,8 @@ function BrowserApp({ attempt }) {
   )
 }
 
-function BrowserPage({ address, navigate, scenario }) {
-  if (address === 'careergrid://snake') return <Snake />
+function BrowserPage({ active, address, navigate, scenario }) {
+  if (address === 'careergrid://snake') return <Snake active={active} />
   if (address === 'careergrid://product') return (
     <section className="product-demo">
       <div className="viewport-buttons"><button type="button">Desktop</button><button type="button">Tablet</button><button type="button">Mobile</button></div>
@@ -114,9 +129,98 @@ function DevtoolsContent({ scenario, tab }) {
   return <><div className="network-tools"><button className="is-active" type="button">All</button><button type="button">Fetch/XHR</button></div><div className="network-table"><div className="network-columns"><span>Method</span><span>Name</span><span>Status</span><span>Type</span><span>Time</span><span>Duration</span></div><button className="network-row" type="button"><span>GET</span><span>/api/health</span><span className="status-good">200</span><span>fetch</span><span>Now</span><span>42 ms</span></button>{scenario.task && <button className="network-row" type="button"><span>GET</span><span>/api/task-evidence</span><span className="status-good">200</span><span>fetch</span><span>Now</span><span>73 ms</span></button>}</div></>
 }
 
-function Snake() {
-  const [score, setScore] = useState(0)
-  return <section className="snake-game"><h2>Snake</h2><p>Score: {score}</p><button type="button" onClick={() => setScore((value) => value + 1)}>Move snake</button></section>
+function Snake({ active }) {
+  const canvasRef = useRef(null)
+  const [game, setGame] = useState(() => resetSnakeGame(readHighScore()))
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const context = canvas?.getContext('2d')
+    if (!canvas || !context) return
+    const cell = canvas.width / GRID_SIZE
+    context.fillStyle = '#071126'
+    context.fillRect(0, 0, canvas.width, canvas.height)
+    context.strokeStyle = 'rgba(104,139,210,.08)'
+    context.lineWidth = 1
+    for (let index = 0; index <= GRID_SIZE; index += 1) {
+      context.beginPath(); context.moveTo(index * cell, 0); context.lineTo(index * cell, canvas.height); context.stroke()
+      context.beginPath(); context.moveTo(0, index * cell); context.lineTo(canvas.width, index * cell); context.stroke()
+    }
+    if (game.food) {
+      context.fillStyle = '#c65cff'
+      context.shadowColor = '#c65cff'
+      context.shadowBlur = 12
+      context.beginPath()
+      context.arc((game.food.x + 0.5) * cell, (game.food.y + 0.5) * cell, cell * 0.3, 0, Math.PI * 2)
+      context.fill()
+      context.shadowBlur = 0
+    }
+    game.snake.forEach((part, index) => {
+      context.fillStyle = index ? '#268ef5' : '#64dcff'
+      context.fillRect(part.x * cell + 2, part.y * cell + 2, cell - 4, cell - 4)
+    })
+  }, [game])
+
+  useEffect(() => {
+    if (!active || !game.running || game.paused || game.gameOver) return undefined
+    const timer = window.setTimeout(() => setGame((current) => tickSnakeGame(current)), snakeTickDelay(game.score))
+    return () => window.clearTimeout(timer)
+  }, [active, game])
+
+  useEffect(() => {
+    if (game.highScore > readHighScore()) window.localStorage.setItem(SNAKE_HIGH_SCORE_KEY, String(game.highScore))
+  }, [game.highScore])
+
+  useEffect(() => {
+    const keydown = (event) => {
+      if (!active || event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return
+      const keyMoves = {
+        ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up',
+        A: 'left', D: 'right', S: 'down', W: 'up', a: 'left', d: 'right', s: 'down', w: 'up',
+      }
+      if (!keyMoves[event.key]) return
+      event.preventDefault()
+      setGame((current) => queueSnakeMove(current, keyMoves[event.key]))
+    }
+    document.addEventListener('keydown', keydown)
+    return () => document.removeEventListener('keydown', keydown)
+  }, [active])
+
+  const overlay = game.gameOver
+    ? ['Game Over', `Final score: ${game.score}. Press Restart to try again.`]
+    : game.paused
+      ? ['Paused', 'Select Resume when you are ready.']
+      : ['Ready?', 'Press Start or use an arrow key.']
+
+  return (
+    <section className="snake-game">
+      <div className="snake-heading">
+        <div><span>DEBUG BREAK</span><h2>Snake</h2></div>
+        <div className="snake-scores">Score {game.score} · High {game.highScore}</div>
+      </div>
+      <div className="snake-canvas-wrap">
+        <canvas ref={canvasRef} width="400" height="400" aria-label="Snake game board" />
+        <div className="snake-overlay" hidden={game.running && !game.paused && !game.gameOver}>
+          <strong>{overlay[0]}</strong><span>{overlay[1]}</span>
+        </div>
+      </div>
+      <div className="snake-actions">
+        <button type="button" onClick={() => setGame(startSnakeGame)}>Start</button>
+        <button type="button" onClick={() => setGame(pauseSnakeGame)}>Pause</button>
+        <button type="button" onClick={() => setGame(resumeSnakeGame)}>Resume</button>
+        <button type="button" onClick={() => setGame((current) => resetSnakeGame(current.highScore, true))}>Restart</button>
+      </div>
+      <div className="snake-direction-pad">
+        {[['↑', 'up'], ['←', 'left'], ['↓', 'down'], ['→', 'right']].map(([label, move]) => (
+          <button type="button" aria-label={`Move ${move}`} key={move} onClick={() => setGame((current) => queueSnakeMove(current, move))}>{label}</button>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function readHighScore() {
+  try { return Number(window.localStorage.getItem(SNAKE_HIGH_SCORE_KEY)) || 0 } catch { return 0 }
 }
 
 export default BrowserApp

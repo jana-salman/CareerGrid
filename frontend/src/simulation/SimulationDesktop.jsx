@@ -190,7 +190,7 @@ function AppWindow({ active, app, attempt, downloads, files, repository, onClose
         : app.id === 'terminal'
           ? <TerminalApp files={files} repository={repository} onRepositoryChange={onRepositoryChange} />
           : app.id === 'browser'
-            ? <BrowserApp attempt={attempt} />
+            ? <BrowserApp active={active} attempt={attempt} />
             : app.id === 'github'
               ? <GitHubApp repository={repository} onRepositoryChange={onRepositoryChange} />
               : <AdvisorApp attempt={attempt} />
