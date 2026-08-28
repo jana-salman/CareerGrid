@@ -5,7 +5,7 @@ import { evaluateWorkplaceSimulation, requestAdvisorGuidance } from '../../servi
 import { buildEvaluationEvidence, markEvaluationFailed, markEvaluationPending, recordEvaluation } from '../state/evaluationEvidence.js'
 import { createFinalReportMessage, ensureFinalReportMessage } from '../state/reportMail.js'
 import { buildScenarioAttachments } from '../state/repositoryModel.js'
-import { processCompletionReply } from '../state/submissionWorkflow.js'
+import { processCompletionReply, SUBMISSION_ACKNOWLEDGEMENT } from '../state/submissionWorkflow.js'
 
 function createMessages(scenario) {
   const task = scenario.task || {}
@@ -130,15 +130,39 @@ function MailApp({ attempt, downloadedAttachments, repository, userIdentity, onD
     let advisorReply = ''
     let reportMessage = null
     let nextRepository = repository
+    let confirmationRendered = false
+    let completionFailed = false
     try {
       if (completionEnabled && selected.task) {
         const completion = await processCompletionReply({
           body,
-          evaluate: (sourceRepository, submission) => runEvaluation(
-            sourceRepository,
-            submission,
-            { ...selected, replies: [...(selected.replies || []), userMessage] },
-          ),
+          evaluate: async (sourceRepository, submission) => {
+            confirmationRendered = true
+            setMessages((items) => items.map((item) => {
+              if (item.id !== selected.id) return item
+              if (item.replies?.some((reply) => reply.id === userMessage.id)) return item
+              return {
+                ...item,
+                replies: [
+                  ...(item.replies || []),
+                  userMessage,
+                  {
+                    body: SUBMISSION_ACKNOWLEDGEMENT,
+                    id: `advisor-confirm-${userMessage.id}`,
+                    role: selected.role,
+                    sender: selected.sender,
+                  },
+                ],
+              }
+            }))
+            setDraft('')
+            setReplying(false)
+            return runEvaluation(
+              sourceRepository,
+              submission,
+              { ...selected, replies: [...(selected.replies || []), userMessage] },
+            )
+          },
           messageId: userMessage.id,
           repository,
           threadId: selected.id,
@@ -146,6 +170,7 @@ function MailApp({ attempt, downloadedAttachments, repository, userIdentity, onD
         nextRepository = completion.repository
         advisorReply = completion.advisorReply
         reportMessage = completion.reportMessage || null
+        completionFailed = Boolean(completion.failed)
       }
       if (!advisorReply) {
         const result = await requestAdvisorGuidance({
@@ -157,11 +182,20 @@ function MailApp({ attempt, downloadedAttachments, repository, userIdentity, onD
       if (nextRepository !== repository) onRepositoryChange(nextRepository)
       setMessages((items) => items.map((item) => {
         if (item.id !== selected.id) return item
-        const replies = [
-          ...(item.replies || []),
-          userMessage,
-          { body: advisorReply, id: `advisor-${Date.now()}`, role: selected.role, sender: selected.sender },
-        ]
+        const replies = [...(item.replies || [])]
+        if (!confirmationRendered) {
+          replies.push(
+            userMessage,
+            { body: advisorReply, id: `advisor-${Date.now()}`, role: selected.role, sender: selected.sender },
+          )
+        } else if (completionFailed && advisorReply !== SUBMISSION_ACKNOWLEDGEMENT) {
+          replies.push({
+            body: advisorReply,
+            id: `advisor-evaluation-${userMessage.id}`,
+            role: selected.role,
+            sender: selected.sender,
+          })
+        }
         if (reportMessage && !replies.some((reply) => reply.type === 'evaluation-review')) {
           replies.push(reportMessage)
         }

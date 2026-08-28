@@ -11,6 +11,7 @@ import {
   stage,
 } from '../src/simulation/state/repositoryModel.js'
 import {
+  SUBMISSION_ACKNOWLEDGEMENT,
   assessCompletionEmail,
   cancelSubmissionCandidate,
   confirmSubmission,
@@ -162,7 +163,7 @@ test('a valid initial email asks only for final confirmation and yes triggers on
   assert.equal(evaluations, 1)
   assert.equal(confirmed.evaluationTriggered, true)
   assert.equal(confirmed.submission.status, 'submitted')
-  assert.equal(confirmed.advisorReply, 'Thanks, I will treat this pull request as your final submission and begin the review.')
+  assert.equal(confirmed.advisorReply, SUBMISSION_ACKNOWLEDGEMENT)
 
   const duplicate = await processCompletionReply({
     body: 'yes',

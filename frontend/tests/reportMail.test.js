@@ -75,4 +75,7 @@ test('Mail evaluation remains in the workspace and navigation belongs only to th
   assert.match(mail, /sender: userName, sent: true/)
   assert.match(mail, /sender: selected\.sender/)
   assert.doesNotMatch(mail, /sender: 'You'|<strong>User<\/strong>/)
+  const confirmationCallback = mail.slice(mail.indexOf('evaluate: async'), mail.indexOf('messageId: userMessage.id'))
+  assert.ok(confirmationCallback.indexOf('setMessages') < confirmationCallback.indexOf('runEvaluation'))
+  assert.match(confirmationCallback, /SUBMISSION_ACKNOWLEDGEMENT/)
 })

@@ -5,6 +5,8 @@ import {
 
 function copy(value) { return JSON.parse(JSON.stringify(value)) }
 
+const SUBMISSION_ACKNOWLEDGEMENT = 'Thanks, I will treat this pull request as your final submission and begin the review.'
+
 function extractSimulatedPullRequestUrls(body) {
   const matches = String(body || '').match(/https:\/\/github\.com\/careergrid-sim\/[^\r\n]*?\/pull\/\d+(?=$|[\s)\],.!?;:])/gi) || []
   return [...new Set(matches.map((url) => url.replace(/[)\],.!?;:]+$/, '')))]
@@ -139,7 +141,7 @@ async function processCompletionReply({ body, evaluate, messageId = '', reposito
     if (confirmed.error) return { advisorReply: confirmed.error, evaluationTriggered: false, repository: confirmed.repository }
     if (!evaluate) {
       return {
-        advisorReply: 'Thanks, I will treat this pull request as your final submission and begin the review.',
+        advisorReply: SUBMISSION_ACKNOWLEDGEMENT,
         evaluationTriggered: false,
         repository: confirmed.repository,
         submission: confirmed.submission,
@@ -150,7 +152,7 @@ async function processCompletionReply({ body, evaluate, messageId = '', reposito
       ...evaluated,
       advisorReply: evaluated.failed
         ? evaluated.advisorReply
-        : 'Thanks, I will treat this pull request as your final submission and begin the review.',
+        : SUBMISSION_ACKNOWLEDGEMENT,
       evaluationTriggered: true,
       submission: confirmed.submission,
     }
@@ -183,6 +185,7 @@ async function processCompletionReply({ body, evaluate, messageId = '', reposito
 }
 
 export {
+  SUBMISSION_ACKNOWLEDGEMENT,
   assessCompletionEmail,
   cancelSubmissionCandidate,
   completionGuidance,
