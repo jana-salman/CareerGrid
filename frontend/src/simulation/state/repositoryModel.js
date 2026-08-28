@@ -5,17 +5,81 @@ function slug(value) { return String(value || 'repository').toLowerCase().replac
 function snapshot(files) { return Object.fromEntries(files.map((file) => [file.path, copy(file)])) }
 function sameFile(left, right) { return Boolean(left) === Boolean(right) && (!left || left.content === right.content) }
 
-function createRepository(files = [], { path = '/Projects/careergrid-workspace', name = 'careergrid-workspace' } = {}) {
-  const tree = snapshot(files)
-  const initial = { id: 'initial', message: 'Initial workspace', author: 'CareerGrid User', createdAt: new Date().toISOString(), snapshot: copy(tree) }
+function fileTypeForPath(path) {
+  const extension = String(path).split('.').pop().toLowerCase()
+  return ({
+    css: 'CSS', html: 'HTML', js: 'JavaScript', json: 'JSON', log: 'Log file', md: 'Markdown',
+    py: 'Python', txt: 'Text file', ts: 'TypeScript', yaml: 'YAML', yml: 'YAML',
+  })[extension] || 'Text file'
+}
+
+function fileSize(content) { return `${Math.max(1, Math.ceil(String(content || '').length / 1024))} KB` }
+
+function buildScenarioAttachments(publicScenario = {}) {
+  const project = publicScenario.project || {}
+  if (!project.name || !project.archive_name || !Array.isArray(project.files)) return []
+  const scenarioId = String(publicScenario.scenario_id || 'scenario')
+  const archiveEntries = Object.fromEntries(project.files
+    .filter((file) => file?.path && typeof file.content === 'string')
+    .map((file) => [`${project.name}/${file.path}`, {
+      content: file.content,
+      fileType: fileTypeForPath(file.path),
+      size: fileSize(file.content),
+      type: 'file',
+    }]))
+  const attachments = [{
+    archiveEntries,
+    fileType: 'ZIP archive',
+    id: `scenario-${scenarioId}-project`,
+    name: project.archive_name,
+    size: fileSize(JSON.stringify(project.files)),
+    type: 'archive',
+  }]
+  for (const resource of publicScenario.resources || []) {
+    if (!resource?.id || !resource?.name || typeof resource.content !== 'string') continue
+    const name = String(resource.name).replace(/[\\/]+/g, '-')
+    attachments.push({
+      content: resource.content,
+      fileType: fileTypeForPath(name),
+      id: `scenario-${scenarioId}-resource-${resource.id}`,
+      name,
+      size: fileSize(resource.content),
+      type: 'file',
+    })
+  }
+  return attachments
+}
+
+function createWorkspace(files, options, extracted) {
+  return {
+    downloadedAttachments: [],
+    extractedProjectPaths: extracted ? [options.path] : [],
+    project: {
+      archiveName: options.archiveName || `${options.name}.zip`,
+      files: copy(files),
+      name: options.name,
+      path: options.path,
+    },
+    projectExtracted: extracted,
+    version: 1,
+  }
+}
+
+function createRepository(files = [], options = {}) {
+  const path = options.path || '/Projects/careergrid-workspace'
+  const name = options.name || 'careergrid-workspace'
+  const projectExtracted = !options.requireExtraction
+  const tree = snapshot(projectExtracted ? files : [])
+  const initial = { id: 'initial', message: projectExtracted ? 'Initial workspace' : 'Project pending extraction', author: 'CareerGrid User', createdAt: new Date().toISOString(), snapshot: copy(tree) }
   return {
     rootPath: path, repositoryName: name, repositorySlug: slug(name), defaultBranch: 'main', currentBranch: 'main',
     branches: { main: { commits: [initial], headSnapshot: copy(tree), workingTree: copy(tree), stagedPaths: [], stagedSnapshot: {} } },
     remote: { pushedBranches: [], branchHeads: {} }, pullRequests: [], submissions: {}, submissionCandidates: {}, evaluations: {},
+    workspace: createWorkspace(files, { ...options, name, path }, projectExtracted),
   }
 }
 
-function normalizeRepository(repository) {
+function normalizeRepository(repository, files = [], options = {}) {
   const next = copy(repository)
   next.remote ||= { pushedBranches: [], branchHeads: {} }; next.remote.pushedBranches ||= []; next.remote.branchHeads ||= {}
   next.pullRequests ||= []; next.submissions ||= {}; next.submissionCandidates ||= {}; next.evaluations ||= {}
@@ -23,16 +87,57 @@ function normalizeRepository(repository) {
     branch.commits ||= []; branch.headSnapshot ||= {}; branch.workingTree ||= copy(branch.headSnapshot); branch.stagedPaths ||= []
     branch.stagedSnapshot ||= Object.fromEntries(branch.stagedPaths.filter((path) => branch.workingTree[path]).map((path) => [path, copy(branch.workingTree[path])]))
   })
+  if (!next.workspace) {
+    const branch = next.branches?.[next.currentBranch]
+    const restoredFiles = files.length ? files : Object.values(branch?.workingTree || {})
+    next.workspace = createWorkspace(restoredFiles, {
+      ...options,
+      name: options.name || next.repositoryName,
+      path: options.path || next.rootPath,
+    }, true)
+  }
   return next
 }
 
 function repositoryStorageKey(attemptId) { return `${STORAGE_PREFIX}${String(attemptId)}` }
 function loadRepository(attemptId, files, options, storage = globalThis.localStorage) {
-  try { const stored = storage?.getItem(repositoryStorageKey(attemptId)); if (stored) return normalizeRepository(JSON.parse(stored)) } catch { /* use a fresh in-memory repository */ }
+  try { const stored = storage?.getItem(repositoryStorageKey(attemptId)); if (stored) return normalizeRepository(JSON.parse(stored), files, options) } catch { /* use a fresh in-memory repository */ }
   return createRepository(files, options)
 }
 function persistRepository(attemptId, repository, storage = globalThis.localStorage) {
   try { storage?.setItem(repositoryStorageKey(attemptId), JSON.stringify(repository)) } catch { /* keep the workspace usable in memory */ }
+}
+
+function downloadAttachment(repository, attachment) {
+  const next = copy(repository)
+  if (!attachment?.id || !attachment?.name) return { repository: next, error: 'Attachment is unavailable.' }
+  const downloads = next.workspace?.downloadedAttachments
+  if (!downloads) return { repository: next, error: 'Workspace downloads are unavailable.' }
+  if (!downloads.some((item) => item.id === attachment.id || item.name === attachment.name)) downloads.push(copy(attachment))
+  return { repository: next, attachment: downloads.find((item) => item.id === attachment.id) }
+}
+
+function extractProjectArchive(repository, attachmentId) {
+  const next = copy(repository)
+  const workspace = next.workspace
+  const archive = workspace?.downloadedAttachments?.find((item) => item.id === attachmentId || item.name === attachmentId)
+  if (!archive || archive.type !== 'archive' || !archive.archiveEntries) {
+    return { repository: next, error: 'This file cannot be extracted.' }
+  }
+  if (workspace.projectExtracted) {
+    return { repository: next, alreadyExtracted: true, projectPath: workspace.project.path }
+  }
+  const tree = snapshot(workspace.project.files)
+  const initial = next.branches.main.commits[0]
+  initial.message = 'Initial project files'
+  initial.snapshot = copy(tree)
+  next.branches.main.headSnapshot = copy(tree)
+  next.branches.main.workingTree = copy(tree)
+  next.branches.main.stagedPaths = []
+  next.branches.main.stagedSnapshot = {}
+  workspace.projectExtracted = true
+  if (!workspace.extractedProjectPaths.includes(workspace.project.path)) workspace.extractedProjectPaths.push(workspace.project.path)
+  return { repository: next, projectPath: workspace.project.path }
 }
 function currentBranch(repository) { return repository.branches[repository.currentBranch] }
 function changedFiles(repository) {
@@ -105,4 +210,23 @@ function validatePullRequest(repository, pullRequest) {
   const baseIds = new Set(base.commits.map((item) => item.id)); return compare.commits.some((item) => !baseIds.has(item.id)) ? current : null
 }
 
-export { changedFiles, commit, createBranch, createPullRequest, createRepository, diff, findPullRequestByUrl, loadRepository, persistRepository, push, repositoryStorageKey, saveFile, stage, switchBranch, validatePullRequest }
+export {
+  buildScenarioAttachments,
+  changedFiles,
+  commit,
+  createBranch,
+  createPullRequest,
+  createRepository,
+  diff,
+  downloadAttachment,
+  extractProjectArchive,
+  findPullRequestByUrl,
+  loadRepository,
+  persistRepository,
+  push,
+  repositoryStorageKey,
+  saveFile,
+  stage,
+  switchBranch,
+  validatePullRequest,
+}

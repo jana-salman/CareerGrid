@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { evaluateWorkplaceSimulation, requestAdvisorGuidance } from '../../services/simulationApi.js'
 import { buildEvaluationEvidence, markEvaluationFailed, markEvaluationPending, recordEvaluation } from '../state/evaluationEvidence.js'
+import { buildScenarioAttachments } from '../state/repositoryModel.js'
 import {
   assessCompletionEmail,
   cancelSubmissionCandidate,
@@ -15,8 +16,9 @@ import {
 function createMessages(scenario) {
   const task = scenario.task || {}
   const advisor = scenario.advisor || {}
+  const scenarioAttachments = buildScenarioAttachments(scenario)
   const main = task.id ? [{
-    attachments: task.attachments || scenario.attachments || [],
+    attachments: scenarioAttachments.length ? scenarioAttachments : task.attachments || scenario.attachments || [],
     body: task.body || task.summary || '',
     deadline: task.deadline || '',
     id: task.id,

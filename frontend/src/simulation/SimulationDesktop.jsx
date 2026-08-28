@@ -10,7 +10,13 @@ import GitHubApp from './apps/GitHubApp.jsx'
 import MailApp from './apps/MailApp.jsx'
 import TerminalApp from './apps/TerminalApp.jsx'
 import VSCodeApp from './apps/VSCodeApp.jsx'
-import { loadRepository, persistRepository, saveFile } from './state/repositoryModel.js'
+import {
+  downloadAttachment,
+  extractProjectArchive,
+  loadRepository,
+  persistRepository,
+  saveFile,
+} from './state/repositoryModel.js'
 
 const apps = [
   { headerClass: 'mail-window-header', icon: '✉', id: 'mail', label: 'Mail', windowClass: 'mail-window' },
@@ -30,7 +36,6 @@ function SimulationDesktop() {
   const [progress, setProgress] = useState(null)
   const [activeApp, setActiveApp] = useState(null)
   const [error, setError] = useState('')
-  const [downloads, setDownloads] = useState([])
   const [repository, setRepository] = useState(null)
   const [unreadCount, setUnreadCount] = useState(0)
   const [now, setNow] = useState(() => new Date())
@@ -65,8 +70,10 @@ function SimulationDesktop() {
         setAttempt(loaded)
         setProgress(loadedProgress)
         setRepository(loadRepository(attemptId, project.files || [], {
+          archiveName: project.archive_name,
           name: project.name || 'careergrid-workspace',
           path: `/Projects/${project.name || 'careergrid-workspace'}`,
+          requireExtraction: loaded.position_id !== 'frontend-developer',
         }))
       })
       .catch((requestError) => active && setError(requestError.message))
@@ -83,10 +90,20 @@ function SimulationDesktop() {
   const scenario = attempt.public_scenario || {}
   const title = attempt.position_id?.replaceAll('-', ' ') || 'CareerGrid'
   const company = scenario.company_name || attempt.company_id || 'your company'
-  const download = (item) => setDownloads((items) => (
-    items.some((entry) => entry.name === item.name) ? items : [...items, item]
-  ))
-  const files = Object.values(repository.branches[repository.currentBranch].workingTree)
+  const downloads = repository.workspace?.downloadedAttachments || []
+  const files = repository.workspace?.projectExtracted
+    ? Object.values(repository.branches[repository.currentBranch].workingTree)
+    : []
+  const download = (item) => {
+    const result = downloadAttachment(repository, item)
+    if (!result.error) setRepository(result.repository)
+    return result
+  }
+  const extract = (attachmentId) => {
+    const result = extractProjectArchive(repository, attachmentId)
+    if (!result.error) setRepository(result.repository)
+    return result
+  }
   const save = (path, content) => {
     const result = saveFile(repository, path, content)
     if (!result.error) setRepository(result.repository)
@@ -151,6 +168,7 @@ function SimulationDesktop() {
             key={app.id}
             onClose={() => setActiveApp(null)}
             onDownload={download}
+            onExtract={extract}
             onUnreadChange={setUnreadCount}
             onSave={save}
             onRepositoryChange={setRepository}
@@ -162,11 +180,11 @@ function SimulationDesktop() {
   )
 }
 
-function AppWindow({ active, app, attempt, downloads, files, repository, onClose, onDownload, onSave, onRepositoryChange, onUnreadChange }) {
+function AppWindow({ active, app, attempt, downloads, files, repository, onClose, onDownload, onExtract, onSave, onRepositoryChange, onUnreadChange }) {
   const content = app.id === 'mail'
     ? <MailApp attempt={attempt} downloadedAttachments={downloads} repository={repository} onDownload={onDownload} onRepositoryChange={onRepositoryChange} onUnreadChange={onUnreadChange} />
     : app.id === 'files'
-      ? <FilesApp attempt={attempt} downloadedAttachments={downloads} projectFiles={files} />
+      ? <FilesApp downloadedAttachments={downloads} projectFiles={files} repository={repository} onExtract={onExtract} />
       : app.id === 'vscode'
         ? <VSCodeApp files={files} repository={repository} onSave={onSave} />
         : app.id === 'terminal'
