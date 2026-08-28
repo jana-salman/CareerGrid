@@ -12,13 +12,13 @@ from services.career_service import (
     get_company_display_name,
     is_position_available,
 )
-from services.advisor_service import AdvisorReplyError, generate_advisor_reply
+from services.ai.advisor_service import AdvisorReplyError, generate_advisor_reply
 from services.backend_demo_scenario_service import (
     BACKEND_DEMO_JOB_SOURCE,
     get_backend_demo_workplace_scenario,
     is_backend_demo,
 )
-from services.evaluation_service import (
+from services.ai.evaluation_service import (
     SimulationEvaluationError,
     evaluate_frontend_workplace_progress,
     evaluate_workplace_submission,
@@ -29,7 +29,7 @@ from services.frontend_workplace_progress_service import (
     validate_frontend_progress,
 )
 from services.frontend_workplace_scenario_service import generate_frontend_workplace_scenario
-from services.scenario_generation_service import ScenarioGenerationError, generate_workplace_scenario
+from services.ai.scenario_generation_service import ScenarioGenerationError, generate_workplace_scenario
 from services.simulation_storage import (
     create_workplace_simulation_attempt,
     get_frontend_workplace_progress,

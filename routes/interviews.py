@@ -12,7 +12,7 @@ from services.career_service import (
 )
 from services.backend_demo_interview_service import get_backend_demo_interview
 from services.backend_demo_scenario_service import is_backend_demo
-from services.interview_service import (
+from services.ai.interview_service import (
     InterviewEvaluationError,
     InterviewGenerationError,
     analyze_spoken_answer,

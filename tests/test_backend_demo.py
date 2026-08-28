@@ -17,8 +17,8 @@ from services.backend_demo_scenario_service import (
     BACKEND_DEMO_JOB_SOURCE,
     get_backend_demo_workplace_scenario,
 )
-from services.interview_service import INTERVIEW_QUESTION_COUNT
-from services.scenario_generation_service import validate_workplace_scenario
+from services.ai.interview_service import INTERVIEW_QUESTION_COUNT
+from services.ai.scenario_generation_service import validate_workplace_scenario
 from services.simulation_storage import save_workplace_scenario
 
 

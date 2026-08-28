@@ -14,8 +14,8 @@ from ai.prompts.interview_v1 import (
 )
 from config import get_gemini_model
 from constants import LEGACY_INTERVIEW_GEMINI_MODEL
-from services.gemini_service import get_gemini_client
-from services.gemini_utils import extract_json
+from services.ai.gemini_service import get_gemini_client
+from services.ai.gemini_utils import extract_json
 
 
 class InterviewGenerationError(RuntimeError):

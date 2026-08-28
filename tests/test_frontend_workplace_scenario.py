@@ -10,7 +10,7 @@ from services.frontend_workplace_scenario_service import (
 from services.backend_demo_scenario_service import (
     get_backend_demo_workplace_scenario,
 )
-from services.scenario_generation_service import (
+from services.ai.scenario_generation_service import (
     ScenarioGenerationError,
     validate_workplace_scenario,
 )

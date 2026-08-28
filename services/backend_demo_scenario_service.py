@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from services.scenario_generation_service import validate_workplace_scenario
+from services.ai.scenario_generation_service import validate_workplace_scenario
 
 
 BACKEND_DEMO_CAREER_ID = "software-developer"

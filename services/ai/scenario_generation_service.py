@@ -12,8 +12,8 @@ from google.genai import types
 
 from ai.prompts.scenario_v1 import build_backend_scenario_prompt
 from config import get_gemini_model
-from services.gemini_service import get_gemini_client
-from services.gemini_utils import clean_json_response
+from services.ai.gemini_service import get_gemini_client
+from services.ai.gemini_utils import clean_json_response
 
 
 class ScenarioGenerationError(RuntimeError):

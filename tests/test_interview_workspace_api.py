@@ -7,7 +7,7 @@ import pytest
 
 from app import create_app
 import routes.interviews as interview_routes
-from services.interview_service import InterviewEvaluationError
+from services.ai.interview_service import InterviewEvaluationError
 from services.backend_demo_interview_service import get_backend_demo_interview
 from services.backend_demo_scenario_service import BACKEND_DEMO_COMPANY_ID
 
