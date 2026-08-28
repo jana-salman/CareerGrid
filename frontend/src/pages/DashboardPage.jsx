@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
+import { logout } from '../services/authApi.js'
 import {
   clearDashboardCache,
   getCachedDashboard,
@@ -41,6 +42,17 @@ function DashboardPage() {
     [dashboard, filter],
   )
 
+  const handleLogout = async (event) => {
+    event.preventDefault()
+    clearDashboardCache()
+    try {
+      await logout()
+      window.location.assign('/login')
+    } catch {
+      window.location.assign('/logout')
+    }
+  }
+
   return (
     <div className="career-page dashboard-page">
       <nav className="navbar dashboard-nav" aria-label="Main navigation">
@@ -48,7 +60,7 @@ function DashboardPage() {
         <div className="dashboard-nav-links">
           <Link to="/">Home</Link>
           <Link className="is-active" to="/dashboard" aria-current="page">Dashboard</Link>
-          <a href="/logout" onClick={clearDashboardCache}>Log out</a>
+          <a href="/logout" onClick={handleLogout}>Log out</a>
         </div>
       </nav>
 

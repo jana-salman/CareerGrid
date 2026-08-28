@@ -19,54 +19,53 @@ def client():
 
 
 def test_career_cards_only_link_to_an_implemented_path(client):
-    response = client.get("/career")
-    page = response.get_data(as_text=True)
+    response = client.get("/api/careers")
+    careers = response.get_json()["careers"]
 
     assert response.status_code == 200
-    assert 'href="/positions/software-developer"' in page
-    assert 'href="/positions/ui-ux-designer"' not in page
-    assert 'href="/positions/data-analyst"' not in page
-    assert page.count("Coming Soon") == 2
-    assert page.count("coming-soon-control") == 2
-    assert page.count("disabled") == 2
+    availability = {item["id"]: item["available"] for item in careers}
+    assert availability == {
+        "software-developer": True,
+        "ui-ux-designer": False,
+        "data-analyst": False,
+    }
 
 
 def test_implemented_developer_positions_remain_active(client):
-    response = client.get("/positions/software-developer")
-    page = response.get_data(as_text=True)
+    response = client.get("/api/careers/software-developer/positions")
+    positions = response.get_json()["positions"]
 
     assert response.status_code == 200
-    assert 'href="/positions/software-developer/backend-developer"' in page
-    assert 'href="/positions/software-developer/frontend-developer"' in page
-    assert "Coming Soon" not in page
+    assert {(item["id"], item["available"]) for item in positions} == {
+        ("backend-developer", True),
+        ("frontend-developer", True),
+    }
 
 
 @pytest.mark.parametrize(
-    ("path", "titles", "expected_count"),
+    ("career_id", "titles", "expected_count"),
     [
         (
-            "/positions/ui-ux-designer",
+            "ui-ux-designer",
             ("UX Designer", "UI Designer"),
             2,
         ),
-        ("/positions/data-analyst", ("Data Analyst",), 1),
+        ("data-analyst", ("Data Analyst",), 1),
     ],
 )
 def test_unfinished_positions_render_disabled_coming_soon_controls(
     client,
-    path,
+    career_id,
     titles,
     expected_count,
 ):
-    response = client.get(path)
-    page = response.get_data(as_text=True)
+    response = client.get(f"/api/careers/{career_id}/positions")
+    positions = response.get_json()["positions"]
 
     assert response.status_code == 200
-    assert all(title in page for title in titles)
-    assert page.count("Coming Soon") == expected_count
-    assert page.count("coming-soon-control") == expected_count
-    assert page.count("disabled") == expected_count
-    assert "View Companies" not in page
+    assert tuple(item["title"] for item in positions) == titles
+    assert len(positions) == expected_count
+    assert all(item["available"] is False for item in positions)
 
 
 @pytest.mark.parametrize(

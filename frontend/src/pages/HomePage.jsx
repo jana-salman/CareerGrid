@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
-import { getAuthenticatedSession } from '../services/authApi.js'
+import { getAuthenticatedSession, logout } from '../services/authApi.js'
 import {
   clearDashboardCache,
   prefetchDashboard,
@@ -25,12 +25,23 @@ function HomePage() {
     return () => document.body.classList.remove('home-page')
   }, [])
 
+  const handleLogout = async (event) => {
+    event.preventDefault()
+    clearDashboardCache()
+    try {
+      await logout()
+      window.location.assign('/login')
+    } catch {
+      window.location.assign('/logout')
+    }
+  }
+
   return (
     <>
       <header className="home-header">
         <nav className="home-navbar" aria-label="Primary navigation">
           <Link className="home-brand" to="/" aria-label="CareerGrid home"><span className="home-brand-mark" aria-hidden="true">C</span><span>CareerGrid</span></Link>
-          <div className="home-nav-links"><Link className="is-active" to="/" aria-current="page">Home</Link><Link to="/career">Careers</Link><a className="home-signout" href="/logout" onClick={clearDashboardCache}>Sign Out</a></div>
+          <div className="home-nav-links"><Link className="is-active" to="/" aria-current="page">Home</Link><Link to="/career">Careers</Link><a className="home-signout" href="/logout" onClick={handleLogout}>Sign Out</a></div>
         </nav>
       </header>
       <main>

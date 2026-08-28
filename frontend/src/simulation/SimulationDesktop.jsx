@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { getAuthenticatedSession } from '../services/authApi.js'
+import ScenarioUnavailablePage from '../pages/ScenarioUnavailablePage.jsx'
 import { getFrontendSimulationProgress, getSimulationAttempt } from '../services/simulationApi.js'
 import TaskPanel from './TaskPanel.jsx'
 import AdvisorApp from './apps/AdvisorApp.jsx'
@@ -41,11 +42,14 @@ function SimulationDesktop() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [now, setNow] = useState(() => new Date())
   const [userIdentity, setUserIdentity] = useState(null)
+  const scenarioUnavailable = attempt
+    && ['generating', 'generation_failed'].includes(attempt.status)
 
   useEffect(() => {
-    document.body.classList.add('simulation-route')
+    if (!scenarioUnavailable) document.body.classList.add('simulation-route')
+    else document.body.classList.remove('simulation-route')
     return () => document.body.classList.remove('simulation-route')
-  }, [])
+  }, [scenarioUnavailable])
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 30_000)
@@ -69,7 +73,8 @@ function SimulationDesktop() {
     let active = true
     Promise.all([getSimulationAttempt(attemptId), getAuthenticatedSession()])
       .then(async ([loaded, authenticatedSession]) => {
-        const loadedProgress = loaded.position_id === 'frontend-developer'
+        const unavailable = ['generating', 'generation_failed'].includes(loaded.status)
+        const loadedProgress = !unavailable && loaded.position_id === 'frontend-developer'
           ? await getFrontendSimulationProgress(attemptId)
           : { current_step: 1, status: loaded.status }
         if (!active) return
@@ -77,12 +82,14 @@ function SimulationDesktop() {
         setAttempt(loaded)
         setProgress(loadedProgress)
         setUserIdentity(authenticatedSession.user)
-        setRepository(loadRepository(attemptId, project.files || [], {
-          archiveName: project.archive_name,
-          name: project.name || 'careergrid-workspace',
-          path: `/Projects/${project.name || 'careergrid-workspace'}`,
-          requireExtraction: loaded.position_id !== 'frontend-developer',
-        }))
+        if (!unavailable) {
+          setRepository(loadRepository(attemptId, project.files || [], {
+            archiveName: project.archive_name,
+            name: project.name || 'careergrid-workspace',
+            path: `/Projects/${project.name || 'careergrid-workspace'}`,
+            requireExtraction: loaded.position_id !== 'frontend-developer',
+          }))
+        }
       })
       .catch((requestError) => {
         if (!active) return
@@ -97,6 +104,7 @@ function SimulationDesktop() {
   }, [attemptId, repository])
 
   if (error) return <main className="workspace"><p>{error}</p></main>
+  if (attempt && scenarioUnavailable) return <ScenarioUnavailablePage attempt={attempt} />
   if (!attempt || !progress || !repository || !userIdentity) return <main className="workspace"><p>Loading workspace...</p></main>
 
   const scenario = attempt.public_scenario || {}

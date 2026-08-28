@@ -6,7 +6,9 @@ import CompanyPage from './pages/CompanyPage.jsx'
 import HomePage from './pages/HomePage.jsx'
 import InterviewPage from './pages/InterviewPage.jsx'
 import InterviewReviewPage from './pages/InterviewReviewPage.jsx'
+import LoginPage from './pages/LoginPage.jsx'
 import PositionPage from './pages/PositionPage.jsx'
+import RegisterPage from './pages/RegisterPage.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
 import WorkplaceReportPage from './pages/WorkplaceReportPage.jsx'
 import SimulationDesktop from './simulation/SimulationDesktop.jsx'
@@ -16,6 +18,8 @@ function CareerGridRoutes() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
       <Route path="/career" element={<CareerPage />} />
       <Route path="/positions/:careerId" element={<PositionPage />} />
       <Route path="/positions/:careerId/:positionId" element={<CompanyPage />} />
@@ -26,6 +30,8 @@ function CareerGridRoutes() {
       <Route path="/workspace/attempt/:attemptId" element={<SimulationDesktop />} />
       {routeDefinitions.filter(({ path }) => ![
         '/',
+        '/login',
+        '/register',
         '/career',
         '/positions/:careerId',
         '/positions/:careerId/:positionId',

@@ -1,6 +1,6 @@
 """Workplace simulation pages, reports, and JSON API routes."""
 
-from flask import Blueprint, current_app, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, jsonify, redirect, request, session, url_for
 
 from constants import (
     FRONTEND_DEVELOPER_POSITION_ID,
@@ -39,6 +39,7 @@ from services.simulation_storage import (
     save_simulation_evaluation,
     save_workplace_scenario,
 )
+from routes.frontend import serve_react_app
 
 simulations_bp = Blueprint("simulations", __name__)
 
@@ -54,27 +55,7 @@ def simulation_workspace(career_id, position_id, company_id):
     if not position_data or not is_position_available(career_id, position_id):
         return redirect(url_for("careers.positions", career_id=career_id))
 
-    position_title = position_data.get(
-        "title",
-        position_id.replace("-", " ").title(),
-    )
-
-    company_name = get_company_display_name(
-        career_id,
-        position_id,
-        company_id,
-    )
-
-    return render_template(
-        "desktop.html",
-        career_id=career_id,
-        position_id=position_id,
-        company_id=company_id,
-        career_name=career_id.replace("-", " ").title(),
-        position_title=position_title,
-        company_name=company_name,
-        user_name=session.get("user_name", "User"),
-    )
+    return serve_react_app()
 
 
 @simulations_bp.post("/simulation/workplace/start")
@@ -245,44 +226,7 @@ def start_workplace_simulation():
 
 @simulations_bp.get("/workspace/attempt/<attempt_id>")
 def workplace_attempt_workspace(attempt_id):
-    attempt = get_simulation_attempt(
-        user_id=session.get("user_id"),
-        attempt_id=attempt_id,
-    )
-    if not attempt or attempt.get("simulation_mode") != WORKPLACE_SIMULATION_MODE:
-        return redirect(url_for("careers.career"))
-    career_id = attempt.get("career_id")
-    position_id = attempt.get("position_id")
-    company_id = attempt.get("company_id")
-    if attempt.get("status") in {"generation_failed", "generating"}:
-        return render_template(
-            "simulation_generation_failed.html",
-            career_id=career_id,
-            position_id=position_id,
-            generation_pending=attempt.get("status") == "generating",
-        )
-    position = POSITIONS_DATA.get(career_id, {}).get(position_id)
-    if not position:
-        return redirect(url_for("careers.career"))
-    company_name = get_company_display_name(
-        career_id,
-        position_id,
-        company_id,
-    )
-    return render_template(
-        "desktop.html",
-        attempt_id=attempt_id,
-        career_id=career_id,
-        position_id=position_id,
-        company_id=company_id,
-        career_name=career_id.replace("-", " ").title(),
-        position_title=position.get(
-            "title",
-            position_id.replace("-", " ").title(),
-        ),
-        company_name=company_name,
-        user_name=session.get("user_name", "User"),
-    )
+    return serve_react_app()
 
 
 def normalize_review_items(value):
@@ -316,175 +260,9 @@ def normalize_review_items(value):
     return [str(value).strip()]
 @simulations_bp.get("/simulation/attempts/<attempt_id>/report")
 def workplace_task_review(attempt_id):
-    """
-    Display the final persisted review for a completed
-    workplace simulation attempt.
-    """
+    """Serve the React workplace report route."""
 
-    user_id = session.get("user_id")
-
-    attempt = get_simulation_attempt(
-        user_id=user_id,
-        attempt_id=attempt_id,
-    )
-
-    if (
-        not attempt
-        or attempt.get("simulation_mode") != WORKPLACE_SIMULATION_MODE
-    ):
-        return redirect(
-            url_for("careers.career")
-        )
-
-
-    evaluation = get_user_visible_evaluation(
-        attempt.get("evaluation")
-    )
-
-    strengths = normalize_review_items(
-    evaluation.get("strengths")
-)
-
-    areas_for_improvement = normalize_review_items(
-        evaluation.get("areas_for_improvement")
-    )
-
-    recommended_next_steps = normalize_review_items(
-        evaluation.get("recommended_next_steps")
-        or evaluation.get("recommended_skills")
-    )
-
-    if not evaluation:
-        return redirect(
-            url_for(
-                "simulations.workplace_attempt_workspace",
-                attempt_id=attempt_id,
-            )
-        )
-
-
-    career_id = attempt.get(
-        "career_id",
-        ""
-    )
-
-    position_id = attempt.get(
-        "position_id",
-        ""
-    )
-
-    company_id = attempt.get(
-        "company_id",
-        ""
-    )
-
-
-    position = (
-        POSITIONS_DATA
-        .get(career_id, {})
-        .get(position_id, {})
-    )
-
-
-    position_title = position.get(
-        "title",
-        position_id.replace(
-            "-",
-            " "
-        ).title(),
-    )
-
-
-    company_name = get_company_display_name(
-        career_id,
-        position_id,
-        company_id,
-    )
-
-    valid_demo_company_ids = set()
-
-    for company in position.get(
-        "companies",
-        []
-    ):
-        company_value = company.get("id")
-
-        if company_value:
-            valid_demo_company_ids.add(
-                company_value
-            )
-
-        if company_value == company_id:
-            company_name = company.get(
-                "name",
-                company_name,
-            )
-
-
-    if is_backend_demo(career_id, position_id, company_id):
-        job_source = BACKEND_DEMO_JOB_SOURCE
-    else:
-        job_source = (
-            "demo"
-            if company_id in valid_demo_company_ids
-            else "adzuna"
-        )
-
-
-    public_scenario = attempt.get(
-        "public_scenario",
-        {}
-    )
-
-    task = (
-        public_scenario.get(
-            "task",
-            {}
-        )
-        if isinstance(
-            public_scenario,
-            dict,
-        )
-        else {}
-    )
-
-
-    task_title = (
-        task.get("subject")
-        or task.get("title")
-        or "Workplace Task Review"
-    )
-
-        # --------------------------------------------------------
-    # Interview simulation unlock
-    # --------------------------------------------------------
-
-    overall_score = evaluation.get("overall_score", 0)
-
-    try:
-        overall_score = float(overall_score)
-    except (TypeError, ValueError):
-        overall_score = 0
-
-    interview_unlocked = overall_score >= current_app.config["INTERVIEW_UNLOCK_SCORE"]
-
-
-    return render_template(
-        "task_review.html",
-        attempt_id=attempt_id,
-        evaluation=evaluation,
-        task_title=task_title,
-        career_id=career_id,
-        position_id=position_id,
-        company_id=company_id,
-        position_title=position_title,
-        company_name=company_name,
-        job_source=job_source,
-        strengths=strengths,
-        areas_for_improvement=areas_for_improvement,
-        recommended_next_steps=recommended_next_steps,
-        interview_unlocked=interview_unlocked,
-    )
+    return serve_react_app()
 
 
 @simulations_bp.get("/api/simulation/attempts/<attempt_id>/report")

@@ -2,7 +2,9 @@
 
 from datetime import datetime
 
-from flask import Blueprint, jsonify, redirect, render_template, session, url_for
+from flask import Blueprint, jsonify, redirect, session, url_for
+
+from routes.frontend import serve_react_app
 
 from constants import WORKPLACE_SIMULATION_MODE
 from services.career_service import (
@@ -134,30 +136,7 @@ def dashboard():
     if not user_id:
         return redirect(url_for("auth.login"))
 
-    payload = _dashboard_payload(user_id)
-    attempts = payload["attempts"]
-    reports = {
-        attempt["attempt_id"]: {
-            "evaluation": attempt["evaluation"],
-            "meta": {
-                "task": attempt["task_title"],
-                "position": attempt["position_title"],
-                "company": attempt["company_name"],
-            },
-        }
-        for attempt in attempts
-        if attempt["attempt_id"] and attempt["evaluation"]
-    }
-
-    return render_template(
-        "dashboard.html",
-        user_name=payload["user_name"],
-        attempts=attempts,
-        simulation_count=payload["simulation_count"],
-        completed_count=payload["completed_count"],
-        average_score=payload["average_score"],
-        reports=reports,
-    )
+    return serve_react_app()
 
 
 @dashboard_bp.get("/api/dashboard")

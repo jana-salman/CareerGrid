@@ -83,17 +83,14 @@ def test_backend_companies_page_shows_demo_before_live_jobs(client, monkeypatch)
     )
 
     response = client.get(
-        "/positions/software-developer/backend-developer"
+        "/api/careers/software-developer/positions/backend-developer/companies"
     )
-    page = response.get_data(as_text=True)
+    companies = response.get_json()["companies"]
 
     assert response.status_code == 200
-    assert "Backend Developer — Demo Challenge" in page
-    assert 'value="careergrid-demo"' in page
-    assert 'value="backend_demo"' in page
-    assert page.index("Backend Developer — Demo Challenge") < page.index(
-        "Live Backend Position"
-    )
+    assert companies[0]["company_id"] == "careergrid-demo"
+    assert companies[0]["job_source"] == "backend_demo"
+    assert companies[1]["title"] == "Live Backend Position"
 
 
 def test_frontend_companies_page_does_not_offer_backend_demo(client, monkeypatch):
@@ -104,14 +101,13 @@ def test_frontend_companies_page_does_not_offer_backend_demo(client, monkeypatch
     )
 
     response = client.get(
-        "/positions/software-developer/frontend-developer"
+        "/api/careers/software-developer/positions/frontend-developer/companies"
     )
-    page = response.get_data(as_text=True)
+    companies = response.get_json()["companies"]
 
     assert response.status_code == 200
-    assert "Backend Developer — Demo Challenge" not in page
-    assert 'value="careergrid-demo"' not in page
-    assert 'value="backend_demo"' not in page
+    assert all(company["company_id"] != "careergrid-demo" for company in companies)
+    assert all(company["job_source"] != "backend_demo" for company in companies)
 
 
 def test_demo_start_uses_predefined_scenario_without_gemini(client, monkeypatch):
@@ -478,14 +474,15 @@ def test_private_rubrics_are_not_rendered_in_interview_browser_page(
         lambda **kwargs: interview,
     )
 
-    response = client.get("/interview/interview-demo")
-    page = response.get_data(as_text=True)
+    response = client.get("/api/interview/interview-demo")
+    payload = response.get_json()
 
     assert response.status_code == 200
-    assert interview["public_questions"][0]["question"] in page
-    assert "Question 1 of 4" in page
-    assert "excellent_answer_should_include" not in page
-    assert "Cannot identify a project or personal contribution" not in page
+    assert payload["questions"][0]["question"] == interview["public_questions"][0]["question"]
+    assert payload["current_question"] == 1
+    serialized = response.get_data(as_text=True)
+    assert "excellent_answer_should_include" not in serialized
+    assert "Cannot identify a project or personal contribution" not in serialized
 
 
 def test_fourth_demo_answer_completes_interview_using_actual_question_count(

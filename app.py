@@ -37,6 +37,15 @@ def create_app(config_overrides: dict | None = None) -> Flask:
 
         return error
 
+    @application.errorhandler(405)
+    def api_method_not_allowed(error):
+        """Keep unsupported API methods JSON-safe without affecting page routes."""
+
+        if request.path.startswith("/api/"):
+            return jsonify({"error": "Method not allowed."}), 405
+
+        return error
+
     return application
 
 

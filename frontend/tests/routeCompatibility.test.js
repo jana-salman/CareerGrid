@@ -71,10 +71,12 @@ test('Dashboard is prefetched, rendered from session-scoped memory, and refreshe
   assert.doesNotMatch(careerNav, /<a href="\/dashboard"/)
   assert.match(home, /setDashboardSession\(session\.user\.id\)/)
   assert.match(home, /prefetchDashboard\(\)/)
-  assert.match(home, /onClick=\{clearDashboardCache\}/)
+  assert.match(home, /onClick=\{handleLogout\}/)
+  assert.match(home, /clearDashboardCache\(\)/)
   assert.match(dashboard, /useState\(\(\) => getCachedDashboard\(\)\)/)
   assert.match(dashboard, /refreshDashboard\(\)/)
-  assert.match(dashboard, /onClick=\{clearDashboardCache\}/)
+  assert.match(dashboard, /onClick=\{handleLogout\}/)
+  assert.match(dashboard, /clearDashboardCache\(\)/)
 })
 
 test('workspace and Mail identity come from the authenticated session API', async () => {

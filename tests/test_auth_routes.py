@@ -68,16 +68,16 @@ def test_registration_normalizes_email_and_hashes_password(client, monkeypatch):
     monkeypatch.setattr(auth_routes, "create_user", create_user)
 
     response = client.post(
-        "/register",
-        data={
+        "/api/auth/register",
+        json={
             "full_name": "Ada Student",
             "email": "  ADA@Example.COM  ",
             "password": "coursework-password",
         },
     )
 
-    assert response.status_code == 302
-    assert response.headers["Location"].endswith("/login?registered=1")
+    assert response.status_code == 201
+    assert response.get_json() == {"created": True}
     saved = create_user.call_args.kwargs
     assert saved["full_name"] == "Ada Student"
     assert saved["email"] == "ada@example.com"
@@ -98,15 +98,19 @@ def test_login_creates_only_the_expected_session_identity(client, monkeypatch):
     )
 
     response = client.post(
-        "/login",
-        data={
+        "/api/auth/login",
+        json={
             "email": "ADA@example.com",
             "password": "correct-password",
         },
     )
 
-    assert response.status_code == 302
-    assert response.headers["Location"].endswith("/")
+    assert response.status_code == 200
+    assert response.get_json()["user"] == {
+        "email": "ada@example.com",
+        "id": "user-123",
+        "name": "Ada Student",
+    }
     with client.session_transaction() as user_session:
         assert dict(user_session) == {
             "user_email": "ada@example.com",
@@ -121,9 +125,53 @@ def test_logout_clears_the_existing_flask_session(client):
         user_session["user_email"] = "student@example.com"
         user_session["user_name"] = "Student User"
 
-    response = client.get("/logout")
+    response = client.post("/api/auth/logout")
 
-    assert response.status_code == 302
-    assert response.headers["Location"].endswith("/")
+    assert response.status_code == 200
+    assert response.get_json() == {"authenticated": False}
     with client.session_transaction() as user_session:
         assert dict(user_session) == {}
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected_error"),
+    [
+        ({"email": "", "password": "secret"}, "Please enter your email and password."),
+        ({"email": "student@example.com", "password": ""}, "Please enter your email and password."),
+    ],
+)
+def test_login_api_rejects_missing_credentials(client, payload, expected_error):
+    response = client.post("/api/auth/login", json=payload)
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": expected_error}
+
+
+def test_login_api_rejects_invalid_credentials_without_creating_session(client, monkeypatch):
+    monkeypatch.setattr(auth_routes, "get_user_by_email", lambda email: None)
+
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "missing@example.com", "password": "incorrect"},
+    )
+
+    assert response.status_code == 401
+    assert response.get_json() == {"error": "Incorrect email or password."}
+    with client.session_transaction() as user_session:
+        assert dict(user_session) == {}
+
+
+def test_registration_api_rejects_duplicate_account(client, monkeypatch):
+    monkeypatch.setattr(auth_routes, "get_user_by_email", lambda email: {"id": "existing"})
+
+    response = client.post(
+        "/api/auth/register",
+        json={
+            "full_name": "Existing User",
+            "email": "existing@example.com",
+            "password": "password",
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.get_json() == {"error": "An account with this email already exists."}
