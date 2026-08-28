@@ -1,6 +1,6 @@
 # CareerGrid React client
 
-This directory contains CareerGrid's React 19 and Vite client. React Router owns the migrated home/catalog, dashboard, workplace, workplace-report, interview, and interview-review routes. Flask remains the API, authentication, persistence, and AI boundary; Jinja templates remain available for auth and verified fallbacks.
+This directory contains CareerGrid's React 19 and Vite client. React Router owns all user-facing pages, including authentication, home/catalog, dashboard, workplace, workplace-report, interview, and interview-review routes. Flask remains the API, session, persistence, and AI boundary.
 
 ## Local development
 
@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-Vite proxies relative API requests, auth routes, server form actions, and `/static` assets to Flask. The shared API helper includes the Flask session cookie. Components must not hard-code a Flask origin, access Firebase directly, or place server secrets in Vite environment variables.
+Vite proxies relative API requests, backend form actions, the legacy-compatible logout route, and `/static` assets to Flask. The shared API helper includes the Flask session cookie. Components must not hard-code a Flask origin, access Firebase directly, or place server secrets in Vite environment variables.
 
 ## Structure and responsibilities
 
@@ -30,4 +30,4 @@ npm run build
 npm audit
 ```
 
-The production build is emitted to ignored `dist/`. The current Flask application does not serve that directory, so deployment requires separate SPA hosting (including deep-link fallback) or explicit Flask build integration.
+The production build is emitted to ignored `dist/`. Flask serves that directory, including fingerprinted assets and an API-safe React Router fallback, so `npm run build` followed by `python app.py` runs the production-style application without Vite.

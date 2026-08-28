@@ -1,6 +1,6 @@
 # CareerGrid
 
-CareerGrid is an AI-assisted career-practice platform for realistic workplace simulations and structured job interviews. The current application combines a React/Vite client with a Flask API and server-rendered authentication/fallback pages. Firebase Realtime Database stores users and attempts, while Google Gemini generates or evaluates selected scenarios, advisor replies, and interview content.
+CareerGrid is an AI-assisted career-practice platform for realistic workplace simulations and structured job interviews. React owns the user interface, while Flask serves the production build and remains the session, API, persistence, and AI boundary. Firebase Realtime Database stores users and attempts, while Google Gemini generates or evaluates selected scenarios, advisor replies, and interview content.
 
 ## Features
 
@@ -39,7 +39,7 @@ Register or log in
 
 The SPA entry point is `frontend/index.html`, routes live in `frontend/src/router.jsx`, and all browser API calls go through named modules in `frontend/src/services/`. Requests use relative `/api/...` URLs and include the existing Flask session cookie.
 
-Flask/Jinja templates and legacy static JavaScript are intentionally retained for login, registration, server-side failure pages, and verified page/workspace fallbacks. Shared styles under `static/css/` are also loaded by the React entry point, so they are part of the active client.
+The production build is served by Flask from the generated `frontend/dist/` directory. Shared styles and images remain under `static/` and retain their existing URLs because the React UI deliberately reuses CareerGrid's established visual system.
 
 ### Server
 
@@ -66,11 +66,12 @@ CareerGrid/
 ├── constants.py                   Stable application limits and identifiers
 ├── routes/                        Flask Blueprints
 │   ├── api.py                     Health and authenticated-session API
-│   ├── auth.py                    Login, registration, and logout
+│   ├── auth.py                    Session login, registration, and logout APIs
 │   ├── careers.py                 Catalog pages and APIs
 │   ├── dashboard.py               Attempt history page and API
 │   ├── simulations.py             Workplace pages and APIs
-│   └── interviews.py              Interview workspace, answer, and review APIs
+│   ├── interviews.py              Interview workspace, answer, and review APIs
+│   └── frontend.py                Vite assets and safe SPA deep-link fallback
 ├── services/                      Domain logic and external integrations
 ├── ai/
 │   ├── prompts/                   Versioned Gemini prompt builders
@@ -81,15 +82,14 @@ CareerGrid/
 │   ├── src/pages/                 Catalog, dashboard, interview, and report pages
 │   ├── src/services/              Browser-safe Flask API clients
 │   └── src/simulation/            Simulated desktop, apps, and repository state
-├── templates/                     Auth, error, and Flask fallback views
-├── static/                        Shared CSS, fallback JS, and images
+├── static/                        Active shared CSS and images
 ├── tests/                         Flask/service tests
 └── frontend/tests/                React service and simulation contract tests
 ```
 
 `app.py` creates the Flask application and registers the route groups from `routes/`. Routes handle HTTP, session ownership, and browser-safe serialization. Services own scenario generation, validation, evaluation, interview behavior, persistence, and external integrations.
 
-React Router owns the migrated client routes for the home/catalog journey, dashboard, workplace, workplace report, interview, and interview review. Vite proxies API, authentication, start-workflow, and static-asset requests to Flask during development. Authentication itself remains server-side: the browser receives only the signed-in user's display identity from `/api/auth/session`, never credentials or password hashes.
+React Router owns all user-facing routes, including authentication, catalog, dashboard, workplace, reports, and interviews. During development, Vite proxies API, backend actions, and shared static assets to Flask. In production-style execution, Flask serves Vite's `index.html` and fingerprinted assets, while its safe fallback excludes `/api`, `/assets`, `/static`, and all explicit backend actions. Authentication remains server-side: JSON login and registration requests establish the same signed Flask session, and the browser receives only the signed-in user's safe display identity.
 
 ## Privacy and AI boundaries
 
@@ -186,20 +186,25 @@ Create a Firebase Realtime Database, download an Admin SDK service-account file,
 
 ## Running locally
 
-Start Flask from the repository root:
+Build the React client, then start Flask from the repository root for production-style local execution:
 
 ```bash
+cd frontend
+npm run build
+cd ..
 python app.py
 ```
 
-In another terminal, start Vite:
+Open `http://127.0.0.1:5000`. Flask serves React and supports direct React Router links and refreshes.
+
+For frontend development, run Flask and start Vite in another terminal:
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-Open the URL printed by Vite (normally `http://127.0.0.1:5173`). Flask normally listens on `http://127.0.0.1:5000`; the Vite proxy forwards API, auth, form-action, and shared-static requests there.
+Open the URL printed by Vite (normally `http://127.0.0.1:5173`). Flask normally listens on `http://127.0.0.1:5000`; the Vite proxy forwards API, backend form actions, and shared-static requests there.
 
 The optional live Gemini connectivity check is separate from the automated suite:
 
@@ -242,6 +247,5 @@ npm audit
 - Adzuna listings are optional and can fall back to local/demo data.
 - Microphone interviews require browser permission and MediaRecorder support; automated tests do not validate real microphones or speech services.
 - The simulated terminal supports a controlled command model and is not a real shell. GitHub URLs and pull requests are fictional simulation artifacts.
-- Flask/Jinja fallback views remain during the incremental migration and may not match every React interaction exactly.
-- Vite's production build is verified, but Flask does not currently serve `frontend/dist/`; deployment must add SPA hosting and deep-link fallback routing.
+- A production-style Flask start requires `npm run build` after frontend source changes; `frontend/dist/` remains generated and uncommitted.
 - End-to-end behavior with production Firebase/Gemini credentials still requires a configured manual environment.
