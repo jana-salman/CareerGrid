@@ -5,6 +5,7 @@ import { ApiError, apiRequest } from '../src/services/api.js'
 import { getAuthenticatedSession } from '../src/services/authApi.js'
 import { submitInterviewAnswer } from '../src/services/interviewApi.js'
 import {
+  evaluateWorkplaceSimulation,
   getSimulationAttempt,
   saveFrontendSimulationProgress,
 } from '../src/services/simulationApi.js'
@@ -135,6 +136,30 @@ test('simulation services encode identifiers and use the backend payload contrac
   assert.deepEqual(JSON.parse(requests[1].options.body), {
     response: { summary: 'Checked' },
     step: 2,
+  })
+})
+
+test('workplace evaluation uses the shared service and existing Flask contract', async () => {
+  let capturedPath
+  let capturedOptions
+  globalThis.fetch = async (path, options) => {
+    capturedPath = path
+    capturedOptions = options
+    return new Response(JSON.stringify({ overall_score: 88 }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 200,
+    })
+  }
+
+  await evaluateWorkplaceSimulation({
+    attemptId: 'attempt-1',
+    evidence: { changed_files: [{ path: 'server.py', before: 'old', after: 'new' }] },
+  })
+
+  assert.equal(capturedPath, '/api/simulation/evaluation')
+  assert.deepEqual(JSON.parse(capturedOptions.body), {
+    attempt_id: 'attempt-1',
+    evidence: { changed_files: [{ path: 'server.py', before: 'old', after: 'new' }] },
   })
 })
 
