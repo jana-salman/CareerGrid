@@ -131,4 +131,7 @@ test('the full general workflow remains separate from the five-step frontend wor
   assert.match(taskPanel, /saveFrontendSimulationProgress/)
   assert.match(desktop, /position_id === 'frontend-developer'/)
   assert.match(mail, /position_id !== 'frontend-developer'/)
+  assert.match(mail, /processCompletionReply/)
+  assert.match(mail, /evaluateWorkplaceSimulation/)
+  assert.match(mail, /navigate\(`\/simulation\/attempts\/\$\{encodeURIComponent\(attempt\.attempt_id\)\}\/report`\)/)
 })

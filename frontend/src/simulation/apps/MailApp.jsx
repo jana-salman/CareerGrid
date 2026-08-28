@@ -4,14 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { evaluateWorkplaceSimulation, requestAdvisorGuidance } from '../../services/simulationApi.js'
 import { buildEvaluationEvidence, markEvaluationFailed, markEvaluationPending, recordEvaluation } from '../state/evaluationEvidence.js'
 import { buildScenarioAttachments } from '../state/repositoryModel.js'
-import {
-  assessCompletionEmail,
-  cancelSubmissionCandidate,
-  confirmSubmission,
-  createSubmissionCandidate,
-  isAffirmativeSubmissionConfirmation,
-  isSubmissionCancellation,
-} from '../state/submissionWorkflow.js'
+import { processCompletionReply } from '../state/submissionWorkflow.js'
 
 function createMessages(scenario) {
   const task = scenario.task || {}
@@ -39,17 +32,6 @@ function createMessages(scenario) {
     subject: email.subject,
     unread: true,
   }))]
-}
-
-function completionGuidance(errors) {
-  if (errors.includes('missing_pull_request')) return 'Please include the simulated pull request link in your completion update.'
-  if (errors.includes('invalid_pull_request')) return "I couldn't find that pull request in the current project. Please double-check the link and send it again."
-  if (errors.includes('branch_not_pushed')) return 'Push the pull request branch before submitting it for review.'
-  if (errors.includes('no_compare_commits')) return 'Commit your changes on the feature branch before submitting the pull request.'
-  if (errors.includes('branch_mismatch')) return 'The branch named in your update does not match the pull request branch.'
-  if (errors.includes('insufficient_summary')) return 'Please add a meaningful summary of what you investigated or changed.'
-  if (errors.includes('missing_verification')) return 'Please state how you tested, checked, or verified the work.'
-  return 'Please complete the simulated Git and pull request workflow before submitting.'
 }
 
 function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRepositoryChange, onUnreadChange }) {
@@ -88,7 +70,7 @@ function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRep
 
   const runEvaluation = async (sourceRepository, submission, taskMessage) => {
     const pending = markEvaluationPending(sourceRepository, taskMessage.id)
-    if (pending.error) return { repository: sourceRepository, reply: pending.error }
+    if (pending.error) return { advisorReply: pending.error, failed: true, repository: sourceRepository }
     let evaluationRepository = pending.repository
     onRepositoryChange(evaluationRepository)
     setEvaluationStatus('evaluating')
@@ -101,15 +83,16 @@ function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRep
       setEvaluationStatus('success')
       setError('')
       navigate(`/simulation/attempts/${encodeURIComponent(attempt.attempt_id)}/report`)
-      return { repository: evaluationRepository, reply: 'Your workplace review is ready.' }
+      return { advisorReply: 'Your workplace review is ready.', failed: false, repository: evaluationRepository }
     } catch (requestError) {
       evaluationRepository = markEvaluationFailed(evaluationRepository, taskMessage.id, requestError.message).repository
       onRepositoryChange(evaluationRepository)
       setEvaluationStatus('failed')
       setError(requestError.message)
       return {
+        advisorReply: 'Your submission was recorded, but the review could not be completed. Reply retry to try again.',
+        failed: true,
         repository: evaluationRepository,
-        reply: 'Your submission was recorded, but the review could not be completed. Reply retry to try again.',
       }
     }
   }
@@ -125,45 +108,19 @@ function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRep
     let nextRepository = repository
     try {
       if (completionEnabled && selected.task) {
-        const candidate = repository.submissionCandidates[selected.id]
-        const existing = repository.submissions[selected.id]
-        if (existing) {
-          const evaluation = repository.evaluations[selected.id]
-          if (evaluation?.status === 'completed') advisorReply = 'This task has already been submitted and evaluated.'
-          else if (/\bretry\b/i.test(body)) {
-            const result = await runEvaluation(repository, existing, { ...selected, replies: [...(selected.replies || []), userMessage] })
-            nextRepository = result.repository
-            advisorReply = result.reply
-          } else {
-            advisorReply = evaluation?.status === 'pending'
-              ? 'Your evaluation is already in progress.'
-              : 'This task is recorded. Reply retry to run the evaluation again.'
-          }
-        } else if (candidate && isSubmissionCancellation(body)) {
-          nextRepository = cancelSubmissionCandidate(repository, selected.id).repository
-          advisorReply = 'No problem. The pending submission was cancelled so you can correct it.'
-        } else if (candidate && isAffirmativeSubmissionConfirmation(body)) {
-          const result = confirmSubmission(repository, selected.id, body, userMessage.id)
-          if (result.error) advisorReply = result.error
-          else {
-            const evaluationResult = await runEvaluation(
-              result.repository,
-              result.submission,
-              { ...selected, replies: [...(selected.replies || []), userMessage] },
-            )
-            nextRepository = evaluationResult.repository
-            advisorReply = evaluationResult.reply
-          }
-        } else if (candidate) {
-          advisorReply = 'I have the pull request queued for final review. Reply yes to submit it, or cancel to make a correction.'
-        } else {
-          const assessment = assessCompletionEmail(repository, body)
-          if (assessment.validCandidate) {
-            const result = createSubmissionCandidate(repository, selected.id, body, assessment)
-            nextRepository = result.repository
-            advisorReply = 'Just to confirm, is this the pull request you want me to review as your final submission?'
-          } else if (assessment.looksLikeSubmission) advisorReply = completionGuidance(assessment.errors)
-        }
+        const completion = await processCompletionReply({
+          body,
+          evaluate: (sourceRepository, submission) => runEvaluation(
+            sourceRepository,
+            submission,
+            { ...selected, replies: [...(selected.replies || []), userMessage] },
+          ),
+          messageId: userMessage.id,
+          repository,
+          threadId: selected.id,
+        })
+        nextRepository = completion.repository
+        advisorReply = completion.advisorReply
       }
       if (!advisorReply) {
         const result = await requestAdvisorGuidance({
