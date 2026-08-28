@@ -728,6 +728,13 @@ def simulation_workplace_evaluation():
                 "task": attempt["public_scenario"].get("task"),
                 "skill_targets": attempt["public_scenario"].get("skill_targets", []),
             },
+            "participant_context": {
+                "student_display_name": str(session.get("user_name") or "").strip(),
+                "advisor_name": str(
+                    (attempt["public_scenario"].get("advisor") or {}).get("name")
+                    or ""
+                ).strip(),
+            },
             "private_expected_solution": attempt["private_context"],
             "actual_user_evidence": evidence,
         }

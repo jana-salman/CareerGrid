@@ -5,7 +5,7 @@ from typing import Any
 
 from google.genai import types
 
-from ai.prompts.workplace_evaluation_v1 import build_workplace_evaluation_prompt
+from ai.prompts.workplace_evaluation_v2 import build_workplace_evaluation_prompt
 from config import get_gemini_model
 from services.gemini_service import get_gemini_client
 

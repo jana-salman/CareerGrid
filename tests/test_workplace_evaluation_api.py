@@ -12,6 +12,7 @@ def authenticated_client():
     with client.session_transaction() as user_session:
         user_session["user_id"] = "evaluation-user"
         user_session["user_email"] = "evaluation@example.com"
+        user_session["user_name"] = "Zahraa"
     return client
 
 
@@ -21,7 +22,10 @@ def workplace_attempt(**overrides):
         "career_id": "software-developer",
         "position_id": "backend-developer",
         "company_id": "technova",
-        "public_scenario": {"task": {"title": "Fix user lookup"}},
+        "public_scenario": {
+            "advisor": {"name": "Maya Chen"},
+            "task": {"title": "Fix user lookup"},
+        },
         "private_context": {"expected_changes": ["server-only"]},
         "evaluation": None,
     }
@@ -97,6 +101,10 @@ def test_evaluation_api_wraps_safe_client_evidence_with_server_context(
     assert wrapped["actual_user_evidence"] == client_evidence
     assert wrapped["private_expected_solution"] == {
         "expected_changes": ["server-only"]
+    }
+    assert wrapped["participant_context"] == {
+        "advisor_name": "Maya Chen",
+        "student_display_name": "Zahraa",
     }
     assert "private_expected_solution" not in response.get_data(as_text=True)
     saver.assert_called_once_with(

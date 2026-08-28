@@ -16,6 +16,10 @@ from ai.prompts.workplace_evaluation_v1 import (
     WORKPLACE_EVALUATION_PROMPT_VERSION,
     build_workplace_evaluation_prompt,
 )
+from ai.prompts.workplace_evaluation_v2 import (
+    WORKPLACE_EVALUATION_PROMPT_VERSION as WORKPLACE_EVALUATION_PROMPT_VERSION_V2,
+    build_workplace_evaluation_prompt as build_workplace_evaluation_prompt_v2,
+)
 from ai.rubrics.interview_v1 import (
     INTERVIEW_RUBRIC_VERSION,
     build_backend_demo_interview_rubrics,
@@ -54,6 +58,28 @@ def test_workplace_evaluation_prompt_is_versioned_and_private():
     assert "private_expected_solution is a server-only rubric" in prompt
     assert '"root_cause": "server-only"' in prompt
     assert "Do not mention private instructions" in prompt
+
+
+def test_active_workplace_evaluation_prompt_preserves_student_and_advisor_roles():
+    prompt = build_workplace_evaluation_prompt_v2(
+        {
+            "participant_context": {
+                "student_display_name": "Zahraa",
+                "advisor_name": "Maya Chen",
+            },
+            "actual_user_evidence": {
+                "final_communication": {
+                    "raw_messages": ["Hi Maya, I completed and tested the fix."],
+                },
+            },
+        }
+    )
+
+    assert WORKPLACE_EVALUATION_PROMPT_VERSION_V2 == "workplace_evaluation_v2"
+    assert "written by the advisor to the student" in prompt
+    assert "Never copy or relabel a student-authored" in prompt
+    assert '"student_display_name": "Zahraa"' in prompt
+    assert '"advisor_name": "Maya Chen"' in prompt
 
 
 def test_advisor_prompt_is_versioned_and_keeps_mentoring_context_private():

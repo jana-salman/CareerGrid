@@ -18,16 +18,21 @@ const taskMessage = {
 }
 
 test('successful evaluation creates the legacy report Mail message and saved-report action', () => {
+  const completionEmail = 'Hi Maya, I completed and tested the User Profile API fix.'
   const report = createFinalReportMessage({
     attemptId: 'attempt/report 1',
     evaluation: { review_message: 'Your completed review is attached.' },
-    taskMessage,
+    taskMessage: {
+      ...taskMessage,
+      replies: [{ body: completionEmail, sender: 'Zahraa', sent: true }],
+    },
   })
 
   assert.equal(report.sender, 'Maya Chen')
   assert.equal(report.role, 'Senior Engineer')
   assert.equal(report.type, 'evaluation-review')
   assert.equal(report.body, 'Your completed review is attached.')
+  assert.notEqual(report.body, completionEmail)
   assert.deepEqual(report.attachments, [{
     id: 'report-task-report',
     name: 'Open Task Review Report',
@@ -67,4 +72,7 @@ test('Mail evaluation remains in the workspace and navigation belongs only to th
   assert.match(mail, /navigate\(path\)/)
   assert.match(mail, /onOpenReport\(attachment\.reportPath\)/)
   assert.match(mail, /!replies\.some\(\(reply\) => reply\.type === 'evaluation-review'\)/)
+  assert.match(mail, /sender: userName, sent: true/)
+  assert.match(mail, /sender: selected\.sender/)
+  assert.doesNotMatch(mail, /sender: 'You'|<strong>User<\/strong>/)
 })
