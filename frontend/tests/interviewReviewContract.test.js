@@ -18,6 +18,8 @@ test('React owns the Interview Review route and uses the shared API service', as
   )
   assert.match(router, /'\/interview\/:interviewId\/review',/)
   assert.match(page, /getInterviewReview\(interviewId\)/)
+  assert.match(page, /setReview\(data\)/)
+  assert.match(page, /return <InterviewReview review=\{review\} \/>/)
   assert.doesNotMatch(page, /fetch\(/)
 })
 

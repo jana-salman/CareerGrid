@@ -48,8 +48,8 @@ function errorMessage(response, data) {
     }
   }
 
-  if (typeof data === 'string' && data.trim()) {
-    return data.trim()
+  if (typeof data === 'string') {
+    return 'CareerGrid received an unexpected server response. Please refresh and try again.'
   }
 
   return response.statusText || `Request failed with status ${response.status}.`

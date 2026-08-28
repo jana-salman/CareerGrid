@@ -63,17 +63,20 @@ test('API errors preserve JSON error details and status codes', async () => {
   )
 })
 
-test('API errors handle non-JSON responses', async () => {
-  globalThis.fetch = async () => new Response('Service unavailable', {
-    headers: { 'Content-Type': 'text/plain' },
-    status: 503,
+test('API errors never expose raw Flask HTML responses', async () => {
+  const flask404 = '<!doctype html><title>404 Not Found</title><p>The requested URL was not found.</p>'
+  globalThis.fetch = async () => new Response(flask404, {
+    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    status: 404,
   })
 
   await assert.rejects(
     apiRequest('/api/example'),
     (error) => error instanceof ApiError
-      && error.message === 'Service unavailable'
-      && error.status === 503,
+      && error.message === 'CareerGrid received an unexpected server response. Please refresh and try again.'
+      && !error.message.includes('404 Not Found')
+      && !error.message.includes('<!doctype html>')
+      && error.status === 404,
   )
 })
 

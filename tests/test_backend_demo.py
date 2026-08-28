@@ -552,6 +552,7 @@ def test_fourth_demo_answer_completes_interview_using_actual_question_count(
 
     assert response.status_code == 200
     assert response.get_json()["completed"] is True
+    assert response.get_json()["review_url"] == "/interview/interview-demo/review"
     assert len(final_evaluation.call_args.kwargs["questions"]) == 4
     complete_attempt.assert_called_once()
 

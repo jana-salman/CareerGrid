@@ -1,241 +1,120 @@
 # CareerGrid
 
-CareerGrid is an AI-powered career simulation platform designed to help students practice realistic workplace tasks and structured job interviews.
+CareerGrid is an AI-assisted career-practice platform for realistic workplace simulations and structured job interviews. The current application combines a React/Vite client with a Flask API and server-rendered authentication/fallback pages. Firebase Realtime Database stores users and attempts, while Google Gemini generates or evaluates selected scenarios, advisor replies, and interview content.
 
-The platform is built with Flask and combines an interactive simulated workplace, Firebase Realtime Database, and Google Gemini. It allows students to practice job-related tasks, receive AI-assisted feedback, complete interviews, and review their previous performance.
+## Features
 
-## Main Features
+- Registration and login with Flask sessions and Werkzeug password hashing
+- Career, position, and company selection
+- React workplace desktop with simulated Mail, Files, VS Code, Terminal, Browser, Git, and GitHub applications
+- In-memory simulated repository, commits, pushes, and pull requests; the browser never runs Git or contacts GitHub
+- Backend Developer scenarios, including a deterministic TechNova demonstration
+- Five-step Frontend Developer simulation with a validated deterministic fallback
+- Evidence-based workplace evaluation and progressive advisor guidance
+- Timed microphone interviews with transcription and speech analysis
+- Server-side private rubrics and final interview evaluation
+- Dashboard history and browser-safe workplace/interview reports
 
-* Secure registration and login using Werkzeug password hashing
-* Career, position, and company/job selection
-* AI-generated Backend Developer workplace scenarios using Google Gemini
-* Deterministic TechNova Backend demo for presentations
-* Five-step Frontend Developer workplace simulation with a fallback scenario when AI generation is unavailable
-* Simulated Mail, Files, VS Code, Terminal, Browser, Git, and GitHub tools
-* Workplace and interview attempts stored in Firebase Realtime Database
-* AI-assisted workplace feedback and progressive advisor guidance
-* Timed microphone-based interviews with transcription and speech analysis
-* Server-side interview rubrics and final AI evaluation
-* Dashboard history for saved attempts and reports
-
-## How CareerGrid Works
-
-CareerGrid guides the user through a complete career-practice journey:
-
-1. Register or log in to an account.
-2. Choose a career, position, and company.
-3. Complete a realistic workplace simulation using the simulated desktop tools.
-4. Submit the work and receive an AI-generated performance evaluation.
-5. Achieve a workplace score of at least **85** to unlock the interview stage.
-6. Complete the timed microphone-based job interview.
-7. Receive the final AI evaluation and review saved results from the dashboard.
+The normal learning flow is:
 
 ```text
-Register / Login
-        ↓
-Choose Career, Position & Company
-        ↓
-Complete Workplace Simulation
-        ↓
-Receive AI Evaluation
-        ↓
-Score ≥ 85
-        ↓
-Complete Job Interview
-        ↓
-View Final Report & Dashboard History
+Register or log in
+       -> choose career, position, and company
+       -> complete a workplace simulation
+       -> receive an evaluation
+       -> unlock the interview at a score of 85 or higher
+       -> complete the interview
+       -> review the final report and dashboard history
 ```
 
-## Technology Stack
+## Technology stack
 
-### Backend
+### Client
 
-* Python 3.11+
-* Flask
-* Werkzeug
-* Firebase Admin SDK
-* Firebase Realtime Database
-* Google Gen AI SDK (Gemini)
-* Requests for optional Adzuna job listings
-* python-dotenv for local environment configuration
+- React 19
+- React Router
+- Vite
+- JavaScript and the existing CareerGrid CSS system
+- Browser MediaRecorder and Web Audio APIs for interview capture
 
-### Frontend
+The SPA entry point is `frontend/index.html`, routes live in `frontend/src/router.jsx`, and all browser API calls go through named modules in `frontend/src/services/`. Requests use relative `/api/...` URLs and include the existing Flask session cookie.
 
-* HTML
-* CSS
-* JavaScript
-* Jinja2 Templates
-* Browser MediaRecorder API
-* Web Audio API
+Flask/Jinja templates and legacy static JavaScript are intentionally retained for login, registration, server-side failure pages, and verified page/workspace fallbacks. Shared styles under `static/css/` are also loaded by the React entry point, so they are part of the active client.
 
-### Testing
+### Server
 
-* pytest
-* Flask test client
-* Mocked Firebase, Gemini, and external-service boundaries
+- Python 3.11+
+- Flask and feature Blueprints
+- Werkzeug password hashing and signed Flask sessions
+- Firebase Admin SDK and Firebase Realtime Database
+- Google Gen AI SDK (Gemini)
+- Requests for optional Adzuna job listings
+- python-dotenv for local configuration
 
-### Version Control
+### Tests
 
-* Git
-* GitHub
+- pytest and the Flask test client
+- Node's built-in test runner for frontend contracts and simulation state
+- Mocked Firebase, Gemini, and external-service boundaries in automated tests
 
 ## Architecture
 
-CareerGrid separates browser presentation, Flask route handling, backend services, storage, and testing while keeping the project within a single Flask application.
-
 ```text
 CareerGrid/
-
-├── app.py
-│   # Flask application setup and main application routes
-│
-├── routes/
-│   └── auth.py
-│       # Authentication Blueprint
-│
-├── services/
-│   ├── scenario_generation_service.py
-│   ├── frontend_workplace_scenario_service.py
-│   ├── backend_demo_scenario_service.py
-│   ├── evaluation_service.py
-│   ├── advisor_service.py
-│   ├── interview_service.py
-│   ├── simulation_storage.py
-│   ├── firebase_service.py
-│   ├── gemini_service.py
-│   └── user_service.py
-│
-├── templates/
-│   # Jinja pages and simulation windows
-│
-├── static/
-│   ├── css/
-│   ├── js/
-│   └── images/
-│
-├── tests/
-│   # Automated tests
-│
-├── .env.example
-│   # Example environment configuration
-│
-├── requirements.txt
-│   # Runtime dependencies
-│
-└── requirements-dev.txt
-    # Runtime and testing dependencies
+├── app.py                         Flask application factory and entry point
+├── config.py                      Environment-backed server configuration
+├── constants.py                   Stable application limits and identifiers
+├── routes/                        Flask Blueprints
+│   ├── api.py                     Health and authenticated-session API
+│   ├── auth.py                    Login, registration, and logout
+│   ├── careers.py                 Catalog pages and APIs
+│   ├── dashboard.py               Attempt history page and API
+│   ├── simulations.py             Workplace pages and APIs
+│   └── interviews.py              Interview workspace, answer, and review APIs
+├── services/                      Domain logic and external integrations
+├── ai/
+│   ├── prompts/                   Versioned Gemini prompt builders
+│   └── rubrics/                   Versioned, server-only private rubrics
+├── frontend/
+│   ├── index.html                 Vite/React entry document
+│   ├── src/router.jsx             React Router configuration
+│   ├── src/pages/                 Catalog, dashboard, interview, and report pages
+│   ├── src/services/              Browser-safe Flask API clients
+│   └── src/simulation/            Simulated desktop, apps, and repository state
+├── templates/                     Auth, error, and Flask fallback views
+├── static/                        Shared CSS, fallback JS, and images
+├── tests/                         Flask/service tests
+└── frontend/tests/                React service and simulation contract tests
 ```
 
-`app.py` acts as the main route coordinator because the workplace and interview flows share application state and endpoints.
+`app.py` creates the Flask application and registers the route groups from `routes/`. Routes handle HTTP, session ownership, and browser-safe serialization. Services own scenario generation, validation, evaluation, interview behavior, persistence, and external integrations.
 
-Authentication is separated into its own Blueprint, while larger features such as scenario generation, evaluation, Firebase storage, interviews, and advisor guidance are organized into service modules.
+React Router owns the migrated client routes for the home/catalog journey, dashboard, workplace, workplace report, interview, and interview review. Vite proxies API, authentication, start-workflow, and static-asset requests to Flask during development. Authentication itself remains server-side: the browser receives only the signed-in user's display identity from `/api/auth/session`, never credentials or password hashes.
 
-## Workplace Scenario Validation
+## Privacy and AI boundaries
 
-Backend and Frontend workplace scenarios use the shared validation pipeline in:
+Gemini calls run only on the Flask server. Prompt builders and rubrics are versioned under `ai/prompts/` and `ai/rubrics/`; their current identifiers include `scenario_v1`, `advisor_v1`, `workplace_evaluation_v2`, `interview_v1`, and `workplace_v1`.
 
-```text
-services/scenario_generation_service.py
-```
+Each stored workplace scenario separates `public_scenario` from `private_context`. Interview records similarly separate `public_questions` from `private_rubrics`. Candidate-facing endpoints construct explicit browser-safe response objects, and workplace evaluation responses pass through a public-field allow-list. Private context may be used internally by server-side advisor and evaluation services but is not returned to the React client.
 
-The validation flow is:
+Workplace scenario validation checks public/private separation, relative project paths, allowed text files, duplicate files, content limits, resource integrity, safe simulated commands, solution-leak patterns, and payload size. Frontend scenarios add five ordered tasks, required project files, inbox/incident linkage, viewport metadata, and expected-patch validation.
 
-```text
-Backend Scenario Service
-        ↓
-validate_workplace_scenario()
+Git, GitHub, the terminal, filesystem, and pull requests inside the workplace are simulations implemented as browser state. They do not execute local commands, mutate the real repository, or call GitHub.
 
-Frontend Scenario Service
-        ↓
-validate_workplace_scenario()
-        ↓
-validate_frontend_requirements()
-```
+## Firebase data model
 
-The shared validator checks:
-
-* Public and private context separation
-* Relative project paths and path traversal
-* Allowed text-file extensions
-* Unique project files
-* File content size limits
-* Project naming and archive consistency
-* Resource and attachment integrity
-* Unsafe shell content
-* Solution-leak patterns
-* Scenario payload size
-
-The Frontend validator also checks career-specific requirements such as:
-
-* Required HTML, CSS, JavaScript, and package files
-* Frontend-only file extensions
-* Five ordered workplace tasks
-* Valid application names
-* Five inbox emails and one linked critical incident
-* Allowed simulated terminal commands
-* Viewport metadata
-* Firebase-safe expected-patch keys
-
-## AI and Evaluation Flow
-
-### Workplace Scenarios
-
-* Normal Backend Developer jobs use Gemini scenario generation.
-* The TechNova presentation job uses a predefined and validated Backend scenario.
-* Frontend Developer jobs use Gemini generation with a deterministic five-step fallback when generation or validation fails.
-
-All scenarios follow the same Firebase attempt lifecycle.
-
-Only validated public scenario information is returned to the user. Private evaluation information remains on the server.
-
-### Workplace Evaluation
-
-The submission system evaluates actual user work, including:
-
-* Changed files
-* Commits
-* Pull-request information
-* Verification results
-* Communication responses
-
-The user's work is compared with private server-side expectations.
-
-Google Gemini then produces the final evidence-based performance report.
-
-### Interviews
-
-Normal interviews use seven Gemini-generated questions.
-
-The TechNova demo uses four predefined interview questions.
-
-The interview system includes:
-
-* Microphone recording
-* Timed questions
-* Transcription
-* Spoken-answer analysis
-* Per-answer evaluation
-* Firebase storage
-* Final AI-generated interview evaluation
-
-A workplace score of at least **85** is required to unlock the interview.
-
-## Firebase Data Structure
-
-CareerGrid uses Firebase Realtime Database with the following high-level structure:
+At a high level, CareerGrid stores:
 
 ```text
 users/{user_id}/
 ├── full_name
 ├── email
 ├── password_hash
-│
 ├── simulation_attempts/{attempt_id}/
 │   ├── public_scenario
 │   ├── private_context
 │   ├── responses
 │   └── evaluation
-│
 └── interview_attempts/{interview_id}/
     ├── public_questions
     ├── private_rubrics
@@ -243,254 +122,126 @@ users/{user_id}/
     └── evaluation
 ```
 
-Private scenario information and interview rubrics remain server-side and are not included in candidate-facing browser data.
+Firebase access uses the Admin SDK on the server. The browser does not receive Firebase credentials or connect directly to the database.
 
-# Installation
+## Installation
 
-## 1. Clone the Repository
+### 1. Create a Python environment
 
-```bash
-git clone https://github.com/jana-salman/CareerGrid.git
-cd CareerGrid
-```
-
-## 2. Create a Virtual Environment
-
-### Windows PowerShell
+Windows PowerShell:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-### macOS or Linux
+macOS or Linux:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-## 3. Install Dependencies
-
-For normal application use:
-
-```bash
-python -m pip install -r requirements.txt
-```
-
-For development and testing:
+### 2. Install dependencies
 
 ```bash
 python -m pip install -r requirements-dev.txt
+cd frontend
+npm install
+cd ..
 ```
 
-## 4. Configure Environment Variables
+Use `requirements.txt` instead of `requirements-dev.txt` when pytest is not needed.
 
-CareerGrid uses environment variables for API keys, database configuration, and application settings.
+### 3. Configure the environment
 
-For security reasons, real credentials are **not included in the repository**.
-
-A `.env.example` file is included in the project root. It contains all required environment variable names with placeholder values.
-
-Create a copy of:
-
-```text
-.env.example
-```
-
-and rename the copy to:
-
-```text
-.env
-```
-
-Then replace the placeholder values with your own configuration:
+Copy `.env.example` to `.env` and replace the placeholders:
 
 ```env
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-3.1-flash-lite
+
+GOOGLE_APPLICATION_CREDENTIALS=firebase-service-account.json
+FIREBASE_DATABASE_URL=https://your-project-default-rtdb.firebaseio.com
+
+SECRET_KEY=replace_with_a_long_random_secret
 CAREERGRID_ENV=development
 FLASK_DEBUG=false
 
-SECRET_KEY=replace_with_a_long_random_secret
-
-GEMINI_API_KEY=replace_with_gemini_api_key
-GEMINI_MODEL=gemini-3.1-flash-lite
-
-ADZUNA_APP_ID=replace_with_adzuna_app_id
-ADZUNA_APP_KEY=replace_with_adzuna_app_key
-
-FIREBASE_DATABASE_URL=https://your-project-default-rtdb.firebaseio.com
-GOOGLE_APPLICATION_CREDENTIALS=firebase-service-account.json
+ADZUNA_APP_ID=optional_adzuna_app_id
+ADZUNA_APP_KEY=optional_adzuna_app_key
 ```
 
-You can generate a suitable Flask secret key using:
+`GEMINI_API_KEY`, Firebase configuration, and `SECRET_KEY` are server-only. Do not expose them through Vite variables. Adzuna credentials are optional; local/demo jobs remain available when they are missing or the service is unavailable.
+
+Generate a Flask secret with:
 
 ```bash
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-When `SECRET_KEY` is not provided during development, CareerGrid creates a temporary random key. This means sessions may reset when the application restarts.
+Development uses a temporary random secret if `SECRET_KEY` is absent, which resets sessions when Flask restarts. Production refuses to start without `SECRET_KEY`.
 
-When:
+Create a Firebase Realtime Database, download an Admin SDK service-account file, and point `GOOGLE_APPLICATION_CREDENTIALS` to it. `.env`, common Firebase credential filenames, virtual environments, `frontend/node_modules/`, and `frontend/dist/` are ignored by Git.
 
-```env
-CAREERGRID_ENV=production
-```
+## Running locally
 
-a `SECRET_KEY` is required.
-
-Adzuna credentials are optional. If they are not provided or the API is unavailable, CareerGrid continues using local/demo job information.
-
-> **Important:** Never commit your `.env` file, Firebase service-account JSON file, API keys, passwords, or other private credentials to GitHub. These files are excluded through `.gitignore`.
-
-The `.env.example` file contains placeholder values only and is safe to keep in the repository.
-
-## 5. Firebase Setup
-
-1. Create or select a Firebase project.
-2. Enable **Firebase Realtime Database**.
-3. Create a Firebase Admin service account.
-4. Download the JSON credential file.
-5. Save it as:
-
-```text
-firebase-service-account.json
-```
-
-in the project root, or store it somewhere else on your computer.
-
-6. Set:
-
-```env
-GOOGLE_APPLICATION_CREDENTIALS=firebase-service-account.json
-```
-
-or provide the path to the file if it is stored somewhere else.
-
-7. Add your Firebase Realtime Database URL:
-
-```env
-FIREBASE_DATABASE_URL=https://your-project-default-rtdb.firebaseio.com
-```
-
-Firebase credential filenames and common Firebase service-account file patterns are excluded through `.gitignore`.
-
-## 6. Gemini Setup
-
-1. Create a Gemini API key using Google AI Studio or an appropriate Google Cloud project.
-2. Add the API key to your local `.env` file:
-
-```env
-GEMINI_API_KEY=your_api_key_here
-```
-
-3. Configure the Gemini model:
-
-```env
-GEMINI_MODEL=gemini-3.1-flash-lite
-```
-
-To perform the optional live Gemini connectivity check:
-
-```bash
-python test_gemini.py
-```
-
-This command uses the external Gemini API and is separate from the offline automated test suite.
-
-## Running CareerGrid
-
-Start the Flask application with:
+Start Flask from the repository root:
 
 ```bash
 python app.py
 ```
 
-Then open:
+In another terminal, start Vite:
 
-```text
-http://127.0.0.1:5000
+```bash
+cd frontend
+npm run dev
 ```
 
-in your browser.
+Open the URL printed by Vite (normally `http://127.0.0.1:5173`). Flask normally listens on `http://127.0.0.1:5000`; the Vite proxy forwards API, auth, form-action, and shared-static requests there.
 
-Debug mode is disabled by default.
+The optional live Gemini connectivity check is separate from the automated suite:
 
-To enable it during local development, set:
-
-```env
-FLASK_DEBUG=true
+```bash
+python test_gemini.py
 ```
 
-## Running Tests and Checks
+## Tests and build
 
-Run the automated test suite:
+From the repository root:
 
 ```bash
 python -m pytest -q
-```
-
-Run Python compilation checks:
-
-```bash
 python -m compileall -q .
 ```
 
-If Node.js is installed, JavaScript files can also be checked using:
+From `frontend/`:
 
 ```bash
-node --check <path-to-file.js>
+npm test
+npm run build
+npm audit
 ```
 
-Tests cover areas including:
+`npm run build` writes generated assets to `frontend/dist/`. That directory and `frontend/node_modules/` are build/install artifacts and are not committed.
 
-* Scenario validation and privacy
-* Deterministic demo behavior
-* Frontend five-step progression
-* Firebase storage contracts
-* Workplace evaluation
-* Interview question selection
-* Dynamic interview completion
+## Security notes
 
-## Security
+- Passwords are stored using Werkzeug hashing; password hashes are never returned by browser APIs.
+- Firebase records are scoped under the authenticated user's server-side identifier.
+- Candidate APIs expose allow-listed report fields and public scenario/question data.
+- Private prompts, expected solutions, scenario context, and rubrics stay on the server.
+- Simulated commands are validated or interpreted in browser state; the app does not offer arbitrary shell execution.
+- `.env`, Firebase service-account files, caches, bytecode, coverage output, databases, logs, dependencies, and frontend builds are ignored.
 
-CareerGrid includes several security measures:
+## Known limitations
 
-* Passwords are stored using Werkzeug password hashing.
-* User IDs are generated as Firebase-safe SHA-256 identifiers based on normalized email addresses.
-* Firebase data is stored under user-specific paths.
-* Candidate-facing APIs do not expose private evaluation context.
-* Interview rubrics remain server-side.
-* Generated paths, files, resources, commands, and attachments are validated.
-* `.env`, Firebase service-account credentials, caches, bytecode, coverage files, and local databases are excluded from Git.
-
-## Creating a Clean Project ZIP
-
-A clean ZIP file can be created using:
-
-```bash
-git archive --format=zip --output CareerGrid-submission.zip HEAD
-```
-
-This exports only tracked source files and does not include:
-
-* `.git`
-* Ignored credentials
-* `.env`
-* Cache directories
-* Generated local files
-
-## Known Limitations and Future Improvements
-
-* Career coverage is currently limited to the careers implemented within the scope of the university project.
-* Gemini and Firebase features require internet access and valid credentials.
-* Microphone functionality depends on browser permission and MediaRecorder support.
-* The simulated terminal supports a controlled command set rather than executing arbitrary local programs.
-* Some large simulation modules could be divided into smaller modules in future versions to improve maintainability.
-
-## Final Submission
-
-The final submitted version of CareerGrid is marked in the GitHub repository using the tag:
-
-```text
-v1
-```
+- Career and company coverage is intentionally limited to the scenarios included in this project.
+- Firebase and Gemini features require network access and valid server credentials.
+- Adzuna listings are optional and can fall back to local/demo data.
+- Microphone interviews require browser permission and MediaRecorder support; automated tests do not validate real microphones or speech services.
+- The simulated terminal supports a controlled command model and is not a real shell. GitHub URLs and pull requests are fictional simulation artifacts.
+- Flask/Jinja fallback views remain during the incremental migration and may not match every React interaction exactly.
+- Vite's production build is verified, but Flask does not currently serve `frontend/dist/`; deployment must add SPA hosting and deep-link fallback routing.
+- End-to-end behavior with production Firebase/Gemini credentials still requires a configured manual environment.

@@ -56,6 +56,24 @@ def test_anonymous_interview_workspace_and_review_apis_are_protected(client):
         }
 
 
+def test_authenticated_unknown_api_route_returns_json_instead_of_html(client):
+    with client.session_transaction() as user_session:
+        user_session["user_id"] = "user-123"
+        user_session["user_email"] = "student@example.com"
+
+    response = client.get("/api/interview/interview-id/reviews")
+
+    assert response.status_code == 404
+    assert response.is_json
+    assert response.get_json() == {
+        "error": (
+            "CareerGrid could not find the requested information. "
+            "Please refresh and try again."
+        )
+    }
+    assert "<!doctype html>" not in response.get_data(as_text=True).lower()
+
+
 def test_authenticated_session_returns_only_browser_safe_identity(client):
     with client.session_transaction() as user_session:
         user_session["user_id"] = "user-123"

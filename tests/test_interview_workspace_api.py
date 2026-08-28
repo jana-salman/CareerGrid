@@ -71,6 +71,19 @@ def _completed_review_interview():
     return interview
 
 
+def test_interview_review_api_has_one_exact_registered_url(client):
+    review_rules = [
+        rule
+        for rule in client.application.url_map.iter_rules()
+        if rule.endpoint == "interviews.interview_review_api"
+    ]
+
+    assert [str(rule) for rule in review_rules] == [
+        "/api/interview/<interview_id>/review"
+    ]
+    assert review_rules[0].methods == {"GET", "HEAD", "OPTIONS"}
+
+
 def test_interview_workspace_api_returns_only_browser_safe_state(client, monkeypatch):
     interview = _interview()
     interview["public_questions"][0]["accidental_private_field"] = "do not expose"
@@ -314,6 +327,7 @@ def test_interview_review_api_returns_only_legacy_visible_report_fields(
     payload = response.get_json()
 
     assert response.status_code == 200
+    assert response.is_json
     assert set(payload) == {
         "areas_for_improvement",
         "communication_feedback",
