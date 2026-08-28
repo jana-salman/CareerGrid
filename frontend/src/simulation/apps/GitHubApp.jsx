@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { createPullRequest } from '../state/repositoryModel.js'
+import { copyPullRequestLink } from '../state/pullRequestClipboard.js'
 
 function GitHubApp({ repository, onRepositoryChange }) {
   const [activeTab, setActiveTab] = useState('code')
@@ -8,9 +9,16 @@ function GitHubApp({ repository, onRepositoryChange }) {
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [error, setError] = useState('')
+  const [toast, setToast] = useState('')
   const current = repository.branches[repository.currentBranch]
   const pushed = repository.remote.pushedBranches.includes(repository.currentBranch)
   const pullRequest = repository.pullRequests.at(-1) || null
+
+  useEffect(() => {
+    if (!toast) return undefined
+    const timer = window.setTimeout(() => setToast(''), 2300)
+    return () => window.clearTimeout(timer)
+  }, [toast])
 
   const create = (event) => {
     event.preventDefault()
@@ -59,13 +67,14 @@ function GitHubApp({ repository, onRepositoryChange }) {
           </form>
         ) : activeTab === 'pulls' ? (
           pullRequest
-            ? <PullRequestDetail pullRequest={pullRequest} repository={repository} />
+            ? <PullRequestDetail pullRequest={pullRequest} repository={repository} onCopySuccess={() => setToast('Pull request link copied')} />
             : <PullRequestsView pullRequests={repository.pullRequests} onCreate={() => setShowForm(true)} />
         ) : (
           <CodeView current={current} pushed={pushed} repository={repository} onCreate={() => setShowForm(true)} />
         )}
       </div>
     </div>
+    {toast && <div className="github-toast" role="status">{toast}</div>}
   </>
 }
 
@@ -100,12 +109,17 @@ function PullRequestsView({ pullRequests, onCreate }) {
   </>
 }
 
-function PullRequestDetail({ pullRequest, repository }) {
+function PullRequestDetail({ onCopySuccess, pullRequest, repository }) {
   const commits = repository.branches[pullRequest.compareBranch]?.commits || []
+  const copyLink = async () => {
+    const result = await copyPullRequestLink(pullRequest.url)
+    if (result.copied) onCopySuccess()
+  }
   return <section className="github-pr-detail" style={{ marginTop: 16 }}>
     <div className="github-actions"><div><h3>#{pullRequest.id} {pullRequest.title}</h3><div className="github-detail-meta"><span className="github-status-badge is-open">Open</span><span>{pullRequest.compareBranch} → {pullRequest.baseBranch}</span><span>opened by {pullRequest.author}</span></div></div></div>
     <p className="github-pr-description">{pullRequest.description || 'No description provided.'}</p>
     <a className="github-pr-url" href={pullRequest.url} target="_blank" rel="noreferrer">{pullRequest.url}</a>
+    <div className="github-form-actions"><button className="github-secondary-button" type="button" onClick={copyLink}>Copy PR Link</button></div>
     <section className="github-section" style={{ marginTop: 16 }}><h4 className="github-section-title">Compare branch commits</h4><div className="github-section-body">{commits.map((commit) => <CommitRow commit={commit} key={commit.id} />)}</div></section>
   </section>
 }
