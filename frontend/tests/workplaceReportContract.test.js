@@ -38,7 +38,7 @@ test('report route restores legacy scrolling without leaking report state', asyn
   ])
 
   assert.match(index, /\/static\/css\/task_review\.css/)
-  assert.match(desktopCss, /body\s*\{[\s\S]*?overflow:\s*hidden;/)
+  assert.match(desktopCss, /body:has\(#careergrid-workspace\)[\s\S]*?overflow:\s*hidden;/)
   assert.match(reportCss, /body\.workplace-report-route\s*\{[\s\S]*?overflow-y:\s*auto;/)
   assert.match(report, /document\.body\.classList\.add\('workplace-report-route'\)/)
   assert.match(report, /document\.body\.classList\.remove\('workplace-report-route'\)/)

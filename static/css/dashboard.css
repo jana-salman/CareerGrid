@@ -56,6 +56,23 @@
   width: min(1180px, 100%);
   margin: 0 auto;
 }
+
+.dashboard-loading {
+  min-height: 280px;
+  padding: 52px clamp(24px, 5vw, 60px);
+}
+
+.dashboard-loading h1 {
+  margin: 8px 0 0;
+  color: var(--cg-text);
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.dashboard-loading .filter-empty {
+  padding-right: 0;
+  padding-left: 0;
+  text-align: left;
+}
 .dashboard-hero {
   margin-bottom: 30px;
 }
