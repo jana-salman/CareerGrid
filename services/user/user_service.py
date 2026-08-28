@@ -4,7 +4,7 @@ import hashlib
 from datetime import datetime, timezone
 from typing import Any
 
-from services.firebase_service import get_database_reference
+from services.user.firebase_service import get_database_reference
 
 
 def normalize_email(email: str) -> str:

@@ -10,7 +10,7 @@ from constants import (
     WORKPLACE_SCENARIO_VERSION,
     WORKPLACE_SIMULATION_MODE,
 )
-from services.firebase_service import get_database_reference
+from services.user.firebase_service import get_database_reference
 
 
 def _current_utc_time() -> str:

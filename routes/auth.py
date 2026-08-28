@@ -13,7 +13,7 @@ from werkzeug.security import (
     generate_password_hash,
 )
 
-from services.user_service import (
+from services.user.user_service import (
     create_user,
     get_user_by_email,
     normalize_email,
