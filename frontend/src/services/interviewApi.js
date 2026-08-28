@@ -1,5 +1,13 @@
 import { apiRequest, encodeApiPathSegment } from './api.js'
 
+function getInterviewWorkspace(interviewId) {
+  return apiRequest(`/api/interview/${encodeApiPathSegment(interviewId)}`)
+}
+
+function getInterviewReview(interviewId) {
+  return apiRequest(`/api/interview/${encodeApiPathSegment(interviewId)}/review`)
+}
+
 function submitInterviewAnswer(interviewId, answerFormData) {
   return apiRequest(
     `/api/interview/${encodeApiPathSegment(interviewId)}/answer`,
@@ -10,4 +18,4 @@ function submitInterviewAnswer(interviewId, answerFormData) {
   )
 }
 
-export { submitInterviewAnswer }
+export { getInterviewReview, getInterviewWorkspace, submitInterviewAnswer }

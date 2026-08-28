@@ -3,7 +3,11 @@ import { afterEach, test } from 'node:test'
 
 import { ApiError, apiRequest } from '../src/services/api.js'
 import { getAuthenticatedSession } from '../src/services/authApi.js'
-import { submitInterviewAnswer } from '../src/services/interviewApi.js'
+import {
+  getInterviewReview,
+  getInterviewWorkspace,
+  submitInterviewAnswer,
+} from '../src/services/interviewApi.js'
 import {
   evaluateWorkplaceSimulation,
   getSimulationAttempt,
@@ -178,4 +182,34 @@ test('interview service preserves multipart form data', async () => {
   await submitInterviewAnswer('interview-1', formData)
 
   assert.equal(capturedBody, formData)
+})
+
+test('interview service loads an encoded workspace API path', async () => {
+  let capturedPath
+  globalThis.fetch = async (path) => {
+    capturedPath = path
+    return new Response(JSON.stringify({ status: 'in_progress', questions: [] }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 200,
+    })
+  }
+
+  await getInterviewWorkspace('interview/with spaces')
+
+  assert.equal(capturedPath, '/api/interview/interview%2Fwith%20spaces')
+})
+
+test('interview service loads an encoded review API path', async () => {
+  let capturedPath
+  globalThis.fetch = async (path) => {
+    capturedPath = path
+    return new Response(JSON.stringify({ status: 'completed', question_results: [] }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 200,
+    })
+  }
+
+  await getInterviewReview('interview/with spaces')
+
+  assert.equal(capturedPath, '/api/interview/interview%2Fwith%20spaces/review')
 })

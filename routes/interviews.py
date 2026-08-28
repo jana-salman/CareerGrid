@@ -1,5 +1,7 @@
 """Interview lifecycle, evaluation, review, and answer API routes."""
 
+import math
+
 from flask import Blueprint, current_app, jsonify, redirect, render_template, request, session, url_for
 
 from constants import WORKPLACE_SIMULATION_MODE
@@ -23,6 +25,188 @@ from services.simulation_storage import (
 )
 
 interviews_bp = Blueprint("interviews", __name__)
+
+_PUBLIC_QUESTION_FIELDS = (
+    "id",
+    "category",
+    "question",
+    "difficulty",
+    "target_words",
+    "time_limit_seconds",
+)
+
+
+def _browser_safe_questions(questions):
+    """Return only the public question fields required by the interview UI."""
+
+    if not isinstance(questions, list):
+        return []
+
+    return [
+        {
+            field: question.get(field)
+            for field in _PUBLIC_QUESTION_FIELDS
+            if field in question
+        }
+        for question in questions
+        if isinstance(question, dict)
+    ]
+
+
+def _current_question_number(interview):
+    """Normalize the persisted one-based interview question pointer."""
+
+    try:
+        return max(int(interview.get("current_question", 1)), 1)
+    except (AttributeError, TypeError, ValueError):
+        return 1
+
+
+def _review_text(value):
+    """Return one display-safe text value for the public review API."""
+
+    if value is None:
+        return ""
+    if isinstance(value, (str, int, float)) and not isinstance(value, bool):
+        return str(value)
+    return ""
+
+
+def _review_number(value):
+    """Return one finite numeric review value without coercing private objects."""
+
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not math.isfinite(value)
+    ):
+        return 0
+    return value
+
+
+def _review_text_list(value):
+    """Allow only scalar user-visible list items into the review API."""
+
+    if not isinstance(value, list):
+        return []
+    return [text for item in value if (text := _review_text(item))]
+
+
+def _browser_safe_interview_review(interview_id, interview):
+    """Build the exact public report fields rendered by the legacy review."""
+
+    evaluation = interview.get("evaluation", {})
+    if not isinstance(evaluation, dict):
+        evaluation = {}
+
+    questions = interview.get("public_questions", [])
+    if not isinstance(questions, list):
+        questions = []
+    answers = normalize_interview_answers(interview.get("answers", {}))
+
+    question_results = []
+    for question in questions:
+        if not isinstance(question, dict):
+            continue
+        question_id = str(question.get("id"))
+        answer = answers.get(question_id, {})
+        question_results.append(
+            {
+                "category": _review_text(question.get("category")),
+                "feedback": _review_text(answer.get("feedback")),
+                "filler_count": _review_number(answer.get("filler_count", 0)),
+                "long_pause_count": _review_number(
+                    answer.get("long_pause_count", 0)
+                ),
+                "question": _review_text(question.get("question")),
+                "score": _review_number(answer.get("question_score", 0)),
+                "transcript": _review_text(answer.get("transcript")),
+                "word_count": _review_number(answer.get("word_count", 0)),
+                "words_per_minute": _review_number(
+                    answer.get("words_per_minute", 0)
+                ),
+            }
+        )
+
+    career_id = _review_text(interview.get("career_id"))
+    position_id = _review_text(interview.get("position_id"))
+    company_id = _review_text(interview.get("company_id"))
+    position = POSITIONS_DATA.get(career_id, {}).get(position_id, {})
+    position_title = position.get(
+        "title",
+        position_id.replace("-", " ").title(),
+    )
+
+    return {
+        "areas_for_improvement": _review_text_list(
+            evaluation.get("areas_for_improvement")
+        ),
+        "communication_feedback": _review_text(
+            evaluation.get("communication_feedback")
+        ),
+        "company_name": get_company_display_name(
+            career_id,
+            position_id,
+            company_id,
+        ),
+        "content_feedback": _review_text(evaluation.get("content_feedback")),
+        "explore_url": url_for("careers.career"),
+        "interview_id": interview_id,
+        "next_steps": _review_text_list(evaluation.get("next_steps")),
+        "overall_score": _review_number(evaluation.get("overall_score", 0)),
+        "position_title": _review_text(position_title),
+        "question_results": question_results,
+        "status": "completed",
+        "strengths": _review_text_list(evaluation.get("strengths")),
+        "summary": _review_text(evaluation.get("summary")),
+    }
+
+
+def _recover_saved_interview_report(
+    *,
+    user_id,
+    interview_id,
+    interview,
+    questions,
+    company_name,
+    position_title,
+):
+    """Finish a report when every answer was saved before evaluation failed."""
+
+    if _current_question_number(interview) <= len(questions):
+        return "not_ready"
+
+    answers = normalize_interview_answers(interview.get("answers", {}))
+    if len(answers) < len(questions):
+        return "not_ready"
+
+    try:
+        final_evaluation = generate_final_interview_evaluation(
+            answers=answers,
+            questions=questions,
+            company_name=company_name,
+            position_title=position_title,
+        )
+        complete_interview_attempt(
+            user_id=user_id,
+            interview_id=interview_id,
+            overall_score=final_evaluation.get("overall_score", 0),
+            evaluation=final_evaluation,
+        )
+    except InterviewEvaluationError as error:
+        current_app.logger.warning(
+            "Interview recovery evaluation failed: %s",
+            error,
+        )
+        return "failed"
+    except Exception as error:
+        current_app.logger.exception(
+            "Interview recovery could not be completed (type=%s).",
+            type(error).__name__,
+        )
+        return "failed"
+
+    return "completed"
 
 @interviews_bp.post("/simulation/attempts/<attempt_id>/interview/start")
 def start_interview(attempt_id):
@@ -239,60 +423,21 @@ def interview_workspace(interview_id):
     # In that case current_question becomes 8. Instead of
     # trapping the candidate, automatically finish the report.
 
-    try:
-        current_question = int(
-            interview.get(
-                "current_question",
-                1,
+    recovery_status = _recover_saved_interview_report(
+        user_id=user_id,
+        interview_id=interview_id,
+        interview=interview,
+        questions=questions,
+        company_name=company_name,
+        position_title=position_title,
+    )
+    if recovery_status == "completed":
+        return redirect(
+            url_for(
+                "interviews.interview_review",
+                interview_id=interview_id,
             )
         )
-    except (TypeError, ValueError):
-        current_question = 1
-
-    if current_question > len(questions):
-
-        answers = normalize_interview_answers(interview.get("answers", {}))
-
-        if len(answers) >= len(questions):
-
-            try:
-
-                final_evaluation = (
-                    generate_final_interview_evaluation(
-                        answers=answers,
-                        questions=questions,
-                        company_name=company_name,
-                        position_title=position_title,
-                    )
-                )
-
-                overall_score = (
-                    final_evaluation.get(
-                        "overall_score",
-                        0,
-                    )
-                )
-
-                complete_interview_attempt(
-                    user_id=user_id,
-                    interview_id=interview_id,
-                    overall_score=overall_score,
-                    evaluation=final_evaluation,
-                )
-
-                return redirect(
-                    url_for(
-                        "interviews.interview_review",
-                        interview_id=interview_id,
-                    )
-                )
-
-            except InterviewEvaluationError as error:
-
-                current_app.logger.warning(
-                    "Interview recovery evaluation failed: %s",
-                    error,
-                )
 
 
     return render_template(
@@ -323,6 +468,105 @@ def interview_workspace(interview_id):
             "user_name",
             "User",
         ),
+    )
+
+
+@interviews_bp.get("/api/interview/<interview_id>")
+def interview_workspace_api(interview_id):
+    """Return the browser-safe workspace state for an owned interview."""
+
+    interview = get_interview_attempt(
+        user_id=session.get("user_id"),
+        interview_id=interview_id,
+    )
+
+    if not interview:
+        return jsonify({"error": "Interview attempt not found."}), 404
+
+    status = interview.get("status")
+    review_url = url_for(
+        "interviews.interview_review",
+        interview_id=interview_id,
+    )
+
+    if status == "completed":
+        return jsonify(
+            {
+                "interview_id": interview_id,
+                "review_url": review_url,
+                "status": "completed",
+            }
+        )
+
+    if status != "in_progress":
+        return jsonify({"error": "This interview is not available."}), 409
+
+    stored_questions = interview.get("public_questions", [])
+    questions = _browser_safe_questions(stored_questions)
+    if not questions:
+        return jsonify({"error": "Interview questions are not available."}), 404
+
+    career_id = str(interview.get("career_id", ""))
+    position_id = str(interview.get("position_id", ""))
+    company_id = str(interview.get("company_id", ""))
+    position = POSITIONS_DATA.get(career_id, {}).get(position_id, {})
+    position_title = position.get(
+        "title",
+        position_id.replace("-", " ").title(),
+    )
+
+    company_name = get_company_display_name(
+        career_id,
+        position_id,
+        company_id,
+    )
+    current_question = _current_question_number(interview)
+    recovery_status = _recover_saved_interview_report(
+        user_id=session.get("user_id"),
+        interview_id=interview_id,
+        interview=interview,
+        questions=stored_questions,
+        company_name=company_name,
+        position_title=position_title,
+    )
+    if recovery_status == "completed":
+        return jsonify(
+            {
+                "interview_id": interview_id,
+                "review_url": review_url,
+                "status": "completed",
+            }
+        )
+    if current_question > len(questions):
+        return jsonify(
+            {
+                "error": (
+                    "Your answers were saved, but CareerGrid could not create "
+                    "the final report. Refresh to try again."
+                )
+            }
+        ), 503
+
+    return jsonify(
+        {
+            "company_id": company_id,
+            "company_name": company_name,
+            "current_question": current_question,
+            "interview_id": interview_id,
+            "interview_title": interview.get(
+                "interview_title",
+                f"{position_title} Interview",
+            ),
+            "opening_message": interview.get(
+                "opening_message",
+                "Welcome to your CareerGrid interview.",
+            ),
+            "position_id": position_id,
+            "position_title": position_title,
+            "questions": questions,
+            "review_url": review_url,
+            "status": "in_progress",
+        }
     )
 
 
@@ -708,6 +952,21 @@ def submit_interview_answer(interview_id):
         ), 503
 
 
+    except Exception as error:
+
+        current_app.logger.exception(
+            "Final interview completion failed (type=%s).",
+            type(error).__name__,
+        )
+
+        return jsonify(
+            {
+                "error":
+                "Your answers were saved, but CareerGrid could not create the final report."
+            }
+        ), 500
+
+
     return jsonify(
         {
             "saved": True,
@@ -719,6 +978,39 @@ def submit_interview_answer(interview_id):
             ),
         }
     )
+
+
+@interviews_bp.get("/api/interview/<interview_id>/review")
+def interview_review_api(interview_id):
+    """Return only the completed owner's legacy-visible interview report."""
+
+    interview = get_interview_attempt(
+        user_id=session.get("user_id"),
+        interview_id=interview_id,
+    )
+
+    if not interview:
+        return jsonify(
+            {
+                "redirect_url": url_for("careers.career"),
+                "status": "unavailable",
+            }
+        )
+
+    if interview.get("status") != "completed":
+        return jsonify(
+            {
+                "interview_id": interview_id,
+                "redirect_url": url_for(
+                    "interviews.interview_workspace",
+                    interview_id=interview_id,
+                ),
+                "status": "in_progress",
+            }
+        )
+
+    return jsonify(_browser_safe_interview_review(interview_id, interview))
+
 
 @interviews_bp.get("/interview/<interview_id>/review")
 def interview_review(interview_id):

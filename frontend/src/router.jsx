@@ -4,6 +4,8 @@ import FoundationPage from './pages/FoundationPage.jsx'
 import CareerPage from './pages/CareerPage.jsx'
 import CompanyPage from './pages/CompanyPage.jsx'
 import HomePage from './pages/HomePage.jsx'
+import InterviewPage from './pages/InterviewPage.jsx'
+import InterviewReviewPage from './pages/InterviewReviewPage.jsx'
 import PositionPage from './pages/PositionPage.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
 import WorkplaceReportPage from './pages/WorkplaceReportPage.jsx'
@@ -18,6 +20,8 @@ function CareerGridRoutes() {
       <Route path="/positions/:careerId" element={<PositionPage />} />
       <Route path="/positions/:careerId/:positionId" element={<CompanyPage />} />
       <Route path="/dashboard" element={<DashboardPage />} />
+      <Route path="/interview/:interviewId" element={<InterviewPage />} />
+      <Route path="/interview/:interviewId/review" element={<InterviewReviewPage />} />
       <Route path="/simulation/attempts/:attemptId/report" element={<WorkplaceReportPage />} />
       <Route path="/workspace/attempt/:attemptId" element={<SimulationDesktop />} />
       {routeDefinitions.filter(({ path }) => ![
@@ -26,6 +30,8 @@ function CareerGridRoutes() {
         '/positions/:careerId',
         '/positions/:careerId/:positionId',
         '/dashboard',
+        '/interview/:interviewId',
+        '/interview/:interviewId/review',
         '/simulation/attempts/:attemptId/report',
         '/workspace/attempt/:attemptId',
       ].includes(path)).map(({ path, title }) => (

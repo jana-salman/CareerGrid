@@ -17,11 +17,17 @@ def client():
 def test_anonymous_users_are_redirected_from_private_pages(client):
     dashboard_response = client.get("/dashboard")
     career_response = client.get("/career")
+    interview_response = client.get("/interview/interview-id")
+    review_response = client.get("/interview/interview-id/review")
 
     assert dashboard_response.status_code == 302
     assert dashboard_response.headers["Location"].endswith("/login")
     assert career_response.status_code == 302
     assert career_response.headers["Location"].endswith("/")
+    assert interview_response.status_code == 302
+    assert interview_response.headers["Location"].endswith("/")
+    assert review_response.status_code == 302
+    assert review_response.headers["Location"].endswith("/")
 
 
 def test_production_requires_an_explicit_secret_key(monkeypatch):

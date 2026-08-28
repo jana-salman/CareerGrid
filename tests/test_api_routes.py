@@ -44,6 +44,18 @@ def test_anonymous_existing_protected_api_returns_json_unauthorized(client):
     assert response.get_json()["error"] == "Authentication required."
 
 
+def test_anonymous_interview_workspace_and_review_apis_are_protected(client):
+    workspace_response = client.get("/api/interview/interview-id")
+    review_response = client.get("/api/interview/interview-id/review")
+
+    for response in (workspace_response, review_response):
+        assert response.status_code == 401
+        assert response.get_json() == {
+            "authenticated": False,
+            "error": "Authentication required.",
+        }
+
+
 def test_authenticated_session_returns_only_browser_safe_identity(client):
     with client.session_transaction() as user_session:
         user_session["user_id"] = "user-123"
