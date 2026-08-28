@@ -1,5 +1,13 @@
 import { useMemo, useState } from 'react'
 import { requestAdvisorGuidance } from '../../services/simulationApi.js'
+import {
+  assessCompletionEmail,
+  cancelSubmissionCandidate,
+  confirmSubmission,
+  createSubmissionCandidate,
+  isAffirmativeSubmissionConfirmation,
+  isSubmissionCancellation,
+} from '../state/submissionWorkflow.js'
 
 function createMessages(scenario) {
   const task = scenario.task || {}
@@ -8,7 +16,18 @@ function createMessages(scenario) {
   return [...main, ...(scenario.background_emails || []).map((email, index) => ({ id: email.id || `background-${index}`, sender: email.sender_name, role: email.sender_title, subject: email.subject, body: email.body, unread: true, attachments: [] }))]
 }
 
-function MailApp({ attempt, downloadedAttachments, onDownload }) {
+function completionGuidance(errors) {
+  if (errors.includes('missing_pull_request')) return 'Please include the simulated pull request link in your completion update.'
+  if (errors.includes('invalid_pull_request')) return "I couldn't find that pull request in the current project. Please double-check the link and send it again."
+  if (errors.includes('branch_not_pushed')) return 'Push the pull request branch before submitting it for review.'
+  if (errors.includes('no_compare_commits')) return 'Commit your changes on the feature branch before submitting the pull request.'
+  if (errors.includes('branch_mismatch')) return 'The branch named in your update does not match the pull request branch.'
+  if (errors.includes('insufficient_summary')) return 'Please add a meaningful summary of what you investigated or changed.'
+  if (errors.includes('missing_verification')) return 'Please state how you tested, checked, or verified the work.'
+  return 'Please complete the simulated Git and pull request workflow before submitting.'
+}
+
+function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRepositoryChange, onSubmissionConfirmed = () => {} }) {
   const scenario = attempt.public_scenario || {}
   const [messages, setMessages] = useState(() => createMessages(scenario))
   const [folder, setFolder] = useState('inbox')
@@ -17,18 +36,44 @@ function MailApp({ attempt, downloadedAttachments, onDownload }) {
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
+  const completionEnabled = attempt.position_id !== 'frontend-developer'
   const visible = useMemo(() => messages.filter((message) => (folder === 'sent' ? message.sent : !message.sent) && `${message.sender} ${message.subject}`.toLowerCase().includes(query.toLowerCase())), [folder, messages, query])
   const selected = messages.find((message) => message.id === selectedId)
   const open = (id) => { setSelectedId(id); setMessages((items) => items.map((item) => item.id === id ? { ...item, unread: false } : item)) }
   const send = async () => {
-    if (!draft.trim() || !selected) return
+    if (!draft.trim() || !selected || sending) return
     setSending(true); setError('')
-    const userMessage = { id: `sent-${Date.now()}`, sender: 'You', role: 'You', body: draft.trim(), sent: true }
-    setMessages((items) => items.map((item) => item.id === selected.id ? { ...item, replies: [...(item.replies || []), userMessage] } : item))
+    const body = draft.trim()
+    const userMessage = { id: `sent-${Date.now()}`, sender: 'You', role: 'You', body, sent: true }
+    let advisorReply = ''
+    let nextRepository = repository
     try {
-      const result = await requestAdvisorGuidance({ attemptId: attempt.attempt_id, advisorContext: { message: draft.trim(), task: { subject: selected.subject } } })
-      const reply = result.advisor_reply || result.reply || 'Thanks - I have received your update.'
-      setMessages((items) => items.map((item) => item.id === selected.id ? { ...item, replies: [...(item.replies || []), userMessage, { id: `advisor-${Date.now()}`, sender: selected.sender, role: selected.role, body: reply }] } : item))
+      if (completionEnabled && selected.task) {
+        const candidate = repository.submissionCandidates[selected.id]
+        const existing = repository.submissions[selected.id]
+        if (existing) advisorReply = 'This task has already been submitted for final review.'
+        else if (candidate && isSubmissionCancellation(body)) {
+          const result = cancelSubmissionCandidate(repository, selected.id); nextRepository = result.repository
+          advisorReply = 'No problem. The pending submission was cancelled so you can correct it.'
+        } else if (candidate && isAffirmativeSubmissionConfirmation(body)) {
+          const result = confirmSubmission(repository, selected.id, body, userMessage.id)
+          if (result.error) advisorReply = result.error
+          else { nextRepository = result.repository; advisorReply = 'Thanks, I will treat this pull request as your final submission and begin the review.'; onSubmissionConfirmed(result.submission, result.repository, selected) }
+        } else if (candidate) advisorReply = 'I have the pull request queued for final review. Reply yes to submit it, or cancel to make a correction.'
+        else {
+          const assessment = assessCompletionEmail(repository, body)
+          if (assessment.validCandidate) {
+            const result = createSubmissionCandidate(repository, selected.id, body, assessment); nextRepository = result.repository
+            advisorReply = 'Just to confirm, is this the pull request you want me to review as your final submission?'
+          } else if (assessment.looksLikeSubmission) advisorReply = completionGuidance(assessment.errors)
+        }
+      }
+      if (!advisorReply) {
+        const result = await requestAdvisorGuidance({ attemptId: attempt.attempt_id, advisorContext: { message: body, task: { subject: selected.subject } } })
+        advisorReply = result.advisor_reply || result.reply || 'Thanks - I have received your update.'
+      }
+      if (nextRepository !== repository) onRepositoryChange(nextRepository)
+      setMessages((items) => items.map((item) => item.id === selected.id ? { ...item, replies: [...(item.replies || []), userMessage, { id: `advisor-${Date.now()}`, sender: selected.sender, role: selected.role, body: advisorReply }] } : item))
       setDraft('')
     } catch (requestError) { setError(requestError.message) }
     finally { setSending(false) }
