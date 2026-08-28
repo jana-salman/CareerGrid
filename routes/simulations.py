@@ -509,6 +509,15 @@ def workplace_report_api(attempt_id):
     position_id = attempt.get("position_id", "")
     company_id = attempt.get("company_id", "")
     position = POSITIONS_DATA.get(career_id, {}).get(position_id, {})
+    valid_demo_company_ids = {
+        company.get("id")
+        for company in position.get("companies", [])
+        if company.get("id")
+    }
+    if is_backend_demo(career_id, position_id, company_id):
+        job_source = BACKEND_DEMO_JOB_SOURCE
+    else:
+        job_source = "demo" if company_id in valid_demo_company_ids else "adzuna"
     public_scenario = attempt.get("public_scenario", {})
     task = public_scenario.get("task", {}) if isinstance(public_scenario, dict) else {}
     overall_score = evaluation.get("overall_score", 0)
@@ -525,6 +534,7 @@ def workplace_report_api(attempt_id):
             "career_id": career_id,
             "position_id": position_id,
             "company_id": company_id,
+            "job_source": job_source,
             "position_title": position.get("title", position_id.replace("-", " ").title()),
             "company_name": get_company_display_name(career_id, position_id, company_id),
             "strengths": normalize_review_items(evaluation.get("strengths")),

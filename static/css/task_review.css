@@ -71,6 +71,13 @@ body {
 }
 
 
+/* The React shell also loads the fixed simulation desktop stylesheet. */
+body.workplace-report-route {
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+
 button,
 a {
     font: inherit;

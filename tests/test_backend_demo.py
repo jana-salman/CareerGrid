@@ -361,6 +361,28 @@ def test_demo_attempt_uses_predefined_interview_without_gemini(client, monkeypat
     )
 
 
+def test_workplace_report_api_preserves_retry_source_and_interview_unlock(
+    client,
+    monkeypatch,
+):
+    attempt = _completed_attempt()
+    attempt["public_scenario"] = {
+        "task": {"subject": "User Profile API Production Incident"}
+    }
+    monkeypatch.setattr(
+        simulation_routes,
+        "get_simulation_attempt",
+        lambda **kwargs: attempt,
+    )
+
+    response = client.get("/api/simulation/attempts/attempt-demo/report")
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["job_source"] == BACKEND_DEMO_JOB_SOURCE
+    assert payload["interview_unlocked"] is True
+
+
 def test_normal_attempt_still_calls_gemini_interview_generation(client, monkeypatch):
     generated_interview = get_backend_demo_interview()
     generator = Mock(return_value=generated_interview)
