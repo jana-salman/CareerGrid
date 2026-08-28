@@ -7,12 +7,12 @@ from flask import Blueprint, jsonify, redirect, session, url_for
 from routes.frontend import serve_react_app
 
 from constants import WORKPLACE_SIMULATION_MODE
-from services.career_service import (
+from services.simulation.career_service import (
     get_career_display_name,
     get_company_display_name,
     get_position_title,
 )
-from services.simulation_storage import list_user_simulation_attempts
+from services.simulation.simulation_storage import list_user_simulation_attempts
 
 
 dashboard_bp = Blueprint("dashboard", __name__)

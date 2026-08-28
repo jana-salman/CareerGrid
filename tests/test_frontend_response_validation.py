@@ -1,6 +1,6 @@
 import pytest
 
-from services.frontend_workplace_progress_service import (
+from services.simulation.frontend_workplace_progress_service import (
     FrontendProgressValidationError,
     validate_frontend_progress,
 )

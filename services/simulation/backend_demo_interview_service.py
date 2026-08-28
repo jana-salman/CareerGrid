@@ -1,7 +1,7 @@
 """Predefined interview questions for the Backend Developer live demo."""
 
-from ai.rubrics.interview_v1 import build_backend_demo_interview_rubrics
-from services.interview_service import calculate_answer_time
+from ai_prompt.rubrics.interview_v1 import build_backend_demo_interview_rubrics
+from services.ai.interview_service import calculate_answer_time
 
 
 def get_backend_demo_interview() -> dict:

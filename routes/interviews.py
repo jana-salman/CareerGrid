@@ -5,14 +5,14 @@ import math
 from flask import Blueprint, current_app, jsonify, redirect, request, session, url_for
 
 from constants import WORKPLACE_SIMULATION_MODE
-from services.career_service import (
+from services.simulation.career_service import (
     POSITIONS_DATA,
     get_company_display_name,
     get_position_title,
 )
-from services.backend_demo_interview_service import get_backend_demo_interview
-from services.backend_demo_scenario_service import is_backend_demo
-from services.interview_service import (
+from services.simulation.backend_demo_interview_service import get_backend_demo_interview
+from services.simulation.backend_demo_scenario_service import is_backend_demo
+from services.ai.interview_service import (
     InterviewEvaluationError,
     InterviewGenerationError,
     analyze_spoken_answer,
@@ -20,7 +20,7 @@ from services.interview_service import (
     generate_interview_questions,
     normalize_interview_answers,
 )
-from services.simulation_storage import (
+from services.simulation.simulation_storage import (
     complete_interview_attempt,
     create_interview_attempt,
     get_interview_attempt,

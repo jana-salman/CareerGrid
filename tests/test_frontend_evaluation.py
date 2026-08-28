@@ -1,4 +1,4 @@
-from services.evaluation_service import evaluate_frontend_workplace_progress
+from services.ai.evaluation_service import evaluate_frontend_workplace_progress
 
 
 def test_frontend_evaluation_has_ten_dimensions_and_bounded_score():

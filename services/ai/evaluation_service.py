@@ -5,10 +5,10 @@ from typing import Any
 
 from google.genai import types
 
-from ai.prompts.workplace_evaluation_v2 import build_workplace_evaluation_prompt
+from ai_prompt.prompts.workplace_evaluation_v2 import build_workplace_evaluation_prompt
 from config import get_gemini_model
-from services.gemini_service import get_gemini_client
-from services.gemini_utils import clean_json_response
+from services.ai.gemini_service import get_gemini_client
+from services.ai.gemini_utils import clean_json_response
 
 
 class SimulationEvaluationError(Exception):

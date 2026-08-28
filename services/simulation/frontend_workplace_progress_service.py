@@ -3,7 +3,7 @@
 from copy import deepcopy
 from typing import Any
 
-from services.frontend_workplace_scenario_service import FRONTEND_TERMINAL_COMMANDS
+from services.simulation.frontend_workplace_scenario_service import FRONTEND_TERMINAL_COMMANDS
 
 
 class FrontendProgressValidationError(ValueError):

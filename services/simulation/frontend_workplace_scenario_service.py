@@ -13,12 +13,12 @@ from typing import Any
 
 from google.genai import types
 
-from ai.prompts.scenario_v1 import build_frontend_scenario_prompt
-from ai.rubrics.workplace_v1 import build_frontend_demo_private_rubric
+from ai_prompt.prompts.scenario_v1 import build_frontend_scenario_prompt
+from ai_prompt.rubrics.workplace_v1 import build_frontend_demo_private_rubric
 from config import get_gemini_model
 from constants import WORKPLACE_FINAL_STEP
-from services.gemini_service import get_gemini_client
-from services.scenario_generation_service import (
+from services.ai.gemini_service import get_gemini_client
+from services.ai.scenario_generation_service import (
     ScenarioGenerationError,
     validate_workplace_scenario,
 )

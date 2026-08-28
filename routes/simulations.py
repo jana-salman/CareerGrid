@@ -7,30 +7,30 @@ from constants import (
     WORKPLACE_FINAL_STEP,
     WORKPLACE_SIMULATION_MODE,
 )
-from services.career_service import (
+from services.simulation.career_service import (
     POSITIONS_DATA,
     get_company_display_name,
     is_position_available,
 )
-from services.advisor_service import AdvisorReplyError, generate_advisor_reply
-from services.backend_demo_scenario_service import (
+from services.ai.advisor_service import AdvisorReplyError, generate_advisor_reply
+from services.simulation.backend_demo_scenario_service import (
     BACKEND_DEMO_JOB_SOURCE,
     get_backend_demo_workplace_scenario,
     is_backend_demo,
 )
-from services.evaluation_service import (
+from services.ai.evaluation_service import (
     SimulationEvaluationError,
     evaluate_frontend_workplace_progress,
     evaluate_workplace_submission,
     normalize_review_items,
 )
-from services.frontend_workplace_progress_service import (
+from services.simulation.frontend_workplace_progress_service import (
     FrontendProgressValidationError,
     validate_frontend_progress,
 )
-from services.frontend_workplace_scenario_service import generate_frontend_workplace_scenario
-from services.scenario_generation_service import ScenarioGenerationError, generate_workplace_scenario
-from services.simulation_storage import (
+from services.simulation.frontend_workplace_scenario_service import generate_frontend_workplace_scenario
+from services.ai.scenario_generation_service import ScenarioGenerationError, generate_workplace_scenario
+from services.simulation.simulation_storage import (
     create_workplace_simulation_attempt,
     get_frontend_workplace_progress,
     get_simulation_attempt,

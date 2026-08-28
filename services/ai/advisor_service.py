@@ -5,10 +5,10 @@ from typing import Any
 
 from google.genai import types
 
-from ai.prompts.advisor_v1 import build_advisor_prompt
+from ai_prompt.prompts.advisor_v1 import build_advisor_prompt
 from config import get_gemini_model
-from services.gemini_service import get_gemini_client
-from services.gemini_utils import clean_json_response
+from services.ai.gemini_service import get_gemini_client
+from services.ai.gemini_utils import clean_json_response
 
 
 class AdvisorReplyError(RuntimeError):

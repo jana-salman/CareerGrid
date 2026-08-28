@@ -7,15 +7,15 @@ from typing import Any
 
 from google.genai import types
 
-from ai.prompts.interview_v1 import (
+from ai_prompt.prompts.interview_v1 import (
     build_final_interview_evaluation_prompt,
     build_interview_generation_prompt,
     build_spoken_answer_evaluation_prompt,
 )
 from config import get_gemini_model
 from constants import LEGACY_INTERVIEW_GEMINI_MODEL
-from services.gemini_service import get_gemini_client
-from services.gemini_utils import extract_json
+from services.ai.gemini_service import get_gemini_client
+from services.ai.gemini_utils import extract_json
 
 
 class InterviewGenerationError(RuntimeError):

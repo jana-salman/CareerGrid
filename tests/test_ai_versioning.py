@@ -1,30 +1,30 @@
 """Contracts for versioned server-side AI definitions."""
 
-from ai.prompts.advisor_v1 import ADVISOR_PROMPT_VERSION, build_advisor_prompt
-from ai.prompts.interview_v1 import (
+from ai_prompt.prompts.advisor_v1 import ADVISOR_PROMPT_VERSION, build_advisor_prompt
+from ai_prompt.prompts.interview_v1 import (
     INTERVIEW_PROMPT_VERSION,
     build_final_interview_evaluation_prompt,
     build_interview_generation_prompt,
     build_spoken_answer_evaluation_prompt,
 )
-from ai.prompts.scenario_v1 import (
+from ai_prompt.prompts.scenario_v1 import (
     SCENARIO_PROMPT_VERSION,
     build_backend_scenario_prompt,
     build_frontend_scenario_prompt,
 )
-from ai.prompts.workplace_evaluation_v1 import (
+from ai_prompt.prompts.workplace_evaluation_v1 import (
     WORKPLACE_EVALUATION_PROMPT_VERSION,
     build_workplace_evaluation_prompt,
 )
-from ai.prompts.workplace_evaluation_v2 import (
+from ai_prompt.prompts.workplace_evaluation_v2 import (
     WORKPLACE_EVALUATION_PROMPT_VERSION as WORKPLACE_EVALUATION_PROMPT_VERSION_V2,
     build_workplace_evaluation_prompt as build_workplace_evaluation_prompt_v2,
 )
-from ai.rubrics.interview_v1 import (
+from ai_prompt.rubrics.interview_v1 import (
     INTERVIEW_RUBRIC_VERSION,
     build_backend_demo_interview_rubrics,
 )
-from ai.rubrics.workplace_v1 import (
+from ai_prompt.rubrics.workplace_v1 import (
     WORKPLACE_RUBRIC_VERSION,
     build_frontend_demo_private_rubric,
 )

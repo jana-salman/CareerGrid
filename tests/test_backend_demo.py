@@ -8,18 +8,18 @@ import app as careergrid_app
 import routes.careers as career_routes
 import routes.interviews as interview_routes
 import routes.simulations as simulation_routes
-from services.career_service import get_company_display_name
-from services.backend_demo_interview_service import (
+from services.simulation.career_service import get_company_display_name
+from services.simulation.backend_demo_interview_service import (
     get_backend_demo_interview,
 )
-from services.backend_demo_scenario_service import (
+from services.simulation.backend_demo_scenario_service import (
     BACKEND_DEMO_COMPANY_ID,
     BACKEND_DEMO_JOB_SOURCE,
     get_backend_demo_workplace_scenario,
 )
-from services.interview_service import INTERVIEW_QUESTION_COUNT
-from services.scenario_generation_service import validate_workplace_scenario
-from services.simulation_storage import save_workplace_scenario
+from services.ai.interview_service import INTERVIEW_QUESTION_COUNT
+from services.ai.scenario_generation_service import validate_workplace_scenario
+from services.simulation.simulation_storage import save_workplace_scenario
 
 
 @pytest.fixture
@@ -626,7 +626,7 @@ def test_workplace_storage_preserves_default_and_custom_generation_sources(
 
     reference = AttemptReference()
     monkeypatch.setattr(
-        "services.simulation_storage.get_database_reference",
+        "services.simulation.simulation_storage.get_database_reference",
         lambda path: reference,
     )
     arguments = {

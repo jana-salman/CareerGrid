@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from ai.prompts.workplace_evaluation_v1 import build_workplace_evaluation_prompt as build_v1_prompt
+from ai_prompt.prompts.workplace_evaluation_v1 import build_workplace_evaluation_prompt as build_v1_prompt
 
 
 WORKPLACE_EVALUATION_PROMPT_VERSION = "workplace_evaluation_v2"
