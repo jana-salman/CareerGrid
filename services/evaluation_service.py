@@ -8,6 +8,7 @@ from google.genai import types
 from ai.prompts.workplace_evaluation_v2 import build_workplace_evaluation_prompt
 from config import get_gemini_model
 from services.gemini_service import get_gemini_client
+from services.gemini_utils import clean_json_response
 
 
 class SimulationEvaluationError(Exception):
@@ -143,7 +144,7 @@ def evaluate_workplace_submission(evidence: dict[str, Any]) -> dict[str, Any]:
                     temperature=0.35,
                 ),
             )
-        evaluation = json.loads(_clean_json_response(response.text or ""))
+        evaluation = json.loads(clean_json_response(response.text or ""))
     except Exception as error:
         raise SimulationEvaluationError(
             "Gemini could not evaluate the submitted work."
@@ -151,21 +152,3 @@ def evaluate_workplace_submission(evidence: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(evaluation, dict) or not isinstance(evaluation.get("dimensions"), dict):
         raise SimulationEvaluationError("Gemini returned an invalid workplace evaluation.")
     return evaluation
-
-
-def _clean_json_response(response_text: str) -> str:
-    """
-    Remove optional Markdown code blocks from Gemini's response.
-    """
-
-    cleaned = response_text.strip()
-
-    if cleaned.startswith("```json"):
-        cleaned = cleaned[7:]
-    elif cleaned.startswith("```"):
-        cleaned = cleaned[3:]
-
-    if cleaned.endswith("```"):
-        cleaned = cleaned[:-3]
-
-    return cleaned.strip()

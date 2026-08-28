@@ -13,6 +13,7 @@ from google.genai import types
 from ai.prompts.scenario_v1 import build_backend_scenario_prompt
 from config import get_gemini_model
 from services.gemini_service import get_gemini_client
+from services.gemini_utils import clean_json_response
 
 
 class ScenarioGenerationError(RuntimeError):
@@ -66,17 +67,6 @@ SOLUTION_LEAK_PATTERNS = (
 SOURCE_LINE_REFERENCE_PATTERN = re.compile(
     r"(?P<filename>[A-Za-z0-9_./-]+\.[A-Za-z0-9]+):(?P<line>[1-9][0-9]*)(?::[0-9]+)?"
 )
-
-
-def _clean_json_response(response_text: str) -> str:
-    cleaned = response_text.strip()
-    if cleaned.startswith("```json"):
-        cleaned = cleaned[7:]
-    elif cleaned.startswith("```"):
-        cleaned = cleaned[3:]
-    if cleaned.endswith("```"):
-        cleaned = cleaned[:-3]
-    return cleaned.strip()
 
 
 def _required_text(value: Any, field_name: str) -> str:
@@ -368,7 +358,7 @@ def generate_workplace_scenario(
                     contents=prompt,
                     config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.7),
                 )
-            payload = json.loads(_clean_json_response(response.text or ""))
+            payload = json.loads(clean_json_response(response.text or ""))
             return validate_workplace_scenario(payload), generation_attempt
         except (ScenarioGenerationError, json.JSONDecodeError, ValueError, TypeError) as error:
             if generation_attempt == max_attempts:

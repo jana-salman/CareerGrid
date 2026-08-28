@@ -15,6 +15,7 @@ from ai.prompts.interview_v1 import (
 from config import get_gemini_model
 from constants import LEGACY_INTERVIEW_GEMINI_MODEL
 from services.gemini_service import get_gemini_client
+from services.gemini_utils import extract_json
 
 
 class InterviewGenerationError(RuntimeError):
@@ -45,46 +46,6 @@ TARGET_ANSWER_COVERAGE = 0.90
 
 def _gemini_model() -> str:
     return get_gemini_model(LEGACY_INTERVIEW_GEMINI_MODEL)
-
-
-def _extract_json(text: str) -> dict[str, Any]:
-    """
-    Convert Gemini output into a JSON object even when the model
-    wraps it in markdown code fences.
-    """
-
-    if not text:
-        raise ValueError(
-            "Gemini returned an empty response."
-        )
-
-    cleaned = text.strip()
-
-    if cleaned.startswith("```"):
-        cleaned = cleaned.replace(
-            "```json",
-            "",
-            1,
-        )
-
-        cleaned = cleaned.replace(
-            "```",
-            "",
-        )
-
-        cleaned = cleaned.strip()
-
-    start = cleaned.find("{")
-    end = cleaned.rfind("}")
-
-    if start == -1 or end == -1:
-        raise ValueError(
-            "Gemini response did not contain valid JSON."
-        )
-
-    return json.loads(
-        cleaned[start:end + 1]
-    )
 
 
 def _safe_float(
@@ -252,7 +213,7 @@ def generate_interview_questions(
             )
         )
 
-        data = _extract_json(
+        data = extract_json(
             response.text or ""
         )
 
@@ -561,7 +522,7 @@ def analyze_spoken_answer(
             )
         )
 
-        result = _extract_json(
+        result = extract_json(
             response.text or ""
         )
 
@@ -1039,7 +1000,7 @@ def generate_final_interview_evaluation(
             )
         )
 
-        result = _extract_json(
+        result = extract_json(
             response.text or ""
         )
 
