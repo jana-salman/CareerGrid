@@ -1,6 +1,6 @@
 """Predefined interview questions for the Backend Developer live demo."""
 
-from ai.rubrics.interview_v1 import build_backend_demo_interview_rubrics
+from ai_prompt.rubrics.interview_v1 import build_backend_demo_interview_rubrics
 from services.ai.interview_service import calculate_answer_time
 
 

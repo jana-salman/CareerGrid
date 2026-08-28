@@ -7,7 +7,7 @@ from typing import Any
 
 from google.genai import types
 
-from ai.prompts.interview_v1 import (
+from ai_prompt.prompts.interview_v1 import (
     build_final_interview_evaluation_prompt,
     build_interview_generation_prompt,
     build_spoken_answer_evaluation_prompt,
