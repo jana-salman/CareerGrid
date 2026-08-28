@@ -4,13 +4,137 @@ import { restartFrontendSimulation, saveFrontendSimulationProgress } from '../se
 
 const labels = ['Triage the production report', 'Investigate across viewports', 'Implement a focused fix', 'Verify behavior and regressions', 'Review, commit, and open a PR']
 const fields = [[['selected_email_id', 'Critical email ID'], ['selected_priority', 'Priority'], ['selected_action', 'First action'], ['written_response', 'Reply to the frontend lead', true]], [['viewports_tested', 'Viewports'], ['evidence_opened', 'Evidence inspected'], ['selected_root_cause', 'Root cause'], ['proposed_next_action', 'Proposed next action', true], ['investigation_summary', 'Investigation summary', true]], [['files_opened', 'Files opened'], ['product_js', 'Updated product.js', true], ['fix_explanation', 'Why this is the smallest safe fix', true]], [['commands_run', 'Safe commands'], ['tests_performed', 'Behavior checks'], ['viewport_checks', 'Viewports'], ['accessibility_checks', 'Accessibility checks'], ['release_decision', 'Release decision']], [['reviewed_files', 'Reviewed changed files'], ['commit_message', 'Commit message'], ['pr_title', 'Pull request title'], ['pr_description', 'Pull request description', true], ['testing_checklist', 'Testing checklist'], ['release_recommendation', 'Release recommendation'], ['final_team_message', 'Final team update', true]]]
-const list = (value) => String(value || '').split(',').map((item) => item.trim()).filter(Boolean)
+
+const list = (value) =>
+  String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+
+function buildStepPayload(step, value) {
+  if (step === 1) {
+    return {
+      opened_email_ids: [value('selected_email_id')],
+      selected_email_id: value('selected_email_id'),
+      selected_priority: value('selected_priority'),
+      selected_action: value('selected_action'),
+      written_response: value('written_response'),
+    }
+  }
+
+  if (step === 2) {
+    return {
+      pages_inspected: ['product'],
+      viewports_tested: list(value('viewports_tested')),
+      evidence_opened: list(value('evidence_opened')),
+      selected_root_cause: value('selected_root_cause'),
+      proposed_next_action: value('proposed_next_action'),
+      investigation_summary: value('investigation_summary'),
+    }
+  }
+
+  if (step === 3) {
+    return {
+      files_opened: list(value('files_opened')),
+      changed_files: { 'product.js': value('product_js') },
+      fix_explanation: value('fix_explanation'),
+    }
+  }
+
+  if (step === 4) {
+    return {
+      commands_run: list(value('commands_run')),
+      tests_performed: list(value('tests_performed')),
+      viewport_checks: list(value('viewport_checks')),
+      accessibility_checks: list(value('accessibility_checks')),
+      release_decision: value('release_decision'),
+    }
+  }
+
+  return {
+    reviewed_files: list(value('reviewed_files')),
+    commit_message: value('commit_message'),
+    pr_title: value('pr_title'),
+    pr_description: value('pr_description'),
+    testing_checklist: list(value('testing_checklist')),
+    release_recommendation: value('release_recommendation'),
+    final_team_message: value('final_team_message'),
+  }
+}
 
 function TaskPanel({ attempt, progress, onProgress = () => {} }) {
-  const [liveProgress, setLiveProgress] = useState(progress); const current = liveProgress || progress; const step = Number(current?.current_step || 1); const complete = current?.status === 'completed' || Boolean(current?.evaluation); const [values, setValues] = useState({}); const [saving, setSaving] = useState(false); const [error, setError] = useState('')
-  const prior = current?.responses?.[`step_${step}`] || {}; const value = (name) => values[name] ?? prior[name] ?? ''
-  const build = () => step === 1 ? { opened_email_ids: [value('selected_email_id')], selected_email_id: value('selected_email_id'), selected_priority: value('selected_priority'), selected_action: value('selected_action'), written_response: value('written_response') } : step === 2 ? { pages_inspected: ['product'], viewports_tested: list(value('viewports_tested')), evidence_opened: list(value('evidence_opened')), selected_root_cause: value('selected_root_cause'), proposed_next_action: value('proposed_next_action'), investigation_summary: value('investigation_summary') } : step === 3 ? { files_opened: list(value('files_opened')), changed_files: { 'product.js': value('product_js') }, fix_explanation: value('fix_explanation') } : step === 4 ? { commands_run: list(value('commands_run')), tests_performed: list(value('tests_performed')), viewport_checks: list(value('viewport_checks')), accessibility_checks: list(value('accessibility_checks')), release_decision: value('release_decision') } : { reviewed_files: list(value('reviewed_files')), commit_message: value('commit_message'), pr_title: value('pr_title'), pr_description: value('pr_description'), testing_checklist: list(value('testing_checklist')), release_recommendation: value('release_recommendation'), final_team_message: value('final_team_message') }
-  const submit = async (event) => { event.preventDefault(); setSaving(true); setError(''); try { const result = await saveFrontendSimulationProgress(attempt.attempt_id, step, build()); const next = result.evaluation ? { ...current, status: 'completed', evaluation: result.evaluation, responses: { ...current.responses, [`step_${step}`]: result.response } } : { ...current, current_step: step + 1, responses: { ...current.responses, [`step_${step}`]: result.response } }; setLiveProgress(next); onProgress(next); setValues({}) } catch (err) { setError(err.message) } finally { setSaving(false) } }
-  return <aside className="frontend-task-panel"><small>FRONTEND WORKPLACE - TASK {Math.min(step, 5)} OF 5</small><h2>{complete ? 'Frontend simulation complete' : labels[step - 1]}</h2><div className="frontend-task-progress">{Array.from({ length: 5 }, (_, index) => <span className={index + 1 <= step ? 'done' : ''} key={index} />)}</div>{complete ? <Link className="frontend-task-submit" to={`/simulation/attempts/${encodeURIComponent(attempt.attempt_id)}/report`}>Open report</Link> : <form onSubmit={submit}>{fields[step - 1].map(([name, label, area]) => <label key={name}>{label}{area ? <textarea required value={value(name)} onChange={(e) => setValues({ ...values, [name]: e.target.value })} /> : <input required value={value(name)} onChange={(e) => setValues({ ...values, [name]: e.target.value })} />}</label>)}<p className="frontend-task-error">{error}</p><button className="frontend-task-submit" disabled={saving} type="submit">{saving ? 'Saving...' : 'Save and continue'}</button></form>}</aside>
+  const [liveProgress, setLiveProgress] = useState(progress)
+  const current = liveProgress || progress
+  const step = Number(current?.current_step || 1)
+  const complete = current?.status === 'completed' || Boolean(current?.evaluation)
+  const [values, setValues] = useState({})
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const prior = current?.responses?.[`step_${step}`] || {}
+  const value = (name) => values[name] ?? prior[name] ?? ''
+
+  const submit = async (event) => {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+    try {
+      const result = await saveFrontendSimulationProgress(attempt.attempt_id, step, buildStepPayload(step, value))
+      const next = result.evaluation
+        ? {
+            ...current,
+            status: 'completed',
+            evaluation: result.evaluation,
+            responses: { ...current.responses, [`step_${step}`]: result.response },
+          }
+        : {
+            ...current,
+            current_step: step + 1,
+            responses: { ...current.responses, [`step_${step}`]: result.response },
+          }
+      setLiveProgress(next)
+      onProgress(next)
+      setValues({})
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <aside className="frontend-task-panel">
+      <small>FRONTEND WORKPLACE - TASK {Math.min(step, 5)} OF 5</small>
+      <h2>{complete ? 'Frontend simulation complete' : labels[step - 1]}</h2>
+      <div className="frontend-task-progress">
+        {Array.from({ length: 5 }, (_, index) => (
+          <span className={index + 1 <= step ? 'done' : ''} key={index} />
+        ))}
+      </div>
+      {complete ? (
+        <Link className="frontend-task-submit" to={`/simulation/attempts/${encodeURIComponent(attempt.attempt_id)}/report`}>
+          Open report
+        </Link>
+      ) : (
+        <form onSubmit={submit}>
+          {fields[step - 1].map(([name, label, area]) => (
+            <label key={name}>
+              {label}
+              {area ? (
+                <textarea required value={value(name)} onChange={(e) => setValues({ ...values, [name]: e.target.value })} />
+              ) : (
+                <input required value={value(name)} onChange={(e) => setValues({ ...values, [name]: e.target.value })} />
+              )}
+            </label>
+          ))}
+          <p className="frontend-task-error">{error}</p>
+          <button className="frontend-task-submit" disabled={saving} type="submit">
+            {saving ? 'Saving...' : 'Save and continue'}
+          </button>
+        </form>
+      )}
+    </aside>
+  )
 }
+
 export default TaskPanel
