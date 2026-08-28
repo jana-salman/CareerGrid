@@ -150,6 +150,9 @@ def register_api():
     if not full_name or not email or not password:
         return jsonify({"error": "Please complete all fields."}), 400
 
+    if len(password) < 8:
+        return jsonify({"error": "Password must be at least 8 characters."}), 400
+
     if get_user_by_email(email) is not None:
         return jsonify({"error": "An account with this email already exists."}), 409
 
