@@ -5,7 +5,11 @@ import math
 from flask import Blueprint, current_app, jsonify, redirect, request, session, url_for
 
 from constants import WORKPLACE_SIMULATION_MODE
-from services.career_service import POSITIONS_DATA, get_company_display_name
+from services.career_service import (
+    POSITIONS_DATA,
+    get_company_display_name,
+    get_position_title,
+)
 from services.backend_demo_interview_service import get_backend_demo_interview
 from services.backend_demo_scenario_service import is_backend_demo
 from services.interview_service import (
@@ -132,11 +136,7 @@ def _browser_safe_interview_review(interview_id, interview):
     career_id = _review_text(interview.get("career_id"))
     position_id = _review_text(interview.get("position_id"))
     company_id = _review_text(interview.get("company_id"))
-    position = POSITIONS_DATA.get(career_id, {}).get(position_id, {})
-    position_title = position.get(
-        "title",
-        position_id.replace("-", " ").title(),
-    )
+    position_title = get_position_title(career_id, position_id)
 
     return {
         "areas_for_improvement": _review_text_list(
@@ -266,10 +266,7 @@ def start_interview(attempt_id):
     if not position:
         return redirect(url_for("careers.career"))
 
-    position_title = position.get(
-        "title",
-        position_id.replace("-", " ").title(),
-    )
+    position_title = get_position_title(career_id, position_id)
 
     company_name = get_company_display_name(
         career_id,
@@ -380,11 +377,7 @@ def interview_workspace_api(interview_id):
     career_id = str(interview.get("career_id", ""))
     position_id = str(interview.get("position_id", ""))
     company_id = str(interview.get("company_id", ""))
-    position = POSITIONS_DATA.get(career_id, {}).get(position_id, {})
-    position_title = position.get(
-        "title",
-        position_id.replace("-", " ").title(),
-    )
+    position_title = get_position_title(career_id, position_id)
 
     company_name = get_company_display_name(
         career_id,
@@ -646,20 +639,7 @@ def submit_interview_answer(interview_id):
     )
 
 
-    position = (
-        POSITIONS_DATA
-        .get(career_id, {})
-        .get(position_id, {})
-    )
-
-
-    position_title = position.get(
-        "title",
-        position_id.replace(
-            "-",
-            " ",
-        ).title(),
-    )
+    position_title = get_position_title(career_id, position_id)
 
 
     company_name = get_company_display_name(

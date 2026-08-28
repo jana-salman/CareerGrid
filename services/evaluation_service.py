@@ -8,6 +8,7 @@ from google.genai import types
 from ai.prompts.workplace_evaluation_v2 import build_workplace_evaluation_prompt
 from config import get_gemini_model
 from services.gemini_service import get_gemini_client
+from services.gemini_utils import clean_json_response
 
 
 class SimulationEvaluationError(Exception):
@@ -143,7 +144,7 @@ def evaluate_workplace_submission(evidence: dict[str, Any]) -> dict[str, Any]:
                     temperature=0.35,
                 ),
             )
-        evaluation = json.loads(_clean_json_response(response.text or ""))
+        evaluation = json.loads(clean_json_response(response.text or ""))
     except Exception as error:
         raise SimulationEvaluationError(
             "Gemini could not evaluate the submitted work."
@@ -153,19 +154,15 @@ def evaluate_workplace_submission(evidence: dict[str, Any]) -> dict[str, Any]:
     return evaluation
 
 
-def _clean_json_response(response_text: str) -> str:
-    """
-    Remove optional Markdown code blocks from Gemini's response.
-    """
-
-    cleaned = response_text.strip()
-
-    if cleaned.startswith("```json"):
-        cleaned = cleaned[7:]
-    elif cleaned.startswith("```"):
-        cleaned = cleaned[3:]
-
-    if cleaned.endswith("```"):
-        cleaned = cleaned[:-3]
-
-    return cleaned.strip()
+def normalize_review_items(value) -> list[str]:
+    """Normalize an evaluation field into a clean list of strings."""
+    if not value:
+        return []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str):
+        value = value.strip()
+        if not value:
+            return []
+        return [value]
+    return [str(value).strip()]

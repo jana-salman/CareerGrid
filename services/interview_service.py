@@ -15,6 +15,7 @@ from ai.prompts.interview_v1 import (
 from config import get_gemini_model
 from constants import LEGACY_INTERVIEW_GEMINI_MODEL
 from services.gemini_service import get_gemini_client
+from services.gemini_utils import extract_json
 
 
 class InterviewGenerationError(RuntimeError):
@@ -45,46 +46,6 @@ TARGET_ANSWER_COVERAGE = 0.90
 
 def _gemini_model() -> str:
     return get_gemini_model(LEGACY_INTERVIEW_GEMINI_MODEL)
-
-
-def _extract_json(text: str) -> dict[str, Any]:
-    """
-    Convert Gemini output into a JSON object even when the model
-    wraps it in markdown code fences.
-    """
-
-    if not text:
-        raise ValueError(
-            "Gemini returned an empty response."
-        )
-
-    cleaned = text.strip()
-
-    if cleaned.startswith("```"):
-        cleaned = cleaned.replace(
-            "```json",
-            "",
-            1,
-        )
-
-        cleaned = cleaned.replace(
-            "```",
-            "",
-        )
-
-        cleaned = cleaned.strip()
-
-    start = cleaned.find("{")
-    end = cleaned.rfind("}")
-
-    if start == -1 or end == -1:
-        raise ValueError(
-            "Gemini response did not contain valid JSON."
-        )
-
-    return json.loads(
-        cleaned[start:end + 1]
-    )
 
 
 def _safe_float(
@@ -235,24 +196,23 @@ def generate_interview_questions(
         question_count=INTERVIEW_QUESTION_COUNT,
     )
 
-    client = get_gemini_client()
-
     try:
 
-        response = (
-            client.models.generate_content(
-                model=_gemini_model(),
+        with get_gemini_client() as client:
+            response = (
+                client.models.generate_content(
+                    model=_gemini_model(),
 
-                contents=prompt,
+                    contents=prompt,
 
-                config=types.GenerateContentConfig(
-                    temperature=0.9,
-                    response_mime_type="application/json",
-                ),
+                    config=types.GenerateContentConfig(
+                        temperature=0.9,
+                        response_mime_type="application/json",
+                    ),
+                )
             )
-        )
 
-        data = _extract_json(
+        data = extract_json(
             response.text or ""
         )
 
@@ -261,9 +221,6 @@ def generate_interview_questions(
         raise InterviewGenerationError(
             f"Interview generation failed: {error}"
         ) from error
-
-    finally:
-        client.close()
 
     questions = data.get(
         "questions"
@@ -537,31 +494,30 @@ def analyze_spoken_answer(
         position_title=position_title,
     )
 
-    client = get_gemini_client()
-
     try:
 
-        response = (
-            client.models.generate_content(
-                model=_gemini_model(),
+        with get_gemini_client() as client:
+            response = (
+                client.models.generate_content(
+                    model=_gemini_model(),
 
-                contents=[
-                    prompt,
+                    contents=[
+                        prompt,
 
-                    types.Part.from_bytes(
-                        data=audio_bytes,
-                        mime_type=mime_type,
+                        types.Part.from_bytes(
+                            data=audio_bytes,
+                            mime_type=mime_type,
+                        ),
+                    ],
+
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        temperature=0.15,
                     ),
-                ],
-
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    temperature=0.15,
-                ),
+                )
             )
-        )
 
-        result = _extract_json(
+        result = extract_json(
             response.text or ""
         )
 
@@ -570,9 +526,6 @@ def analyze_spoken_answer(
         raise InterviewEvaluationError(
             f"Could not evaluate interview audio: {error}"
         ) from error
-
-    finally:
-        client.close()
 
     transcript = str(
         result.get(
@@ -1022,24 +975,23 @@ def generate_final_interview_evaluation(
         position_title=position_title,
     )
 
-    client = get_gemini_client()
-
     try:
 
-        response = (
-            client.models.generate_content(
-                model=_gemini_model(),
+        with get_gemini_client() as client:
+            response = (
+                client.models.generate_content(
+                    model=_gemini_model(),
 
-                contents=prompt,
+                    contents=prompt,
 
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    temperature=0.25,
-                ),
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        temperature=0.25,
+                    ),
+                )
             )
-        )
 
-        result = _extract_json(
+        result = extract_json(
             response.text or ""
         )
 
@@ -1048,9 +1000,6 @@ def generate_final_interview_evaluation(
         raise InterviewEvaluationError(
             f"Could not create final interview evaluation: {error}"
         ) from error
-
-    finally:
-        client.close()
 
     # Gemini is NOT allowed to change this score.
     result[

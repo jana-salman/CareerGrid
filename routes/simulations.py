@@ -22,6 +22,7 @@ from services.evaluation_service import (
     SimulationEvaluationError,
     evaluate_frontend_workplace_progress,
     evaluate_workplace_submission,
+    normalize_review_items,
 )
 from services.frontend_workplace_progress_service import (
     FrontendProgressValidationError,
@@ -58,15 +59,138 @@ def simulation_workspace(career_id, position_id, company_id):
     return serve_react_app()
 
 
+def _validate_simulation_company(
+    career_id: str,
+    position_id: str,
+    company_id: str,
+    job_source: str,
+    position: dict,
+) -> str | None:
+    """
+    Validate the company selection for a workplace simulation.
+
+    Returns None if valid, or a redirect URL string if invalid.
+    """
+
+    if job_source == BACKEND_DEMO_JOB_SOURCE:
+        if not is_backend_demo(career_id, position_id, company_id):
+            return url_for(
+                "careers.companies",
+                career_id=career_id,
+                position_id=position_id,
+            )
+    elif job_source == "adzuna":
+        # Live Adzuna jobs use the company name.
+        if (
+            not company_id
+            or len(company_id) > current_app.config["MAX_ADZUNA_COMPANY_NAME_LENGTH"]
+        ):
+            return url_for(
+                "careers.companies",
+                career_id=career_id,
+                position_id=position_id,
+            )
+    else:
+        # Demo companies must match the IDs in POSITIONS_DATA.
+        valid_companies = {
+            company.get("id")
+            for company in position.get("companies", [])
+        }
+
+        if company_id not in valid_companies:
+            return url_for(
+                "careers.companies",
+                career_id=career_id,
+                position_id=position_id,
+            )
+
+    return None
+
+
+def _generate_simulation_scenario(
+    *,
+    career_id: str,
+    position_id: str,
+    company_id: str,
+    attempt_id: str,
+    position: dict,
+    is_backend_demo_request: bool,
+) -> tuple[dict, int, str]:
+    """
+    Generate and return the workplace scenario for the given attempt.
+
+    Returns (scenario, generation_attempt_count, generation_source).
+    Raises ScenarioGenerationError on failure.
+    """
+
+    if is_backend_demo_request:
+        scenario = get_backend_demo_workplace_scenario(
+            attempt_id=attempt_id,
+        )
+        generation_attempt_count = 1
+        generation_source = "predefined_demo"
+    elif position_id == FRONTEND_DEVELOPER_POSITION_ID:
+        company_name = next(
+            (
+                company.get("name")
+                for company in position.get("companies", [])
+                if company.get("id") == company_id
+            ),
+            company_id,
+        )
+        scenario, generation_attempt_count = generate_frontend_workplace_scenario(
+            company_name=company_name,
+            attempt_id=attempt_id,
+        )
+        generation_source = "gemini"
+    else:
+        scenario, generation_attempt_count = generate_workplace_scenario(
+            career_id=career_id,
+            position_id=position_id,
+            company_id=company_id,
+            attempt_id=attempt_id,
+        )
+        generation_source = "gemini"
+
+    return scenario, generation_attempt_count, generation_source
+
+
+def _handle_generation_failure(
+    *,
+    user_id: str,
+    attempt_id: str | None,
+    career_id: str,
+    position_id: str,
+) -> str:
+    """
+    Mark the attempt as failed and return the appropriate redirect URL.
+    """
+
+    if attempt_id:
+        try:
+            mark_workplace_generation_failed(
+                user_id=user_id,
+                attempt_id=attempt_id,
+            )
+        except Exception:
+            current_app.logger.exception("Could not mark workplace generation as failed")
+        return url_for("simulations.workplace_attempt_workspace", attempt_id=attempt_id)
+
+    return url_for(
+        "careers.companies",
+        career_id=career_id,
+        position_id=position_id,
+    )
+
+
 @simulations_bp.post("/simulation/workplace/start")
 def start_workplace_simulation():
     career_id = request.form.get("career_id", "").strip()
     position_id = request.form.get("position_id", "").strip()
     company_id = request.form.get("company_id", "").strip()
     job_source = request.form.get("job_source", "demo").strip().lower()
-    is_backend_demo_request = (
-        job_source == BACKEND_DEMO_JOB_SOURCE
-        and is_backend_demo(career_id, position_id, company_id)
+    is_backend_demo_request = job_source == BACKEND_DEMO_JOB_SOURCE and is_backend_demo(
+        career_id, position_id, company_id
     )
 
     position = POSITIONS_DATA.get(career_id, {}).get(position_id)
@@ -77,44 +201,11 @@ def start_workplace_simulation():
     if not is_position_available(career_id, position_id):
         return redirect(url_for("careers.positions", career_id=career_id))
 
-    if job_source == BACKEND_DEMO_JOB_SOURCE:
-        if not is_backend_demo(career_id, position_id, company_id):
-            return redirect(
-                url_for(
-                    "careers.companies",
-                    career_id=career_id,
-                    position_id=position_id,
-                )
-            )
-    elif job_source == "adzuna":
-        # Live Adzuna jobs use the company name.
-        if (
-            not company_id
-            or len(company_id) > current_app.config["MAX_ADZUNA_COMPANY_NAME_LENGTH"]
-        ):
-            return redirect(
-                url_for(
-                    "careers.companies",
-                    career_id=career_id,
-                    position_id=position_id,
-                )
-            )
-
-    else:
-        # Demo companies must match the IDs in POSITIONS_DATA.
-        valid_companies = {
-            company.get("id")
-            for company in position.get("companies", [])
-        }
-
-        if company_id not in valid_companies:
-            return redirect(
-                url_for(
-                    "careers.companies",
-                    career_id=career_id,
-                    position_id=position_id,
-                )
-            )
+    invalid_company_redirect = _validate_simulation_company(
+        career_id, position_id, company_id, job_source, position
+    )
+    if invalid_company_redirect:
+        return redirect(invalid_company_redirect)
 
     attempt_id = None
     workplace_stage = "attempt_creation"
@@ -132,41 +223,21 @@ def start_workplace_simulation():
             position_id,
             company_id,
         )
-        generation_source = "gemini"
         workplace_stage = (
-            "frontend_scenario_generation"
+            "predefined_demo_scenario"
+            if is_backend_demo_request
+            else "frontend_scenario_generation"
             if position_id == FRONTEND_DEVELOPER_POSITION_ID
             else "scenario_generation"
         )
-        if is_backend_demo_request:
-            workplace_stage = "predefined_demo_scenario"
-            scenario = get_backend_demo_workplace_scenario(
-                attempt_id=attempt_id,
-            )
-            generation_attempt_count = 1
-            generation_source = "predefined_demo"
-        elif position_id == FRONTEND_DEVELOPER_POSITION_ID:
-            company_name = next(
-                (
-                    company.get("name")
-                    for company in position.get("companies", [])
-                    if company.get("id") == company_id
-                ),
-                company_id,
-            )
-            scenario, generation_attempt_count = (
-                generate_frontend_workplace_scenario(
-                    company_name=company_name,
-                    attempt_id=attempt_id,
-                )
-            )
-        else:
-            scenario, generation_attempt_count = generate_workplace_scenario(
-                career_id=career_id,
-                position_id=position_id,
-                company_id=company_id,
-                attempt_id=attempt_id,
-            )
+        scenario, generation_attempt_count, generation_source = _generate_simulation_scenario(
+            career_id=career_id,
+            position_id=position_id,
+            company_id=company_id,
+            attempt_id=attempt_id,
+            position=position,
+            is_backend_demo_request=is_backend_demo_request,
+        )
         workplace_stage = "firebase_scenario_storage"
         save_workplace_scenario(
             user_id=session.get("user_id"),
@@ -185,16 +256,6 @@ def start_workplace_simulation():
             "Scenario generation failed for workplace attempt %s",
             attempt_id,
         )
-        try:
-            mark_workplace_generation_failed(
-                user_id=session.get("user_id"),
-                attempt_id=attempt_id,
-            )
-        except Exception:
-            current_app.logger.exception("Could not mark workplace generation as failed")
-        return redirect(
-            url_for("simulations.workplace_attempt_workspace", attempt_id=attempt_id)
-        )
     except Exception as error:
         current_app.logger.exception(
             "Workplace attempt failed: type=%s attempt_id=%s career_id=%s "
@@ -205,23 +266,17 @@ def start_workplace_simulation():
             position_id,
             workplace_stage,
         )
-        if attempt_id:
-            try:
-                mark_workplace_generation_failed(
-                    user_id=session.get("user_id"),
-                    attempt_id=attempt_id,
-                )
-            except Exception:
-                current_app.logger.exception("Could not mark workplace generation as failed")
-            return redirect(url_for("simulations.workplace_attempt_workspace", attempt_id=attempt_id))
-        return redirect(
-            url_for(
-                "careers.companies",
-                career_id=career_id,
-                position_id=position_id,
-            )
+    else:
+        return redirect(url_for("simulations.workplace_attempt_workspace", attempt_id=attempt_id))
+
+    return redirect(
+        _handle_generation_failure(
+            user_id=session.get("user_id"),
+            attempt_id=attempt_id,
+            career_id=career_id,
+            position_id=position_id,
         )
-    return redirect(url_for("simulations.workplace_attempt_workspace", attempt_id=attempt_id))
+    )
 
 
 @simulations_bp.get("/workspace/attempt/<attempt_id>")
@@ -229,35 +284,6 @@ def workplace_attempt_workspace(attempt_id):
     return serve_react_app()
 
 
-def normalize_review_items(value):
-    """
-    Normalize an evaluation field into a clean list of strings.
-
-    Gemini/evaluation data may contain either:
-    - a list of strings
-    - one plain string
-    - no value
-    """
-
-    if not value:
-        return []
-
-    if isinstance(value, list):
-        return [
-            str(item).strip()
-            for item in value
-            if str(item).strip()
-        ]
-
-    if isinstance(value, str):
-        value = value.strip()
-
-        if not value:
-            return []
-
-        return [value]
-
-    return [str(value).strip()]
 @simulations_bp.get("/simulation/attempts/<attempt_id>/report")
 def workplace_task_review(attempt_id):
     """Serve the React workplace report route."""

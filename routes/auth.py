@@ -85,7 +85,7 @@ def protect_pages():
     if request.endpoint == "dashboard.dashboard" and "user_id" not in session:
         return redirect(url_for("auth.login"))
 
-    if "user_email" not in session:
+    if "user_id" not in session:
         return redirect(url_for("careers.home"))
 
 
@@ -149,6 +149,9 @@ def register_api():
     password = str(payload.get("password", ""))
     if not full_name or not email or not password:
         return jsonify({"error": "Please complete all fields."}), 400
+
+    if len(password) < 8:
+        return jsonify({"error": "Password must be at least 8 characters."}), 400
 
     if get_user_by_email(email) is not None:
         return jsonify({"error": "An account with this email already exists."}), 409

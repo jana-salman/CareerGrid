@@ -8,6 +8,7 @@ from google.genai import types
 from ai.prompts.advisor_v1 import build_advisor_prompt
 from config import get_gemini_model
 from services.gemini_service import get_gemini_client
+from services.gemini_utils import clean_json_response
 
 
 class AdvisorReplyError(RuntimeError):
@@ -21,20 +22,6 @@ ALLOWED_INTENTS = {
     "final_submission",
     "follow_up",
 }
-
-
-def _clean_json_response(response_text: str) -> str:
-    cleaned = response_text.strip()
-
-    if cleaned.startswith("```json"):
-        cleaned = cleaned[7:]
-    elif cleaned.startswith("```"):
-        cleaned = cleaned[3:]
-
-    if cleaned.endswith("```"):
-        cleaned = cleaned[:-3]
-
-    return cleaned.strip()
 
 
 def generate_advisor_reply(
@@ -61,7 +48,7 @@ def generate_advisor_reply(
         raise AdvisorReplyError("Gemini returned an empty advisor reply.")
 
     try:
-        parsed = json.loads(_clean_json_response(response.text))
+        parsed = json.loads(clean_json_response(response.text))
     except json.JSONDecodeError as error:
         raise AdvisorReplyError("Gemini returned invalid advisor JSON.") from error
 

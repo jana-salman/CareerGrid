@@ -75,5 +75,11 @@ def build_app_config() -> dict:
         "MAX_ADZUNA_COMPANY_NAME_LENGTH": MAX_ADZUNA_COMPANY_NAME_LENGTH,
         "INTERVIEW_UNLOCK_SCORE": INTERVIEW_UNLOCK_SCORE,
         "MAX_INTERVIEW_AUDIO_BYTES": MAX_INTERVIEW_AUDIO_BYTES,
+        "MAX_CONTENT_LENGTH": MAX_INTERVIEW_AUDIO_BYTES + (1024 * 1024),
+        "SESSION_COOKIE_SAMESITE": "Lax",
+        "SESSION_COOKIE_SECURE": get_environment_value(
+            "CAREERGRID_ENV", "development"
+        ).strip().lower() == "production",
+        "RATELIMIT_DEFAULT_LIMITS_DEDUCT_WHEN": lambda response: response.status_code < 500,
         "FRONTEND_DIST_DIR": BASE_DIR / "frontend" / "dist",
     }
