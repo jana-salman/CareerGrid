@@ -32,7 +32,7 @@ def _format_dashboard_date(timestamp):
         return str(timestamp)
 
 
-def _build_dashboard_item(summary):
+def _build_dashboard_item(summary, *, include_evaluation=True):
     """Prepare one simulation attempt for the dashboard."""
 
     career_id = summary.get("career_id")
@@ -66,7 +66,7 @@ def _build_dashboard_item(summary):
             or ""
         )
 
-    return {
+    item = {
         "attempt_id": summary.get("attempt_id"),
         "task_title": summary.get("task_title") or "Workplace simulation",
         "career_name": get_career_display_name(career_id),
@@ -84,23 +84,35 @@ def _build_dashboard_item(summary):
         "status": raw_status,
         "status_label": status_labels.get(raw_status, "In Progress"),
         "feedback_preview": str(feedback_preview).strip(),
-        "evaluation": evaluation,
+        "has_evaluation": bool(evaluation),
         "can_resume": (
             raw_status == "in_progress"
             and summary.get("simulation_mode") == WORKPLACE_SIMULATION_MODE
         ),
     }
 
+    if include_evaluation:
+        item["evaluation"] = evaluation
 
-def _dashboard_payload(user_id):
+    return item
+
+
+def _dashboard_payload(user_id, *, include_evaluations=True):
     """Build the display-safe dashboard response for one signed-in user."""
 
     summaries = [summary for summary in list_user_simulation_attempts(user_id)
                  if summary.get("simulation_mode") == WORKPLACE_SIMULATION_MODE]
-    attempts = [_build_dashboard_item(summary) for summary in summaries]
+    attempts = [
+        _build_dashboard_item(
+            summary,
+            include_evaluation=include_evaluations,
+        )
+        for summary in summaries
+    ]
     scores = [attempt["score"] for attempt in attempts
               if attempt["status"] == "completed" and attempt["score"] is not None]
     return {
+        "user_id": user_id,
         "user_name": session.get("user_name"),
         "attempts": attempts,
         "simulation_count": len(attempts),
@@ -155,4 +167,9 @@ def dashboard_api():
     user_id = session.get("user_id")
     if not user_id:
         return jsonify({"error": "Authentication required."}), 401
-    return jsonify(_dashboard_payload(user_id))
+    return jsonify(
+        _dashboard_payload(
+            user_id,
+            include_evaluations=False,
+        )
+    )

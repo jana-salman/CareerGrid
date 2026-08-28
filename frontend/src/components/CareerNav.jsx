@@ -1,6 +1,19 @@
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
+import { prefetchDashboard } from '../services/dashboardApi.js'
+
 function CareerNav({ backTo, backLabel, showDashboard = false }) {
+  const warmDashboard = () => {
+    prefetchDashboard().catch(() => {})
+  }
+
+  useEffect(() => {
+    if (showDashboard) {
+      warmDashboard()
+    }
+  }, [showDashboard])
+
   return (
     <nav className="navbar">
       <h2 className="logo">CareerGrid</h2>
@@ -9,7 +22,11 @@ function CareerNav({ backTo, backLabel, showDashboard = false }) {
       ) : (
         <div>
           <Link to="/">Home</Link>
-          {showDashboard && <a href="/dashboard">Dashboard</a>}
+          {showDashboard && (
+            <Link to="/dashboard" onFocus={warmDashboard} onMouseEnter={warmDashboard}>
+              Dashboard
+            </Link>
+          )}
         </div>
       )}
     </nav>

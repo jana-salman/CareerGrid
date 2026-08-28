@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { getAuthenticatedSession } from '../services/authApi.js'
+import {
+  clearDashboardCache,
+  prefetchDashboard,
+  setDashboardSession,
+} from '../services/dashboardApi.js'
 
 function HomePage() {
   const [userName, setUserName] = useState('')
@@ -9,7 +14,11 @@ function HomePage() {
   useEffect(() => {
     document.body.classList.add('home-page')
     getAuthenticatedSession()
-      .then((session) => setUserName(session.user.name))
+      .then((session) => {
+        setUserName(session.user.name)
+        setDashboardSession(session.user.id)
+        prefetchDashboard().catch(() => {})
+      })
       .catch((error) => {
         if (error.status === 401) window.location.assign('/login')
       })
@@ -21,7 +30,7 @@ function HomePage() {
       <header className="home-header">
         <nav className="home-navbar" aria-label="Primary navigation">
           <Link className="home-brand" to="/" aria-label="CareerGrid home"><span className="home-brand-mark" aria-hidden="true">C</span><span>CareerGrid</span></Link>
-          <div className="home-nav-links"><Link className="is-active" to="/" aria-current="page">Home</Link><Link to="/career">Careers</Link><a className="home-signout" href="/logout">Sign Out</a></div>
+          <div className="home-nav-links"><Link className="is-active" to="/" aria-current="page">Home</Link><Link to="/career">Careers</Link><a className="home-signout" href="/logout" onClick={clearDashboardCache}>Sign Out</a></div>
         </nav>
       </header>
       <main>

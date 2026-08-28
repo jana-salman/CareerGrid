@@ -59,6 +59,24 @@ test('Dashboard Home returns to authenticated Home while Careers remains separat
   assert.match(home, /<Link to="\/career">Careers<\/Link>/)
 })
 
+test('Dashboard is prefetched, rendered from session-scoped memory, and refreshed in place', async () => {
+  const [careerNav, dashboard, home] = await Promise.all([
+    read('src/components/CareerNav.jsx'),
+    read('src/pages/DashboardPage.jsx'),
+    read('src/pages/HomePage.jsx'),
+  ])
+
+  assert.match(careerNav, /prefetchDashboard\(\)/)
+  assert.match(careerNav, /<Link to="\/dashboard"/)
+  assert.doesNotMatch(careerNav, /<a href="\/dashboard"/)
+  assert.match(home, /setDashboardSession\(session\.user\.id\)/)
+  assert.match(home, /prefetchDashboard\(\)/)
+  assert.match(home, /onClick=\{clearDashboardCache\}/)
+  assert.match(dashboard, /useState\(\(\) => getCachedDashboard\(\)\)/)
+  assert.match(dashboard, /refreshDashboard\(\)/)
+  assert.match(dashboard, /onClick=\{clearDashboardCache\}/)
+})
+
 test('workspace and Mail identity come from the authenticated session API', async () => {
   const [desktop, mail] = await Promise.all([
     read('src/simulation/SimulationDesktop.jsx'),

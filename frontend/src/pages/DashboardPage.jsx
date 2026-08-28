@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
-import { getDashboard } from '../services/dashboardApi.js'
+import {
+  clearDashboardCache,
+  getCachedDashboard,
+  refreshDashboard,
+} from '../services/dashboardApi.js'
 
 const filters = [
   ['all', 'All'],
@@ -15,14 +19,19 @@ function attemptMatchesFilter(attempt, filter) {
 }
 
 function DashboardPage() {
-  const [dashboard, setDashboard] = useState(null)
+  const [dashboard, setDashboard] = useState(() => getCachedDashboard())
   const [filter, setFilter] = useState('all')
   const [error, setError] = useState('')
 
   useEffect(() => {
     let active = true
-    getDashboard()
-      .then((data) => active && setDashboard(data))
+    refreshDashboard()
+      .then((data) => {
+        if (active) {
+          setDashboard(data)
+          setError('')
+        }
+      })
       .catch((requestError) => active && setError(requestError.message))
     return () => { active = false }
   }, [])
@@ -39,7 +48,7 @@ function DashboardPage() {
         <div className="dashboard-nav-links">
           <Link to="/">Home</Link>
           <Link className="is-active" to="/dashboard" aria-current="page">Dashboard</Link>
-          <a href="/logout">Log out</a>
+          <a href="/logout" onClick={clearDashboardCache}>Log out</a>
         </div>
       </nav>
 
@@ -163,7 +172,7 @@ function AttemptCard({ attempt }) {
         {attempt.score !== null && (
           <div className="history-score"><strong>{attempt.score}</strong><span>/ 100</span></div>
         )}
-        {attempt.evaluation ? (
+        {attempt.has_evaluation ? (
           <Link
             className="dashboard-action dashboard-action--primary"
             to={`/simulation/attempts/${encodeURIComponent(attempt.attempt_id)}/report`}
