@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
 
 import { ApiError, apiRequest } from '../src/services/api.js'
-import { getAuthenticatedSession } from '../src/services/authApi.js'
+import { getAuthenticatedSession, login, logout, register } from '../src/services/authApi.js'
 import {
   getInterviewReview,
   getInterviewWorkspace,
@@ -117,6 +117,37 @@ test('authentication service uses the protected session endpoint', async () => {
   assert.equal(capturedPath, '/api/auth/session')
   assert.equal(result.authenticated, true)
   assert.equal(result.user.id, 'user-1')
+})
+
+test('authentication actions use relative JSON API endpoints and Flask credentials', async () => {
+  const requests = []
+  globalThis.fetch = async (path, options) => {
+    requests.push({ path, options })
+    return new Response(JSON.stringify({ ok: true }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 200,
+    })
+  }
+
+  await login({ email: 'student@example.com', password: 'secret' })
+  await register({ fullName: 'Student User', email: 'student@example.com', password: 'secret' })
+  await logout()
+
+  assert.deepEqual(requests.map(({ path }) => path), [
+    '/api/auth/login',
+    '/api/auth/register',
+    '/api/auth/logout',
+  ])
+  assert.ok(requests.every(({ options }) => options.credentials === 'include'))
+  assert.deepEqual(JSON.parse(requests[0].options.body), {
+    email: 'student@example.com',
+    password: 'secret',
+  })
+  assert.deepEqual(JSON.parse(requests[1].options.body), {
+    email: 'student@example.com',
+    full_name: 'Student User',
+    password: 'secret',
+  })
 })
 
 test('simulation services encode identifiers and use the backend payload contract', async () => {
