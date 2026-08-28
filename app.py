@@ -1,6 +1,8 @@
 """CareerGrid Flask application factory and development entrypoint."""
 
 from flask import Flask, jsonify, request
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from config import build_app_config, environment_flag, secret_key
 from routes import register_blueprints
@@ -20,6 +22,19 @@ def create_app(config_overrides: dict | None = None) -> Flask:
         application.config.update(config_overrides)
 
     register_blueprints(application)
+
+    limiter = Limiter(
+        get_remote_address,
+        app=application,
+        default_limits=[],
+        storage_uri="memory://",
+    )
+    application.view_functions["auth.login_api"] = limiter.limit("10 per minute")(
+        application.view_functions["auth.login_api"]
+    )
+    application.view_functions["auth.register_api"] = limiter.limit("5 per minute")(
+        application.view_functions["auth.register_api"]
+    )
 
     @application.errorhandler(404)
     def api_not_found(error):

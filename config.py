@@ -80,5 +80,6 @@ def build_app_config() -> dict:
         "SESSION_COOKIE_SECURE": get_environment_value(
             "CAREERGRID_ENV", "development"
         ).strip().lower() == "production",
+        "RATELIMIT_DEFAULT_LIMITS_DEDUCT_WHEN": lambda response: response.status_code < 500,
         "FRONTEND_DIST_DIR": BASE_DIR / "frontend" / "dist",
     }
