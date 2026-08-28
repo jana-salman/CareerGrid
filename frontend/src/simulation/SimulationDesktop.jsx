@@ -206,19 +206,15 @@ function SimulationDesktop() {
 }
 
 function AppWindow({ active, app, attempt, downloads, files, repository, userIdentity, onClose, onDownload, onExtract, onSave, onRepositoryChange, onUnreadChange }) {
-  const content = app.id === 'mail'
-    ? <MailApp attempt={attempt} downloadedAttachments={downloads} repository={repository} userIdentity={userIdentity} onDownload={onDownload} onRepositoryChange={onRepositoryChange} onUnreadChange={onUnreadChange} />
-    : app.id === 'files'
-      ? <FilesApp downloadedAttachments={downloads} projectFiles={files} repository={repository} onExtract={onExtract} />
-      : app.id === 'vscode'
-        ? <VSCodeApp files={files} repository={repository} onSave={onSave} />
-        : app.id === 'terminal'
-          ? <TerminalApp files={files} repository={repository} onRepositoryChange={onRepositoryChange} />
-          : app.id === 'browser'
-            ? <BrowserApp active={active} attempt={attempt} />
-            : app.id === 'github'
-              ? <GitHubApp repository={repository} onRepositoryChange={onRepositoryChange} />
-              : <AdvisorApp attempt={attempt} />
+  const appContent = {
+    mail: <MailApp attempt={attempt} downloadedAttachments={downloads} repository={repository} userIdentity={userIdentity} onDownload={onDownload} onRepositoryChange={onRepositoryChange} onUnreadChange={onUnreadChange} />,
+    files: <FilesApp downloadedAttachments={downloads} projectFiles={files} repository={repository} onExtract={onExtract} />,
+    vscode: <VSCodeApp files={files} repository={repository} onSave={onSave} />,
+    terminal: <TerminalApp files={files} repository={repository} onRepositoryChange={onRepositoryChange} />,
+    browser: <BrowserApp active={active} attempt={attempt} />,
+    github: <GitHubApp repository={repository} onRepositoryChange={onRepositoryChange} />,
+  }
+  const content = appContent[app.id] ?? <AdvisorApp attempt={attempt} />
 
   return (
     <section className={`app-window ${app.windowClass}${active ? ' is-active' : ''}`} aria-hidden={!active}>
