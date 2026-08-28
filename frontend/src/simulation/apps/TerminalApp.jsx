@@ -83,7 +83,35 @@ function TerminalApp({ files, repository, onRepositoryChange }) {
     setInput('')
   }
 
-  return <><div className="terminal-tab-bar"><div className="terminal-tab is-active">&gt;_ bash</div><div className="terminal-working-directory">{repository.rootPath}</div></div><div className="terminal-screen"><div className="terminal-welcome">CareerGrid Workspace Terminal<br />Type <strong>help</strong> to see available commands.</div><div className="terminal-history">{history.map((entry, index) => <div className="terminal-command-block" key={index}><div>careergrid:{repository.rootPath}$ {entry.command}</div><pre>{entry.output}</pre></div>)}</div></div><form className="terminal-command-bar" onSubmit={run}><span className="terminal-prompt">careergrid:{repository.rootPath}$</span><input className="terminal-input" value={input} onChange={(event) => setInput(event.target.value)} autoFocus /></form></>
+  return <>
+    <div className="terminal-tab-bar">
+      <div className="terminal-tab is-active"><span>&gt;_</span><span>bash</span></div>
+      <div className="terminal-working-directory">{repository.rootPath}</div>
+    </div>
+    <div className="terminal-screen">
+      <div className="terminal-welcome">CareerGrid Workspace Terminal{`\n\n`}Type <strong>help</strong> to see available commands.</div>
+      <div className="terminal-history">
+        {history.map((entry, index) => {
+          const outputClass = /fatal|error|not found/i.test(entry.output)
+            ? ' is-error'
+            : /switched|pushed|staged|file\(s\) changed/i.test(entry.output)
+              ? ' is-success'
+              : ''
+          return <div className="terminal-command-block" key={index}>
+            <div className="terminal-command-line">
+              <span className="terminal-command-prompt">careergrid:{repository.rootPath}$</span>
+              <span className="terminal-command-text">{entry.command}</span>
+            </div>
+            <pre className={`terminal-output${outputClass}`}>{entry.output}</pre>
+          </div>
+        })}
+      </div>
+    </div>
+    <form className="terminal-command-bar" onSubmit={run}>
+      <span className="terminal-prompt">careergrid:{repository.rootPath}$</span>
+      <input className="terminal-input" value={input} onChange={(event) => setInput(event.target.value)} autoFocus spellCheck="false" />
+    </form>
+  </>
 }
 
 export default TerminalApp

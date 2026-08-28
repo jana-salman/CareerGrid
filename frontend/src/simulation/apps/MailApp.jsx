@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+
 import { evaluateWorkplaceSimulation, requestAdvisorGuidance } from '../../services/simulationApi.js'
 import { buildEvaluationEvidence, markEvaluationFailed, markEvaluationPending, recordEvaluation } from '../state/evaluationEvidence.js'
 import {
@@ -14,8 +15,28 @@ import {
 function createMessages(scenario) {
   const task = scenario.task || {}
   const advisor = scenario.advisor || {}
-  const main = task.id ? [{ id: task.id, sender: advisor.name || 'CareerGrid Advisor', role: advisor.title || 'Advisor', subject: task.subject || 'Workplace task', body: task.body || task.summary || '', unread: true, task: true, attachments: task.attachments || scenario.attachments || [] }] : []
-  return [...main, ...(scenario.background_emails || []).map((email, index) => ({ id: email.id || `background-${index}`, sender: email.sender_name, role: email.sender_title, subject: email.subject, body: email.body, unread: true, attachments: [] }))]
+  const main = task.id ? [{
+    attachments: task.attachments || scenario.attachments || [],
+    body: task.body || task.summary || '',
+    deadline: task.deadline || '',
+    id: task.id,
+    priority: task.priority || 'high',
+    role: advisor.title || 'Advisor',
+    sender: advisor.name || 'CareerGrid Advisor',
+    subject: task.subject || 'Workplace task',
+    task: true,
+    unread: true,
+  }] : []
+  return [...main, ...(scenario.background_emails || []).map((email, index) => ({
+    attachments: [],
+    body: email.body,
+    id: email.id || `background-${index}`,
+    priority: email.priority || 'normal',
+    role: email.sender_title,
+    sender: email.sender_name,
+    subject: email.subject,
+    unread: true,
+  }))]
 }
 
 function completionGuidance(errors) {
@@ -29,7 +50,7 @@ function completionGuidance(errors) {
   return 'Please complete the simulated Git and pull request workflow before submitting.'
 }
 
-function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRepositoryChange }) {
+function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRepositoryChange, onUnreadChange }) {
   const navigate = useNavigate()
   const scenario = attempt.public_scenario || {}
   const [messages, setMessages] = useState(() => createMessages(scenario))
@@ -37,22 +58,39 @@ function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRep
   const [selectedId, setSelectedId] = useState(null)
   const [query, setQuery] = useState('')
   const [draft, setDraft] = useState('')
+  const [replying, setReplying] = useState(false)
   const [sending, setSending] = useState(false)
-  const [evaluationStatus, setEvaluationStatus] = useState('')
+  const [, setEvaluationStatus] = useState('')
   const submissionLock = useRef(false)
   const [error, setError] = useState('')
   const completionEnabled = attempt.position_id !== 'frontend-developer'
-  const visible = useMemo(() => messages.filter((message) => (folder === 'sent' ? message.sent : !message.sent) && `${message.sender} ${message.subject}`.toLowerCase().includes(query.toLowerCase())), [folder, messages, query])
+  const visible = useMemo(() => messages.filter((message) => (
+    (folder === 'sent' ? message.sent : !message.sent)
+    && `${message.sender} ${message.subject}`.toLowerCase().includes(query.toLowerCase())
+  )), [folder, messages, query])
   const selected = messages.find((message) => message.id === selectedId)
-  const open = (id) => { setSelectedId(id); setMessages((items) => items.map((item) => item.id === id ? { ...item, unread: false } : item)) }
+
+  useEffect(() => {
+    onUnreadChange(messages.filter((message) => !message.sent && message.unread).length)
+  }, [messages, onUnreadChange])
+
+  const open = (id) => {
+    setSelectedId(id)
+    setReplying(false)
+    setDraft('')
+    setError('')
+    setMessages((items) => items.map((item) => (
+      item.id === id ? { ...item, unread: false } : item
+    )))
+  }
 
   const runEvaluation = async (sourceRepository, submission, taskMessage) => {
     const pending = markEvaluationPending(sourceRepository, taskMessage.id)
     if (pending.error) return { repository: sourceRepository, reply: pending.error }
     let evaluationRepository = pending.repository
     onRepositoryChange(evaluationRepository)
-      setEvaluationStatus('evaluating')
-      setError('Evaluating your submitted workplace evidence...')
+    setEvaluationStatus('evaluating')
+    setError('Evaluating your submitted workplace evidence...')
     try {
       const evidence = buildEvaluationEvidence({ attempt, repository: evaluationRepository, submission, taskMessage })
       const evaluation = await evaluateWorkplaceSimulation({ attemptId: attempt.attempt_id, evidence })
@@ -67,16 +105,20 @@ function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRep
       onRepositoryChange(evaluationRepository)
       setEvaluationStatus('failed')
       setError(requestError.message)
-      return { repository: evaluationRepository, reply: 'Your submission was recorded, but the review could not be completed. Reply retry to try again.' }
+      return {
+        repository: evaluationRepository,
+        reply: 'Your submission was recorded, but the review could not be completed. Reply retry to try again.',
+      }
     }
   }
 
   const send = async () => {
     if (!draft.trim() || !selected || sending || submissionLock.current) return
     submissionLock.current = true
-    setSending(true); setError('')
+    setSending(true)
+    setError('')
     const body = draft.trim()
-    const userMessage = { id: `sent-${Date.now()}`, sender: 'You', role: 'You', body, sent: true }
+    const userMessage = { body, id: `sent-${Date.now()}`, role: 'You', sender: 'You', sent: true }
     let advisorReply = ''
     let nextRepository = repository
     try {
@@ -88,39 +130,183 @@ function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRep
           if (evaluation?.status === 'completed') advisorReply = 'This task has already been submitted and evaluated.'
           else if (/\bretry\b/i.test(body)) {
             const result = await runEvaluation(repository, existing, { ...selected, replies: [...(selected.replies || []), userMessage] })
-            nextRepository = result.repository; advisorReply = result.reply
-          } else advisorReply = evaluation?.status === 'pending' ? 'Your evaluation is already in progress.' : 'This task is recorded. Reply retry to run the evaluation again.'
-        }
-        else if (candidate && isSubmissionCancellation(body)) {
-          const result = cancelSubmissionCandidate(repository, selected.id); nextRepository = result.repository
+            nextRepository = result.repository
+            advisorReply = result.reply
+          } else {
+            advisorReply = evaluation?.status === 'pending'
+              ? 'Your evaluation is already in progress.'
+              : 'This task is recorded. Reply retry to run the evaluation again.'
+          }
+        } else if (candidate && isSubmissionCancellation(body)) {
+          nextRepository = cancelSubmissionCandidate(repository, selected.id).repository
           advisorReply = 'No problem. The pending submission was cancelled so you can correct it.'
         } else if (candidate && isAffirmativeSubmissionConfirmation(body)) {
           const result = confirmSubmission(repository, selected.id, body, userMessage.id)
           if (result.error) advisorReply = result.error
           else {
-            const evaluationResult = await runEvaluation(result.repository, result.submission, { ...selected, replies: [...(selected.replies || []), userMessage] })
-            nextRepository = evaluationResult.repository; advisorReply = evaluationResult.reply
+            const evaluationResult = await runEvaluation(
+              result.repository,
+              result.submission,
+              { ...selected, replies: [...(selected.replies || []), userMessage] },
+            )
+            nextRepository = evaluationResult.repository
+            advisorReply = evaluationResult.reply
           }
-        } else if (candidate) advisorReply = 'I have the pull request queued for final review. Reply yes to submit it, or cancel to make a correction.'
-        else {
+        } else if (candidate) {
+          advisorReply = 'I have the pull request queued for final review. Reply yes to submit it, or cancel to make a correction.'
+        } else {
           const assessment = assessCompletionEmail(repository, body)
           if (assessment.validCandidate) {
-            const result = createSubmissionCandidate(repository, selected.id, body, assessment); nextRepository = result.repository
+            const result = createSubmissionCandidate(repository, selected.id, body, assessment)
+            nextRepository = result.repository
             advisorReply = 'Just to confirm, is this the pull request you want me to review as your final submission?'
           } else if (assessment.looksLikeSubmission) advisorReply = completionGuidance(assessment.errors)
         }
       }
       if (!advisorReply) {
-        const result = await requestAdvisorGuidance({ attemptId: attempt.attempt_id, advisorContext: { message: body, task: { subject: selected.subject } } })
+        const result = await requestAdvisorGuidance({
+          advisorContext: { message: body, task: { subject: selected.subject } },
+          attemptId: attempt.attempt_id,
+        })
         advisorReply = result.advisor_reply || result.reply || 'Thanks - I have received your update.'
       }
       if (nextRepository !== repository) onRepositoryChange(nextRepository)
-      setMessages((items) => items.map((item) => item.id === selected.id ? { ...item, replies: [...(item.replies || []), userMessage, { id: `advisor-${Date.now()}`, sender: selected.sender, role: selected.role, body: advisorReply }] } : item))
+      setMessages((items) => items.map((item) => item.id === selected.id ? {
+        ...item,
+        replies: [
+          ...(item.replies || []),
+          userMessage,
+          { body: advisorReply, id: `advisor-${Date.now()}`, role: selected.role, sender: selected.sender },
+        ],
+      } : item))
       setDraft('')
-    } catch (requestError) { setError(requestError.message) }
-    finally { submissionLock.current = false; setSending(false) }
+      setReplying(false)
+    } catch (requestError) {
+      setError(requestError.message)
+    } finally {
+      submissionLock.current = false
+      setSending(false)
+    }
   }
-  return <div className="mail-layout"><aside className="mail-sidebar"><div className="mail-sidebar-title">Mail</div><nav className="mail-folders"><button className={`mail-folder${folder === 'inbox' ? ' is-active' : ''}`} type="button" onClick={() => setFolder('inbox')}><span>Inbox</span><span>Inbox</span><span className="folder-count">{messages.filter((item) => !item.sent && item.unread).length}</span></button><button className={`mail-folder${folder === 'sent' ? ' is-active' : ''}`} type="button" onClick={() => setFolder('sent')}><span>Sent</span><span>Sent</span><span className="folder-count">{messages.filter((item) => item.sent).length}</span></button></nav></aside><section className="mail-list-column"><div className="mail-list-toolbar"><div><h2>{folder === 'inbox' ? 'Inbox' : 'Sent'}</h2><span>Your workplace messages</span></div><input type="search" placeholder="Search mail" value={query} onChange={(event) => setQuery(event.target.value)} /></div><div className="mail-message-list">{visible.map((message) => <button className={`mail-list-item${selectedId === message.id ? ' is-selected' : ''}${message.unread ? ' is-unread' : ''}`} type="button" key={message.id} onClick={() => open(message.id)}><strong>{message.sender}</strong><span>{message.subject}</span><p>{message.body?.slice(0, 120)}</p></button>)}</div></section><section className="mail-reading-pane">{!selected ? <div className="mail-empty-state"><div className="mail-empty-icon">Mail</div><h2>Select a message</h2><p>Open an email from your inbox to read it here.</p></div> : <div className="mail-message-view"><header className="mail-message-header"><h1>{selected.subject}</h1><p>{selected.sender} · {selected.role}</p></header><div className="mail-thread"><article className="mail-thread-message"><strong>{selected.sender}</strong><p>{selected.body}</p></article>{selected.replies?.map((reply) => <article className="mail-thread-message" key={reply.id}><strong>{reply.sender}</strong><p>{reply.body}</p></article>)}</div>{selected.attachments?.length > 0 && <section className="mail-attachments"><h3>Attachments</h3><div className="mail-attachment-list">{selected.attachments.map((attachment) => <button className="mail-attachment-card" type="button" key={attachment.id || attachment.name} onClick={() => onDownload(attachment)}><span className="mail-attachment-icon">FILE</span><span className="mail-attachment-info"><strong>{attachment.name}</strong><small>{downloadedAttachments.some((item) => item.name === attachment.name) ? 'Saved to Downloads' : attachment.size || 'Attachment'}</small></span></button>)}</div></section>}<section className="mail-composer"><div className="mail-composer-header"><span>To:</span><strong>{selected.sender}</strong></div><textarea rows="6" placeholder="Write your reply..." value={draft} onChange={(event) => setDraft(event.target.value)} /><p className="mail-draft-status">{error}</p><div className="mail-compose-actions"><button className="mail-send-button" type="button" disabled={sending || !draft.trim()} onClick={send}>{sending ? 'Sending...' : 'Send'}</button></div></section></div>}</section></div>
+
+  return (
+    <div className="mail-layout">
+      <aside className="mail-sidebar">
+        <div className="mail-sidebar-title">Mail</div>
+        <nav className="mail-folders">
+          <button className={`mail-folder${folder === 'inbox' ? ' is-active' : ''}`} type="button" onClick={() => setFolder('inbox')}>
+            <span aria-hidden="true">📥</span><span>Inbox</span>
+            <span className="folder-count">{messages.filter((item) => !item.sent && item.unread).length}</span>
+          </button>
+          <button className={`mail-folder${folder === 'sent' ? ' is-active' : ''}`} type="button" onClick={() => setFolder('sent')}>
+            <span aria-hidden="true">📤</span><span>Sent</span>
+            <span className="folder-count">{messages.filter((item) => item.sent).length}</span>
+          </button>
+        </nav>
+        <div className="mail-sidebar-footer">
+          <span className="mail-account-avatar">U</span>
+          <div><strong>User</strong><small>{attempt.position_id?.replaceAll('-', ' ')}</small></div>
+        </div>
+      </aside>
+
+      <section className="mail-list-column">
+        <div className="mail-list-toolbar">
+          <div><h2>{folder === 'inbox' ? 'Inbox' : 'Sent'}</h2><span>Your workplace messages</span></div>
+          <input id="mail-search" type="search" placeholder="Search mail" value={query} onChange={(event) => setQuery(event.target.value)} />
+        </div>
+        <div className="mail-message-list">
+          {visible.map((message) => (
+            <button
+              className={`mail-list-item${selectedId === message.id ? ' is-selected' : ''}${message.unread ? ' is-unread' : ''}`}
+              type="button"
+              key={message.id}
+              onClick={() => open(message.id)}
+            >
+              <span className="mail-list-topline"><strong className="mail-list-sender">{message.sender}</strong><span className="mail-list-time">Now</span></span>
+              <div className="mail-list-subject">{message.subject}</div>
+              <div className="mail-list-preview">{message.body?.slice(0, 120)}</div>
+              {message.deadline && <div className="mail-list-deadline">Due {message.deadline}</div>}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="mail-reading-pane">
+        {!selected ? (
+          <div className="mail-empty-state"><div className="mail-empty-icon">✉</div><h2>Select a message</h2><p>Open an email from your inbox to read it here.</p></div>
+        ) : (
+          <div className="mail-message-view">
+            <header className="mail-message-header">
+              <div>
+                <div className="mail-message-label-row">
+                  <span className={`mail-priority priority-${selected.priority || 'normal'}`}>{selected.priority === 'high' ? 'High priority' : 'Normal priority'}</span>
+                  {selected.deadline && <span className="mail-deadline">Due {selected.deadline}</span>}
+                  {selected.task && <span className="mail-task-status">Workplace task</span>}
+                </div>
+                <h1>{selected.subject}</h1>
+              </div>
+            </header>
+
+            <div className="mail-thread">
+              <ThreadMessage message={selected} />
+              {selected.replies?.map((reply) => <ThreadMessage message={reply} key={reply.id} />)}
+            </div>
+
+            {selected.attachments?.length > 0 && (
+              <section className="mail-attachments">
+                <h3>Attachments</h3>
+                <div className="mail-attachment-list">
+                  {selected.attachments.map((attachment) => {
+                    const downloaded = downloadedAttachments.some((item) => item.name === attachment.name)
+                    return (
+                      <div className="mail-attachment-card" key={attachment.id || attachment.name}>
+                        <span className="mail-attachment-icon">FILE</span>
+                        <span className="mail-attachment-info"><strong>{attachment.name}</strong><span>{attachment.size || 'Attachment'}</span></span>
+                        <button className={`mail-download-button${downloaded ? ' is-downloaded' : ''}`} type="button" onClick={() => onDownload(attachment)}>
+                          {downloaded ? 'Saved' : 'Download'}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
+            {!replying && <div className="mail-message-actions"><button className="mail-primary-action" type="button" onClick={() => setReplying(true)}>↩ Reply</button></div>}
+            {replying && (
+              <section className="mail-composer">
+                <div className="mail-composer-header"><span>To:</span><strong>{selected.sender}</strong></div>
+                <textarea id="mail-reply-text" rows="8" placeholder="Write your reply..." value={draft} onChange={(event) => setDraft(event.target.value)} />
+                <div className="mail-composer-footer">
+                  <span className="mail-draft-status">{error || 'Your reply will stay in this email thread.'}</span>
+                  <div className="mail-compose-actions">
+                    <button className="mail-cancel-button" type="button" onClick={() => { setReplying(false); setDraft(''); setError('') }}>Cancel</button>
+                    <button className="mail-send-button" type="button" disabled={sending || !draft.trim()} onClick={send}>{sending ? 'Sending...' : 'Send'}</button>
+                  </div>
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+      </section>
+    </div>
+  )
+}
+
+function ThreadMessage({ message }) {
+  const isUser = message.sent || message.sender === 'You'
+  return (
+    <article className={`mail-thread-message${isUser ? ' is-user' : ''}`}>
+      <header className="mail-thread-message-header">
+        <div className="mail-sender-block">
+          <span className="mail-sender-avatar">{String(message.sender || 'U').charAt(0).toUpperCase()}</span>
+          <div><strong>{message.sender}</strong><small>{message.role || ''}</small></div>
+        </div>
+        <span className="mail-thread-time">Now</span>
+      </header>
+      <div className="mail-thread-body">{message.body}</div>
+    </article>
+  )
 }
 
 export default MailApp
