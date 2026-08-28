@@ -3,19 +3,13 @@
 from copy import deepcopy
 from typing import Any
 
+from services.frontend_workplace_scenario_service import FRONTEND_TERMINAL_COMMANDS
+
 
 class FrontendProgressValidationError(ValueError):
     """Raised when a Frontend step response violates the workflow contract."""
 
 
-ALLOWED_COMMANDS = {
-    "help",
-    "clear",
-    "npm test",
-    "npm run lint",
-    "npm run build",
-    "git diff",
-}
 ALLOWED_FILES = {
     "index.html",
     "styles.css",
@@ -176,7 +170,7 @@ def validate_frontend_progress(
         }
     elif step == 4:
         commands = _strings(payload.get("commands_run", []), maximum=20)
-        if any(command not in ALLOWED_COMMANDS for command in commands):
+        if any(command not in FRONTEND_TERMINAL_COMMANDS for command in commands):
             raise FrontendProgressValidationError("Terminal command is not allowed.")
         patch = existing_responses["step_3"].get("changed_files", {})
         checks = _patch_checks(patch)
