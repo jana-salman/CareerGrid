@@ -85,7 +85,7 @@ def protect_pages():
     if request.endpoint == "dashboard.dashboard" and "user_id" not in session:
         return redirect(url_for("auth.login"))
 
-    if "user_email" not in session:
+    if "user_id" not in session:
         return redirect(url_for("careers.home"))
 
 
