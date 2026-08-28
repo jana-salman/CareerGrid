@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { evaluateWorkplaceSimulation, requestAdvisorGuidance } from '../../services/simulationApi.js'
 import { buildEvaluationEvidence, markEvaluationFailed, markEvaluationPending, recordEvaluation } from '../state/evaluationEvidence.js'
+import { createFinalReportMessage, ensureFinalReportMessage } from '../state/reportMail.js'
 import { buildScenarioAttachments } from '../state/repositoryModel.js'
 import { processCompletionReply } from '../state/submissionWorkflow.js'
 
@@ -58,6 +59,19 @@ function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRep
     onUnreadChange(messages.filter((message) => !message.sent && message.unread).length)
   }, [messages, onUnreadChange])
 
+  useEffect(() => {
+    const completedTask = messages.find((message) => message.task && repository.evaluations[message.id]?.status === 'completed')
+    if (!completedTask) return
+    const evaluation = repository.evaluations[completedTask.id].data || {}
+    setMessages((items) => items.map((message) => (
+      message.id === completedTask.id
+        ? ensureFinalReportMessage(message, { attemptId: attempt.attempt_id, evaluation })
+        : message
+    )))
+    setFolder('inbox')
+    setSelectedId((current) => current || completedTask.id)
+  }, [attempt.attempt_id, repository.evaluations])
+
   const open = (id) => {
     setSelectedId(id)
     setReplying(false)
@@ -82,8 +96,12 @@ function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRep
       onRepositoryChange(evaluationRepository)
       setEvaluationStatus('success')
       setError('')
-      navigate(`/simulation/attempts/${encodeURIComponent(attempt.attempt_id)}/report`)
-      return { advisorReply: 'Your workplace review is ready.', failed: false, repository: evaluationRepository }
+      return {
+        advisorReply: 'Your workplace review is ready.',
+        failed: false,
+        reportMessage: createFinalReportMessage({ attemptId: attempt.attempt_id, evaluation, taskMessage }),
+        repository: evaluationRepository,
+      }
     } catch (requestError) {
       evaluationRepository = markEvaluationFailed(evaluationRepository, taskMessage.id, requestError.message).repository
       onRepositoryChange(evaluationRepository)
@@ -105,6 +123,7 @@ function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRep
     const body = draft.trim()
     const userMessage = { body, id: `sent-${Date.now()}`, role: 'You', sender: 'You', sent: true }
     let advisorReply = ''
+    let reportMessage = null
     let nextRepository = repository
     try {
       if (completionEnabled && selected.task) {
@@ -121,6 +140,7 @@ function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRep
         })
         nextRepository = completion.repository
         advisorReply = completion.advisorReply
+        reportMessage = completion.reportMessage || null
       }
       if (!advisorReply) {
         const result = await requestAdvisorGuidance({
@@ -130,14 +150,18 @@ function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRep
         advisorReply = result.advisor_reply || result.reply || 'Thanks - I have received your update.'
       }
       if (nextRepository !== repository) onRepositoryChange(nextRepository)
-      setMessages((items) => items.map((item) => item.id === selected.id ? {
-        ...item,
-        replies: [
+      setMessages((items) => items.map((item) => {
+        if (item.id !== selected.id) return item
+        const replies = [
           ...(item.replies || []),
           userMessage,
           { body: advisorReply, id: `advisor-${Date.now()}`, role: selected.role, sender: selected.sender },
-        ],
-      } : item))
+        ]
+        if (reportMessage && !replies.some((reply) => reply.type === 'evaluation-review')) {
+          replies.push(reportMessage)
+        }
+        return { ...item, replies }
+      }))
       setDraft('')
       setReplying(false)
     } catch (requestError) {
@@ -207,8 +231,8 @@ function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRep
             </header>
 
             <div className="mail-thread">
-              <ThreadMessage message={selected} />
-              {selected.replies?.map((reply) => <ThreadMessage message={reply} key={reply.id} />)}
+              <ThreadMessage message={selected} onOpenReport={(path) => navigate(path)} />
+              {selected.replies?.map((reply) => <ThreadMessage message={reply} onOpenReport={(path) => navigate(path)} key={reply.id} />)}
             </div>
 
             {selected.attachments?.length > 0 && (
@@ -252,7 +276,7 @@ function MailApp({ attempt, downloadedAttachments, repository, onDownload, onRep
   )
 }
 
-function ThreadMessage({ message }) {
+function ThreadMessage({ message, onOpenReport }) {
   const isUser = message.sent || message.sender === 'You'
   return (
     <article className={`mail-thread-message${isUser ? ' is-user' : ''}`}>
@@ -264,6 +288,9 @@ function ThreadMessage({ message }) {
         <span className="mail-thread-time">Now</span>
       </header>
       <div className="mail-thread-body">{message.body}</div>
+      {message.attachments?.filter((attachment) => attachment.type === 'evaluation-report').map((attachment) => (
+        <button className="mail-download-button" type="button" key={attachment.id} onClick={() => onOpenReport(attachment.reportPath)}>{attachment.name}</button>
+      ))}
     </article>
   )
 }
