@@ -6,18 +6,18 @@ from flask import Blueprint, current_app, jsonify, redirect, session, url_for
 
 from routes.frontend import serve_react_app
 
-from services.backend_demo_scenario_service import (
+from services.simulation.backend_demo_scenario_service import (
     BACKEND_DEMO_CAREER_ID,
     BACKEND_DEMO_POSITION_ID,
     get_backend_demo_job,
 )
-from services.career_service import (
+from services.simulation.career_service import (
     POSITIONS_DATA,
     get_career_display_name,
     get_career_cards,
     is_position_available,
 )
-from services.job_service import fetch_adzuna_jobs
+from services.simulation.job_service import fetch_adzuna_jobs
 
 careers_bp = Blueprint("careers", __name__)
 

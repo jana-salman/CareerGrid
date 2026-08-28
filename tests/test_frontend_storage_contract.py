@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 import app as careergrid_app
 import routes.simulations as simulation_routes
-from services.simulation_storage import get_user_visible_evaluation
+from services.simulation.simulation_storage import get_user_visible_evaluation
 
 
 def test_readiness_is_part_of_public_report_but_unknown_fields_are_not():

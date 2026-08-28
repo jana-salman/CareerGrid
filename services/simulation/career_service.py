@@ -1,6 +1,6 @@
 """Career, position, and company catalog queries."""
 
-from services.backend_demo_scenario_service import (
+from services.simulation.backend_demo_scenario_service import (
     BACKEND_DEMO_COMPANY_NAME,
     is_backend_demo,
 )
