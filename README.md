@@ -63,7 +63,7 @@ The production build is served by Flask from the generated `frontend/dist/` dire
 * Firebase Admin SDK
 * Firebase Realtime Database
 * Google Gen AI SDK (Gemini)
-* Requests for optional Adzuna job listings
+* Requests for Adzuna job listings
 * python-dotenv for local configuration
 
 ### Tests
@@ -338,57 +338,201 @@ cd ..
 
 Use `requirements.txt` instead of `requirements-dev.txt` when pytest and other development-only dependencies are not required.
 
-### 4. Configure the environment
+### 4. Configure the Environment
 
-Copy `.env.example` to `.env` and replace the placeholders:
+Copy `.env.example` to `.env`, then follow the **API Keys and Credentials Setup** section below to generate and configure the required credentials.
+
+## API Keys and Credentials Setup
+
+Before running CareerGrid, configure the required server-side credentials in a `.env` file.
+
+Copy `.env.example` to `.env`.
+
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+macOS or Linux:
+
+```bash
+cp .env.example .env
+```
+
+CareerGrid requires:
+
+- Google Gemini API key
+- Firebase Realtime Database
+- Firebase Admin SDK service-account credentials
+- Flask secret key
+- Adzuna API credentials
+
+
+### 1. Google Gemini API Key — Required
+
+CareerGrid uses Google Gemini for:
+
+* workplace scenario generation
+* advisor feedback
+* workplace evaluation
+* interview question generation
+* interview evaluation
+
+Create or manage a Gemini API key through Google AI Studio:
+
+* Google AI Studio: https://ai.google.dev/aistudio
+* Gemini API documentation: https://ai.google.dev/gemini-api/docs
+* API key documentation: https://ai.google.dev/gemini-api/docs/api-key
+
+After creating the key, add it to `.env`:
 
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
 GEMINI_MODEL=gemini-3.1-flash-lite
-
-GOOGLE_APPLICATION_CREDENTIALS=firebase-service-account.json
-FIREBASE_DATABASE_URL=https://your-project-default-rtdb.firebaseio.com
-
-SECRET_KEY=replace_with_a_long_random_secret
-CAREERGRID_ENV=development
-FLASK_DEBUG=false
-
-ADZUNA_APP_ID=optional_adzuna_app_id
-ADZUNA_APP_KEY=optional_adzuna_app_key
 ```
 
-`GEMINI_API_KEY`, Firebase configuration, and `SECRET_KEY` are server-only.
+The Gemini API key is used only by the Flask backend and must never be placed in frontend code or Vite environment variables.
 
-Do not expose them through Vite environment variables or frontend source code.
+### 2. Firebase Realtime Database — Required
 
-Adzuna credentials are optional. CareerGrid can continue using local/demo company data when they are missing or when the external service is unavailable.
+CareerGrid uses Firebase Realtime Database to store:
 
-Generate a Flask secret with:
+* registered users
+* workplace simulation attempts
+* interview attempts
+* responses
+* evaluations
+
+Create a Firebase project:
+
+* Firebase Console: https://console.firebase.google.com/
+
+Then create a Realtime Database for the project.
+
+Documentation:
+
+* Firebase Realtime Database: https://firebase.google.com/docs/database
+* Firebase Admin SDK setup: https://firebase.google.com/docs/admin/setup
+
+Copy the Realtime Database URL and add it to `.env`:
+
+```env
+FIREBASE_DATABASE_URL=https://your-project-default-rtdb.firebaseio.com
+```
+
+The exact database URL is displayed in the Realtime Database section of the Firebase Console.
+
+### 3. Firebase Admin SDK Service Account — Required
+
+The Flask backend accesses Firebase through the Firebase Admin SDK.
+
+In the Firebase Console:
+
+1. Open your Firebase project.
+2. Open **Project settings**.
+3. Select **Service accounts**.
+4. Select **Firebase Admin SDK**.
+5. Click **Generate new private key**.
+6. Download the generated JSON file.
+7. Place the JSON file inside the local CareerGrid project directory.
+
+For example:
+
+```text
+CareerGrid/
+├── firebase-service-account.json
+├── app.py
+├── frontend/
+└── ...
+```
+
+Then configure its path in `.env`:
+
+```env
+GOOGLE_APPLICATION_CREDENTIALS=firebase-service-account.json
+```
+
+The Firebase service-account file contains private credentials and must never be committed or publicly uploaded.
+
+### 4. Flask Secret Key — Required
+
+CareerGrid uses signed Flask sessions for authentication.
+
+Generate a secure secret key locally:
 
 ```bash
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-In development, CareerGrid can use a temporary random secret if `SECRET_KEY` is absent. Sessions reset whenever Flask restarts in that case.
+Copy the generated value into `.env`:
 
-Production configuration requires a persistent `SECRET_KEY`.
-
-Create a Firebase Realtime Database, download an Admin SDK service-account file, and set `GOOGLE_APPLICATION_CREDENTIALS` to its path.
-
-Sensitive and generated files such as:
-
-```text
-.env
-firebase-service-account.json
-.venv/
-venv/
-frontend/node_modules/
-frontend/dist/
-__pycache__/
-.pytest_cache/
+```env
+SECRET_KEY=your_generated_secret_key_here
 ```
 
-are ignored by Git.
+For local development:
+
+```env
+CAREERGRID_ENV=development
+FLASK_DEBUG=false
+```
+
+When `CAREERGRID_ENV=production`, CareerGrid requires a persistent `SECRET_KEY` and enables production-secure session cookie behavior.
+
+### 5. Adzuna API Credentials 
+
+CareerGrid can use the Adzuna API to retrieve live job listings.
+
+The application can still run without Adzuna credentials because local/demo job data is available as a fallback.
+
+Register for Adzuna developer credentials:
+
+* Adzuna Developer Portal: https://developer.adzuna.com/
+* API overview and quick start: https://developer.adzuna.com/overview
+* Interactive API documentation: https://developer.adzuna.com/activedocs
+
+After registration, obtain an `app_id` and `app_key`.
+
+Add them to `.env`:
+
+```env
+ADZUNA_APP_ID=your_adzuna_app_id
+ADZUNA_APP_KEY=your_adzuna_app_key
+```
+
+If these values are omitted, CareerGrid continues using local/demo job data.
+
+### Final `.env` Example
+
+After completing the setup, `.env` should look similar to:
+
+```env
+# Google Gemini
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-3.1-flash-lite
+
+# Firebase
+GOOGLE_APPLICATION_CREDENTIALS=firebase-service-account.json
+FIREBASE_DATABASE_URL=https://your-project-default-rtdb.firebaseio.com
+
+# Flask
+SECRET_KEY=your_generated_secret_key_here
+CAREERGRID_ENV=development
+FLASK_DEBUG=false
+
+# Adzuna job listings
+ADZUNA_APP_ID=your_adzuna_app_id
+ADZUNA_APP_KEY=your_adzuna_app_key
+```
+
+Never commit:
+
+* `.env`
+* Firebase service-account JSON files
+* real API keys or credentials
+
+
 
 ## Running Locally
 
@@ -507,7 +651,6 @@ frontend/dist/
 
 * Career and company coverage is intentionally limited to the scenarios implemented in this project.
 * Firebase and Gemini features require network access and valid server credentials.
-* Adzuna job listings are optional and may fall back to local/demo data.
 * Microphone interviews require browser permission and MediaRecorder support.
 * Automated tests cannot fully validate real microphones or external speech behavior.
 * The simulated terminal supports a controlled command model and is not a real shell.
@@ -528,7 +671,7 @@ Flask API and session layer
       ↓
 Domain services
       ↓
-Firebase / Gemini
+Firebase / Gemini / Adzuna
 ```
 
 Prompt templates and private rubrics remain isolated under `ai_prompt/`, while executable AI logic is organized under `services/ai/`.
