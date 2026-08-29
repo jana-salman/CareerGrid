@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import {
   changedFiles,
@@ -9,6 +9,84 @@ import {
   stage,
   switchBranch,
 } from '../state/repositoryModel.js'
+
+const commandCompletions = [
+  'cat', 'cd', 'clear', 'git add', 'git branch', 'git checkout -b',
+  'git commit -m', 'git diff', 'git log', 'git log --oneline', 'git push',
+  'git status', 'git switch', 'git switch -c', 'help', 'ls', 'pwd',
+]
+
+function normalizePath(path) {
+  const resolved = []
+  String(path || '/').replaceAll('\\', '/').split('/').forEach((part) => {
+    if (!part || part === '.') return
+    if (part === '..') resolved.pop()
+    else resolved.push(part)
+  })
+  return `/${resolved.join('/')}`
+}
+
+function resolvePath(cwd, value = '.') {
+  const raw = String(value || '.').trim()
+  if (raw === '~') return '/Projects'
+  return normalizePath(raw.startsWith('/') ? raw : `${cwd}/${raw}`)
+}
+
+function repositoryParent(repository) {
+  const parts = repository.rootPath.split('/').filter(Boolean)
+  return `/${parts.slice(0, -1).join('/')}` || '/'
+}
+
+function absoluteFilePath(repository, file) {
+  return normalizePath(`${repository.rootPath}/${file.path}`)
+}
+
+function repositoryDirectories(repository, files) {
+  const directories = new Set([repositoryParent(repository)])
+  if (!repository.workspace?.projectExtracted) return directories
+  directories.add(repository.rootPath)
+  files.forEach((file) => {
+    const parts = absoluteFilePath(repository, file).split('/').filter(Boolean)
+    for (let index = 1; index < parts.length; index += 1) {
+      directories.add(`/${parts.slice(0, index).join('/')}`)
+    }
+  })
+  return directories
+}
+
+function fileAtPath(repository, files, path) {
+  const target = normalizePath(path)
+  return files.find((file) => absoluteFilePath(repository, file) === target)
+}
+
+function listOutput(repository, files, target) {
+  const projectParent = repositoryParent(repository)
+  if (target === projectParent) {
+    return repository.workspace?.projectExtracted ? `${repository.repositoryName}/` : ''
+  }
+
+  const file = fileAtPath(repository, files, target)
+  if (file) return file.path.split('/').pop()
+  if (!repositoryDirectories(repository, files).has(target)) return null
+
+  const prefix = target === '/' ? '/' : `${target}/`
+  const entries = new Map()
+  files.forEach((item) => {
+    const absolute = absoluteFilePath(repository, item)
+    if (!absolute.startsWith(prefix)) return
+    const remaining = absolute.slice(prefix.length)
+    if (!remaining) return
+    const [name, ...rest] = remaining.split('/')
+    entries.set(name, rest.length > 0)
+  })
+  return [...entries]
+    .sort(([leftName, leftFolder], [rightName, rightFolder]) => {
+      if (leftFolder !== rightFolder) return leftFolder ? -1 : 1
+      return leftName.localeCompare(rightName)
+    })
+    .map(([name, folder]) => folder ? `${name}/` : name)
+    .join('    ')
+}
 
 function statusOutput(repository) {
   const branch = repository.branches[repository.currentBranch]
@@ -26,21 +104,79 @@ function diffOutput(repository) {
   return changes.map((change) => `diff -- ${change.path}\n--- before\n${change.before}\n+++ after\n${change.after}`).join('\n\n')
 }
 
+function logOutput(repository, oneline) {
+  const commits = [...repository.branches[repository.currentBranch].commits].reverse()
+  if (oneline) return commits.map((item) => `${item.id} ${item.message}`).join('\n')
+  return commits.map((item) => `commit ${item.id}\nAuthor: ${item.author}\nDate:   ${new Date(item.createdAt).toLocaleString()}\n\n    ${item.message}`).join('\n\n')
+}
+
+function commonPrefix(values) {
+  if (!values.length) return ''
+  return values.reduce((prefix, value) => {
+    let index = 0
+    while (index < prefix.length && prefix[index] === value[index]) index += 1
+    return prefix.slice(0, index)
+  })
+}
+
+function autocomplete(value, cwd, repository, files) {
+  const pathCommand = value.match(/^(cd|cat|git add)\s+([^\s]*)$/)
+  if (pathCommand) {
+    const [, command, partial] = pathCommand
+    const candidates = []
+    if (cwd === repositoryParent(repository) && repository.workspace?.projectExtracted) {
+      candidates.push(repository.repositoryName)
+    } else if (cwd === repository.rootPath || cwd.startsWith(`${repository.rootPath}/`)) {
+      const prefix = cwd === repository.rootPath ? '' : `${cwd.slice(repository.rootPath.length + 1)}/`
+      files.forEach((file) => {
+        if (file.path.startsWith(prefix)) candidates.push(file.path.slice(prefix.length))
+      })
+    }
+    const matches = [...new Set(candidates)].filter((candidate) => candidate.startsWith(partial))
+    if (!matches.length) return value
+    return `${command} ${matches.length === 1 ? matches[0] : commonPrefix(matches)}`
+  }
+
+  const matches = commandCompletions.filter((command) => command.startsWith(value))
+  if (!matches.length) return value
+  return matches.length === 1 ? `${matches[0]} ` : commonPrefix(matches)
+}
+
 function TerminalApp({ files, repository, onRepositoryChange }) {
   const [input, setInput] = useState('')
   const [history, setHistory] = useState([])
+  const [commandHistory, setCommandHistory] = useState([])
+  const [historyIndex, setHistoryIndex] = useState(null)
+  const [cwd, setCwd] = useState(() => repositoryParent(repository))
+  const inputRef = useRef(null)
 
   const apply = (result, successMessage) => {
     if (!result.error) onRepositoryChange(result.repository)
     return result.error || successMessage(result)
   }
 
+  const isInsideRepository = cwd === repository.rootPath || cwd.startsWith(`${repository.rootPath}/`)
+
   const execute = (command) => {
-    const target = command.slice(4)
-    if (command === 'pwd') return repository.rootPath
-    if (command === 'ls') return files.map((file) => file.path.split('/').pop()).join('  ')
-    if (command.startsWith('cd ')) return target === '..' || target === '/Projects' || target === repository.rootPath ? '' : `cd: ${target}: No such file or directory`
-    if (command.startsWith('cat ')) return files.find((file) => file.path === target || file.path.endsWith(`/${target}`))?.content || `cat: ${target}: No such file`
+    if (command === 'pwd') return cwd
+    if (command === 'ls' || command.startsWith('ls ')) {
+      const rawTarget = command === 'ls' ? '.' : command.slice(3).trim()
+      const output = listOutput(repository, files, resolvePath(cwd, rawTarget))
+      return output === null ? `ls: cannot access '${rawTarget}': No such file or directory` : output
+    }
+    if (command === 'cd' || command.startsWith('cd ')) {
+      const rawTarget = command === 'cd' ? '/Projects' : command.slice(3).trim()
+      const target = resolvePath(cwd, rawTarget)
+      if (!repositoryDirectories(repository, files).has(target)) return `cd: ${rawTarget}: No such file or directory`
+      setCwd(target)
+      return ''
+    }
+    if (command.startsWith('cat ')) {
+      const rawTarget = command.slice(4).trim()
+      const file = fileAtPath(repository, files, resolvePath(cwd, rawTarget))
+      return file?.content ?? `cat: ${rawTarget}: No such file`
+    }
+    if (command.startsWith('git ') && !isInsideRepository) return 'fatal: not a git repository (or any of the parent directories): .git'
     if (command === 'git status') return statusOutput(repository)
     if (command === 'git diff') return diffOutput(repository)
     if (command === 'git branch') return Object.keys(repository.branches).map((name) => `${name === repository.currentBranch ? '*' : ' '} ${name}`).join('\n')
@@ -56,8 +192,10 @@ function TerminalApp({ files, repository, onRepositoryChange }) {
       return apply(stage(repository, '.'), (result) => `${result.count} file(s) staged`)
     }
     if (command.startsWith('git add ')) {
-      const path = command.slice(8).trim()
-      return apply(stage(repository, [path]), (result) => result.count ? `${path} staged` : `pathspec '${path}' did not match changed files`)
+      const rawPath = command.slice(8).trim()
+      const absolutePath = resolvePath(cwd, rawPath)
+      const path = absolutePath.startsWith(`${repository.rootPath}/`) ? absolutePath.slice(repository.rootPath.length + 1) : rawPath
+      return apply(stage(repository, [path]), (result) => result.count ? `${path} staged` : `pathspec '${rawPath}' did not match changed files`)
     }
     if (command.startsWith('git commit -m ')) {
       const message = command.match(/^git commit -m\s+["'](.+)["']$/)?.[1] || ''
@@ -66,27 +204,131 @@ function TerminalApp({ files, repository, onRepositoryChange }) {
     if (command === 'git push' || command.startsWith('git push ')) {
       return apply(push(repository), (result) => `Branch '${result.branch}' pushed to origin`)
     }
-    if (command === 'git log' || command === 'git log --oneline') {
-      return [...repository.branches[repository.currentBranch].commits].reverse().map((item) => `${item.id} ${item.message}`).join('\n')
-    }
-    if (command === 'help') return 'Available commands: pwd, ls, cd, cat, git status, git diff, git branch, git switch, git add, git commit, git push, git log, clear'
+    if (command === 'git log') return logOutput(repository, false)
+    if (command === 'git log --oneline') return logOutput(repository, true)
+    if (command === 'help') return `Available commands:
+
+Navigation
+  pwd
+  ls [path]
+  cd <path>
+  cat <file>
+  clear
+
+Git
+  git status
+  git branch
+  git switch -c <branch>
+  git switch <branch>
+  git checkout -b <branch>
+  git add <file>
+  git add .
+  git commit -m "message"
+  git log
+  git log --oneline
+  git push
+
+Terminal
+  help`
     if (command === 'clear') return '__CLEAR__'
     return `${command}: command not found`
   }
 
-  const run = (event) => {
-    event.preventDefault()
+  const runCommand = () => {
     const command = input.trim()
     if (!command) return
     const output = execute(command)
-    setHistory((items) => output === '__CLEAR__' ? [] : [...items, { command, output }])
+    setHistory((items) => output === '__CLEAR__' ? [] : [...items, { command, cwd, output }])
+    if (output !== '__CLEAR__') setCommandHistory((items) => [...items, command])
+    setHistoryIndex(null)
     setInput('')
+  }
+
+  const run = (event) => {
+    event.preventDefault()
+    runCommand()
+  }
+
+  const moveCursor = (position) => {
+    window.requestAnimationFrame(() => inputRef.current?.setSelectionRange(position, position))
+  }
+
+  const handleKeyDown = (event) => {
+    const key = event.key.toLowerCase()
+    if (event.ctrlKey && event.shiftKey && (key === 'c' || key === 'v')) return
+    if (event.ctrlKey && key === 'l') {
+      event.preventDefault()
+      setHistory([])
+      return
+    }
+    if (event.ctrlKey && key === 'c') {
+      event.preventDefault()
+      if (input) setHistory((items) => [...items, { command: input, cwd, output: '^C' }])
+      setInput('')
+      setHistoryIndex(null)
+      return
+    }
+    if (event.ctrlKey && key === 'a') {
+      event.preventDefault()
+      moveCursor(0)
+      return
+    }
+    if (event.ctrlKey && key === 'e') {
+      event.preventDefault()
+      moveCursor(input.length)
+      return
+    }
+    if (event.ctrlKey && key === 'u') {
+      event.preventDefault()
+      setInput('')
+      setHistoryIndex(null)
+      return
+    }
+    if (event.ctrlKey && key === 'r') {
+      event.preventDefault()
+      const query = input.toLowerCase()
+      const match = [...commandHistory].reverse().find((command) => command.toLowerCase().includes(query))
+      if (match) {
+        setInput(match)
+        moveCursor(match.length)
+      }
+      return
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      if (!commandHistory.length) return
+      const nextIndex = historyIndex === null ? commandHistory.length - 1 : Math.max(0, historyIndex - 1)
+      setHistoryIndex(nextIndex)
+      setInput(commandHistory[nextIndex])
+      moveCursor(commandHistory[nextIndex].length)
+      return
+    }
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      if (historyIndex === null) return
+      const nextIndex = historyIndex + 1
+      if (nextIndex >= commandHistory.length) {
+        setHistoryIndex(null)
+        setInput('')
+      } else {
+        setHistoryIndex(nextIndex)
+        setInput(commandHistory[nextIndex])
+        moveCursor(commandHistory[nextIndex].length)
+      }
+      return
+    }
+    if (event.key === 'Tab') {
+      event.preventDefault()
+      const completed = autocomplete(input, cwd, repository, files)
+      setInput(completed)
+      moveCursor(completed.length)
+    }
   }
 
   return <>
     <div className="terminal-tab-bar">
       <div className="terminal-tab is-active"><span>&gt;_</span><span>bash</span></div>
-      <div className="terminal-working-directory">{repository.rootPath}</div>
+      <div className="terminal-working-directory">{cwd}</div>
     </div>
     <div className="terminal-screen">
       <div className="terminal-welcome">CareerGrid Workspace Terminal{`\n\n`}Type <strong>help</strong> to see available commands.</div>
@@ -99,7 +341,7 @@ function TerminalApp({ files, repository, onRepositoryChange }) {
               : ''
           return <div className="terminal-command-block" key={index}>
             <div className="terminal-command-line">
-              <span className="terminal-command-prompt">careergrid:{repository.rootPath}$</span>
+              <span className="terminal-command-prompt">careergrid:{entry.cwd}$</span>
               <span className="terminal-command-text">{entry.command}</span>
             </div>
             <pre className={`terminal-output${outputClass}`}>{entry.output}</pre>
@@ -108,8 +350,8 @@ function TerminalApp({ files, repository, onRepositoryChange }) {
       </div>
     </div>
     <form className="terminal-command-bar" onSubmit={run}>
-      <span className="terminal-prompt">careergrid:{repository.rootPath}$</span>
-      <input className="terminal-input" value={input} onChange={(event) => setInput(event.target.value)} autoFocus spellCheck="false" />
+      <span className="terminal-prompt">careergrid:{cwd}$</span>
+      <input ref={inputRef} className="terminal-input" value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={handleKeyDown} autoFocus spellCheck="false" />
     </form>
   </>
 }

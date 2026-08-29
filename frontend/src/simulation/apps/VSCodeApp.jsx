@@ -39,6 +39,12 @@ function VSCodeApp({ files, repository, onSave }) {
     if (!current) return
     onSave(current.path, buffer)
   }
+  const handleEditorKeyDown = (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+      event.preventDefault()
+      save()
+    }
+  }
 
   return (
     <div className="vscode-layout">
@@ -100,7 +106,7 @@ function VSCodeApp({ files, repository, onSave }) {
             </div>
             <div className="vscode-code-wrapper">
               <div className="vscode-line-numbers">{lineNumbers.map((number) => <div className="vscode-line-number" key={number}>{number}</div>)}</div>
-              <textarea className="vscode-code-editor" value={buffer} onChange={(event) => setBuffer(event.target.value)} spellCheck="false" />
+              <textarea className="vscode-code-editor" value={buffer} onChange={(event) => setBuffer(event.target.value)} onKeyDown={handleEditorKeyDown} spellCheck="false" />
             </div>
           </section>
         )}
