@@ -501,7 +501,24 @@ ADZUNA_APP_ID=your_adzuna_app_id
 ADZUNA_APP_KEY=your_adzuna_app_key
 ```
 
-If these values are omitted, CareerGrid continues using local/demo job data.
+If these values are omitted, CareerGrid shows a clear "not configured" message and offers practice (demo) companies, which are labelled as practice simulations, not live vacancies.
+
+Live-listing country and location are configured on the server:
+
+```env
+JOB_SEARCH_COUNTRY=us      # at au be br ca ch de es fr gb in it mx nl nz pl sg us za
+JOB_SEARCH_LOCATION=       # optional city/region inside that country
+```
+
+**Lebanon.** Adzuna does not publish a Lebanon (`lb`) endpoint, so CareerGrid never sends Lebanon requests to Adzuna and never relabels another country's results as Lebanese. Selecting Lebanon shows an honest "unavailable" state unless a Jooble partner key is configured:
+
+```env
+JOOBLE_API_KEY=            # optional; request one at https://jooble.org/api/about
+```
+
+With a Jooble key, CareerGrid queries Jooble's documented REST API with `location=Lebanon` and keeps only listings whose location is in Lebanon. Jooble's Lebanese coverage has not been verified, so test it with your key before relying on it. Every live card shows its source, location, and a link to the original listing.
+
+When a user picks a live listing, its title and description are sanitized and passed to Gemini only as untrusted reference data, so the task reflects the listing's responsibilities without the employer being presented as the author.
 
 ### Final `.env` Example
 
@@ -647,6 +664,40 @@ frontend/dist/
 * `/api` routes remain isolated from the React SPA fallback.
 * `.env`, Firebase service-account files, caches, bytecode, coverage output, local databases, logs, dependencies, and frontend builds are ignored by Git.
 
+## Submitting Workplace Work
+
+The Git-based workplace (Backend Developer) accepts two delivery routes. Both lead to the same confirmation, evaluation, feedback, and personalized roadmap:
+
+* **Pull request:** `git switch -c feature/name` → edit and save → `git add .` → `git commit -m "..."` → `git push` → open a pull request in GitHub → reply to the task email with the PR link → reply `yes` to confirm.
+* **Directly on main:** edit and save on `main` → `git add .` → `git commit -m "..."` → `git push` → reply to the task email saying the work is ready on main (no link needed) → reply `yes` to confirm.
+
+Only committed and pushed work is reviewed. When you confirm, the submitted commit, its files, and the original-project baseline are frozen, so later edits cannot change what is evaluated. The comparison baseline is an immutable copy of the starter project taken when it is first extracted. Git workflow is scored separately from technical quality, so delivering to main does not invalidate working code. Questions such as "How do I submit without a PR?" get instructions instead of starting an assessment. If an evaluation fails or is interrupted, reply `retry`.
+
+The Frontend Developer path keeps its five-step task panel. Step 3 reads the files you saved in VS Code, and step 5 lets you deliver by pull request or by pushing to main.
+
+## Workplace Assignment Generation
+
+Each practice company and position, and each live listing and position, has **one saved assignment**. The first launch generates and validates it; every later attempt copies it, with no Gemini call. Each attempt keeps its own copy, workspace (stored in the browser per attempt), submission, feedback and roadmap. Reopening an attempt resumes its work, and **Try Again** on the report starts a clean attempt with the same assignment.
+
+* **Shared assignments** (`services/simulation/assignment_library.py`). Stored server-side under `shared_assignments/<key>` in Firebase (the browser APIs never return it, and private criteria stay there and in the attempt's private context). Keys: `practice-<career>-<position>-<company>`, or for listings `listing-<source>-<position>-<listing ref>-<requirements digest>`, where the listing ref is the provider URL without its tracking query. An edited listing therefore gets its own assignment, and one client cannot overwrite another listing's assignment by sending altered text. A practice company's assignment is replaced when its role profile changes materially (word-overlap similarity below 0.8), when `ASSIGNMENT_LIBRARY_VERSION` is bumped, or on request.
+* **Versions.** Replacements are written as `versions/v<n>`; existing attempts keep the copy they started with. If a replacement fails, launches keep using the current version.
+* **Concurrency.** One generator per key, claimed with a Firebase transaction (`lock`, expiring after 420 s). Concurrent launches wait for that result instead of generating again; if it never arrives they continue with the fallback.
+* **Failures.** A failed generation is never saved as an assignment. The participant continues with the validated built-in assignment (recorded as `generation.source = "fallback"` on the attempt, and counted under `fallbacks` on the key). A cooldown, `ASSIGNMENT_RETRY_COOLDOWN_SECONDS` (default 900, doubling per consecutive failure, capped at 6 h), stops every launch from calling Gemini again.
+* **Deliberate regeneration.** `python scripts/manage_assignments.py list` shows keys, versions, failures and fallbacks. `python scripts/manage_assignments.py regenerate --career software-developer --position backend-developer --company technova` (or `--key <key>`) replaces that assignment on its next launch and clears its cooldown.
+
+* **Context.** Live listings pass their title and description to the generator as untrusted data. Adzuna returns only about the first 500 characters, so these are marked as excerpts and the prompt forbids inventing further employer requirements. Practice companies (TechNova, BrightSoft, PixelWorks, CloudByte) pass a defined role profile. The dedicated TechNova "Demo Challenge" card stays a fixed demo, because its interview depends on it.
+* **One task per role, no rotation.** The prompt (`ai_prompt/prompts/scenario_v5.py`) asks for one realistic feature request or investigation that fits the job context, at roughly 30–60 minutes of connected work, without per-attempt type rotation or "different from recent tasks" instructions.
+* **Structure.** The model fills in a JSON-schema-constrained draft with bounded list sizes: situation, requirements, code, README content, evidence and private rubric. Gemini enforces list sizes but not text lengths, so length is checked by the quality gate. The server assembles IDs, attachments, the inbox, the five Frontend steps and README sections such as Project structure, Verification and Deliverables (`services/ai/scenario_drafts.py`).
+* **Pipelines.** `SCENARIO_GENERATION_PIPELINE=single` (default) asks for the whole draft in one call. `staged` first asks for a short task specification, checks it cheaply, then asks for the project, evidence and rubric for that exact plan; for Backend its schema requires one assessment per requirement. In live tests on 2026-11-16 the staged calls were slower (specification 14–182 s, project 101 s to over 165 s) than single drafts (25–33 s), and neither produced an accepted task, so staged is not the default.
+* **Repairs never invent.** The server only formats and removes provably false details (a log line number past the end of a file). It never adds assessment criteria, file descriptions or evidence, and never drops a check; a draft with such a gap is rejected and the exact problems are returned to the model.
+* **Gates.** `validate_workplace_scenario` and the quality gate in `services/ai/scenario_quality.py` check README sections, connected modules with real behaviour, tests that import the code, evidence, edge-case and preserve requirements, every requirement having a criterion, the starter not already satisfying the task, a title that names the work, and no solution leaks (including hint comments such as `# Should check ...`). Leak rejections quote the offending line.
+* **Candidate archive.** Every candidate the model returns, accepted or rejected, is saved with its validation reasons under `instance/generation_candidates/<day>/<run>/` (gitignored), plus a `summary.json`. `python scripts/inspect_candidate.py <run folder>` prints an accepted task's brief, evidence and rubric together and runs its existing tests.
+* **Bounded recovery.** `SCENARIO_GENERATION_BUDGET_SECONDS` (default 240) caps the total wait and each model call times out within it. `SCENARIO_GENERATION_MAX_ATTEMPTS` (default 4) caps returned drafts; a rejected draft's reasons are fed back to the next attempt. "Model overloaded" (503) errors back off and retry without using an attempt. Quota, authentication and unknown-model errors stop immediately. The browser gives up after 6 minutes and offers a retry that resumes the same attempt.
+* **Fallback.** If no draft passes, a validated built-in assignment is used: the TechNova User Profile incident for Backend, or the product-page checkout incident for Frontend. `tests/test_assignment_projects.py` runs both projects for real.
+* **Records.** Each attempt stores internal diagnostics under `generation` in Firebase: model, outcome (`generated`, `fallback` or `predefined_demo`), failure reason, per-attempt reasons and timings, assignment type, domain, context source and prompt version. These are never returned to the browser.
+
+Model choice and its reasoning level are server settings: `GEMINI_SCENARIO_MODEL` and `GEMINI_SCENARIO_THINKING`. Generating a full assignment is the most demanding model call. To compare models on identical inputs with your own key, run `python scripts/compare_generation_models.py <model> [--pipelines single,staged] [--cases ...]`; each run counts against that model's quota and results are appended to `instance/generation_comparison/`.
+
 ## Known Limitations
 
 * Career and company coverage is intentionally limited to the scenarios implemented in this project.
@@ -655,6 +706,9 @@ frontend/dist/
 * Automated tests cannot fully validate real microphones or external speech behavior.
 * The simulated terminal supports a controlled command model and is not a real shell.
 * GitHub URLs and pull requests created inside the workplace are fictional simulation artifacts.
+* The simulated workspace cannot execute tests; verification described by the participant is treated as a written claim, and frontend "automated" results are static checks of submitted files.
+* There is no experience-level selector yet; generated tasks target junior/intern level.
+* Workspaces saved before this version have no stored original-project baseline. CareerGrid restores it only from the server's original scenario files (and labels it as restored); if that is impossible, direct-to-main submission asks the user to use a pull request instead.
 * Production-style Flask execution requires `npm run build` after frontend source changes because `frontend/dist/` remains generated and uncommitted.
 * End-to-end behavior with production Firebase/Gemini credentials still requires a properly configured runtime environment.
 

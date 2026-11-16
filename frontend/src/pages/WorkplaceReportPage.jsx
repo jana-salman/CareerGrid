@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { getWorkplaceReport } from '../services/dashboardApi.js'
+import { readableList, roadmapForDisplay } from './reportRoadmap.js'
 
 function scoreCopy(score) {
   if (score >= 80) return ['score-label--strong', 'Strong Performance', "You're showing strong readiness for this role."]
@@ -31,7 +32,7 @@ function ListSection({ kicker, title, items }) {
   return (
     <Section className="feedback-card" kicker={kicker} title={title}>
       <ul className="feedback-list">
-        {items.map((item) => <li key={item}>{item}</li>)}
+        {items.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}
       </ul>
     </Section>
   )
@@ -78,6 +79,10 @@ function WorkplaceReportPage() {
   const evaluation = report.evaluation
   const score = Number(evaluation.overall_score) || 0
   const [labelClass, label, heading] = scoreCopy(score)
+  const roadmap = roadmapForDisplay(evaluation)
+  const strengths = readableList(report.strengths)
+  const improvements = readableList(report.areas_for_improvement)
+  const nextSteps = readableList(report.recommended_next_steps)
 
   return (
     <main className="review-page">
@@ -133,15 +138,34 @@ function WorkplaceReportPage() {
           </Section>
         )}
 
+        {evaluation.submission_overview && (
+          <Section kicker="What Was Reviewed" title="Submitted Work">
+            <ul className="feedback-list">
+              <li>Delivery: {evaluation.submission_overview.mode === 'main' ? 'Committed and pushed directly to main' : 'Pull request from a feature branch'}</li>
+              {evaluation.submission_overview.branch && <li>Branch: {evaluation.submission_overview.branch}{evaluation.submission_overview.commit_id ? ` · commit ${evaluation.submission_overview.commit_id}` : ''}</li>}
+              {evaluation.submission_overview.pull_request_url && <li>Pull request: {evaluation.submission_overview.pull_request_url}</li>}
+              {evaluation.submission_overview.changed_files?.length > 0 && <li>Files changed from the original project: {evaluation.submission_overview.changed_files.join(', ')}</li>}
+            </ul>
+          </Section>
+        )}
+
+        {evaluation.git_workflow_feedback && (
+          <Section kicker="Assessed Separately" title="Git Workflow Feedback">
+            <p className="assessment-copy">{evaluation.git_workflow_feedback}</p>
+          </Section>
+        )}
+
+        {evaluation.verification_note && <p className="assessment-copy report-verification-note">{evaluation.verification_note}</p>}
+
         <div className="feedback-columns">
-          {report.strengths.length > 0 && (
-            <ListSection kicker="What Went Well" title="Strengths" items={report.strengths} />
+          {strengths.length > 0 && (
+            <ListSection kicker="What Went Well" title="Strengths" items={strengths} />
           )}
-          {report.areas_for_improvement.length > 0 && (
+          {improvements.length > 0 && (
             <ListSection
               kicker="Your Next Focus"
               title="Areas for Improvement"
-              items={report.areas_for_improvement}
+              items={improvements}
             />
           )}
         </div>
@@ -152,11 +176,59 @@ function WorkplaceReportPage() {
           </Section>
         )}
 
-        {report.recommended_next_steps.length > 0 && (
+        {roadmap.status === 'available' && (
+          <Section kicker="Your Personalized Roadmap" title="Skill Gaps and Next Learning Steps">
+            <div className="performance-grid">
+              {roadmap.items.map((item, index) => (
+                <article className="performance-card roadmap-card" key={`${index}-${item.skill}`}>
+                  <div className="performance-card-header"><h3>{item.skill}</h3></div>
+                  {item.evidence && <p><strong>Evidence from your submission:</strong> {item.evidence}</p>}
+                  {item.gap && <p><strong>Gap:</strong> {item.gap}</p>}
+                  <h4 className="roadmap-subheading">Next steps</h4>
+                  <ol className="roadmap-steps">
+                    {item.steps.map((step, stepIndex) => <li key={`${stepIndex}-${step}`}>{step}</li>)}
+                  </ol>
+                  <h4 className="roadmap-subheading">Free learning resources</h4>
+                  {item.resources.length > 0 ? (
+                    <ul className="roadmap-resources">
+                      {item.resources.map((resource) => (
+                        <li key={resource.url}>
+                          <a
+                            href={resource.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`${resource.title}${resource.provider ? ` by ${resource.provider}` : ''} (opens in a new tab)`}
+                          >
+                            {resource.title} <span aria-hidden="true">↗</span>
+                          </a>
+                          {resource.provider && <span className="roadmap-resource-provider">{resource.provider}</span>}
+                          {resource.relevance && <p>{resource.relevance}</p>}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="roadmap-empty">No suitable free learning resource is listed for this skill yet.</p>
+                  )}
+                </article>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {roadmap.status === 'unavailable' && (
+          <Section kicker="Your Personalized Roadmap" title="Roadmap Unavailable">
+            <p className="assessment-copy roadmap-empty">
+              The learning roadmap saved with this report could not be read, so it is not shown.
+              Your score, performance breakdown, and feedback above are unaffected.
+            </p>
+          </Section>
+        )}
+
+        {nextSteps.length > 0 && (
           <Section kicker="Keep Growing" title="Recommended Next Steps">
             <ul className="next-step-list">
-              {report.recommended_next_steps.map((step, index) => (
-                <li key={step}>
+              {nextSteps.map((step, index) => (
+                <li key={`${index}-${step}`}>
                   <span>{index + 1}</span>
                   <p>{step}</p>
                 </li>
@@ -193,6 +265,7 @@ function WorkplaceReportPage() {
               <input type="hidden" name="position_id" value={report.position_id} />
               <input type="hidden" name="company_id" value={report.company_id} />
               <input type="hidden" name="job_source" value={report.job_source} />
+              <input type="hidden" name="retry_attempt_id" value={attemptId} />
               <button className="review-button review-button--primary" type="submit">
                 <span>↻</span>
                 Try Again

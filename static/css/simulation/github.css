@@ -249,3 +249,8 @@
     .github-layout { grid-template-columns: 1fr; }
     .github-form-grid { grid-template-columns: 1fr; }
 }
+
+
+.github-sync-status { margin: 8px 0 12px; padding-left: 18px; color: #57606a; font-size: .88rem; }
+.github-delivery-guide p, .github-delivery-guide li { font-size: .88rem; }
+.github-delivery-guide ol { padding-left: 20px; }

@@ -1,8 +1,6 @@
 """Career browsing, position selection, and company routes."""
 
-import re
-
-from flask import Blueprint, current_app, jsonify, redirect, session, url_for
+from flask import Blueprint, current_app, jsonify, redirect, request, session, url_for
 
 from routes.frontend import serve_react_app
 
@@ -17,45 +15,62 @@ from services.simulation.career_service import (
     get_career_cards,
     is_position_available,
 )
-from services.simulation.job_service import fetch_adzuna_jobs
+from services.simulation.job_service import search_jobs, supported_countries
 
 careers_bp = Blueprint("careers", __name__)
 
 
-def _company_cards(career_id, position_id):
-    """Return the browser-safe company choices used by the selection UI."""
+def _job_search(position, country):
+    """Search the provider that genuinely covers the selected country."""
+
+    return search_jobs(
+        position["title"],
+        country=country or current_app.config.get("JOB_SEARCH_COUNTRY"),
+        location=current_app.config.get("JOB_SEARCH_LOCATION", ""),
+        results=current_app.config["ADZUNA_DEFAULT_RESULTS"],
+        adzuna_app_id=current_app.config.get("ADZUNA_APP_ID"),
+        adzuna_app_key=current_app.config.get("ADZUNA_APP_KEY"),
+        jooble_api_key=current_app.config.get("JOOBLE_API_KEY"),
+        timeout_seconds=current_app.config["ADZUNA_REQUEST_TIMEOUT_SECONDS"],
+    )
+
+
+def _company_cards(career_id, position_id, country=None):
+    """Return browser-safe company choices plus the live-search status."""
 
     position = POSITIONS_DATA.get(career_id, {}).get(position_id)
     if not position or not is_position_available(career_id, position_id):
-        return None
+        return None, None
 
-    jobs = fetch_adzuna_jobs(
-        position["title"],
-        results=current_app.config["ADZUNA_DEFAULT_RESULTS"],
-        app_id=current_app.config.get("ADZUNA_APP_ID"),
-        app_key=current_app.config.get("ADZUNA_APP_KEY"),
-        timeout_seconds=current_app.config["ADZUNA_REQUEST_TIMEOUT_SECONDS"],
-    )
+    search = _job_search(position, country)
     cards = []
     if career_id == BACKEND_DEMO_CAREER_ID and position_id == BACKEND_DEMO_POSITION_ID:
-        cards.append({**get_backend_demo_job(), "status": "Demo"})
-    if jobs:
-        for job in jobs:
-            company = job.get("company", {})
-            location = job.get("location", {})
-            description = re.sub(r"<[^>]+>", "", str(job.get("description", ""))).strip()
-            cards.append(
-                {
-                    "title": job.get("title") or position["title"],
-                    "company_id": company.get("display_name", ""),
-                    "company_name": company.get("display_name", ""),
-                    "location": location.get("display_name", ""),
-                    "description": description[:230],
-                    "job_source": "adzuna",
-                    "status": "Open",
-                }
-            )
-    else:
+        cards.append(
+            {
+                **get_backend_demo_job(),
+                "status": "Demo",
+                "listing_kind": "practice",
+                "source_label": "CareerGrid practice scenario",
+            }
+        )
+    for job in search["jobs"]:
+        cards.append(
+            {
+                "title": job["title"],
+                "company_id": job["company_name"],
+                "company_name": job["company_name"],
+                "location": job["location"],
+                "description": job["description"][:230],
+                "full_description": job["description"],
+                "job_source": job["source"],
+                "source_label": job["source_label"],
+                "url": job["url"],
+                "created": job["created"],
+                "status": "Live listing",
+                "listing_kind": "live",
+            }
+        )
+    if not search["jobs"]:
         for company in position.get("companies", []):
             cards.append(
                 {
@@ -63,12 +78,19 @@ def _company_cards(career_id, position_id):
                     "company_id": company["id"],
                     "company_name": company["name"],
                     "location": company["location"],
-                    "description": "Practice a simulated task for this role while live listings are unavailable.",
+                    "description": (
+                        "Practice a simulated task for this role. This fictional "
+                        "company is not a live vacancy."
+                    ),
                     "job_source": "demo",
+                    "source_label": "CareerGrid practice scenario",
                     "status": "Demo",
+                    "listing_kind": "practice",
                 }
             )
-    return cards
+    job_search = {key: value for key, value in search.items() if key != "jobs"}
+    job_search["supported_countries"] = supported_countries()
+    return cards, job_search
 
 
 @careers_bp.get("/api/careers")
@@ -101,7 +123,9 @@ def position_catalog_api(career_id):
 def company_catalog_api(career_id, position_id):
     """Return server-resolved Adzuna, demo, or fallback company cards."""
 
-    companies = _company_cards(career_id, position_id)
+    companies, job_search = _company_cards(
+        career_id, position_id, request.args.get("country")
+    )
     if companies is None:
         return jsonify({"error": "Position not found or unavailable."}), 404
     position = POSITIONS_DATA[career_id][position_id]
@@ -112,6 +136,7 @@ def company_catalog_api(career_id, position_id):
             "position_id": position_id,
             "position_title": position["title"],
             "companies": companies,
+            "job_search": job_search,
         }
     )
 

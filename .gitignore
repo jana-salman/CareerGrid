@@ -28,3 +28,11 @@ firebase-service-account*.json
 # React/Vite build artifacts
 frontend/node_modules/
 frontend/dist/
+.venv/
+.venv-win/
+.venv-windows/
+.env
+instance/
+__pycache__/
+frontend/node_modules/
+frontend/dist/

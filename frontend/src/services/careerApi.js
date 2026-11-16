@@ -10,9 +10,10 @@ function getPositions(careerId) {
   return apiRequest(`${careerPath(careerId)}/positions`)
 }
 
-function getCompanies(careerId, positionId) {
+function getCompanies(careerId, positionId, country = '') {
+  const query = country ? `?country=${encodeURIComponent(country)}` : ''
   return apiRequest(
-    `${careerPath(careerId)}/positions/${encodeApiPathSegment(positionId)}/companies`,
+    `${careerPath(careerId)}/positions/${encodeApiPathSegment(positionId)}/companies${query}`,
   )
 }
 

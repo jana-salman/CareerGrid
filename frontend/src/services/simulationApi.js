@@ -45,6 +45,22 @@ function evaluateWorkplaceSimulation({ evidence, attemptId } = {}) {
   })
 }
 
+// Starts (or, for a repeated client_request_id, resumes) one workplace attempt.
+function startWorkplaceSimulation({ careerId, positionId, companyId, jobSource, jobContext, clientRequestId, signal }) {
+  return apiRequest('/api/simulation/workplace/start', {
+    method: 'POST',
+    signal,
+    body: {
+      career_id: careerId,
+      position_id: positionId,
+      company_id: companyId,
+      job_source: jobSource,
+      client_request_id: clientRequestId,
+      ...(jobContext ? { job_context: jobContext } : {}),
+    },
+  })
+}
+
 export {
   evaluateWorkplaceSimulation,
   getFrontendSimulationProgress,
@@ -52,4 +68,5 @@ export {
   requestAdvisorGuidance,
   restartFrontendSimulation,
   saveFrontendSimulationProgress,
+  startWorkplaceSimulation,
 }

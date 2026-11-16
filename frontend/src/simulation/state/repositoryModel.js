@@ -65,6 +65,13 @@ function createWorkspace(files, options, extracted) {
   }
 }
 
+// The baseline is an immutable copy of the original starter project. It is
+// written once, when the project first becomes available, and is never updated
+// by later commits, pushes, or branch changes. Submissions are compared to it.
+function createBaseline(tree, source, extra = {}) {
+  return { commitId: 'initial', createdAt: new Date().toISOString(), snapshot: copy(tree), source, ...extra }
+}
+
 function createRepository(files = [], options = {}) {
   const path = options.path || '/Projects/careergrid-workspace'
   const name = options.name || 'careergrid-workspace'
@@ -75,6 +82,7 @@ function createRepository(files = [], options = {}) {
     rootPath: path, repositoryName: name, repositorySlug: slug(name), defaultBranch: 'main', currentBranch: 'main',
     branches: { main: { commits: [initial], headSnapshot: copy(tree), workingTree: copy(tree), stagedPaths: [], stagedSnapshot: {} } },
     remote: { pushedBranches: [], branchHeads: {} }, pullRequests: [], submissions: {}, submissionCandidates: {}, evaluations: {},
+    baseline: projectExtracted ? createBaseline(tree, 'starter_project') : null,
     workspace: createWorkspace(files, { ...options, name, path }, projectExtracted),
   }
 }
@@ -95,6 +103,15 @@ function normalizeRepository(repository, files = [], options = {}) {
       name: options.name || next.repositoryName,
       path: options.path || next.rootPath,
     }, true)
+  }
+  if (next.baseline === undefined || next.baseline === null) {
+    // Older saved workspaces predate the baseline. Only restore it from the
+    // server's original scenario files, and label it as restored; never derive
+    // it from the user's (possibly edited) branches.
+    const original = files.filter((file) => file?.path && typeof file.content === 'string')
+    next.baseline = next.workspace?.projectExtracted && original.length
+      ? createBaseline(snapshot(original), 'restored_from_scenario_project', { restored: true })
+      : null
   }
   return next
 }
@@ -128,6 +145,7 @@ function extractProjectArchive(repository, attachmentId) {
     return { repository: next, alreadyExtracted: true, projectPath: workspace.project.path }
   }
   const tree = snapshot(workspace.project.files)
+  if (!next.baseline) next.baseline = createBaseline(tree, 'extracted_starter_project')
   const initial = next.branches.main.commits[0]
   initial.message = 'Initial project files'
   initial.snapshot = copy(tree)
@@ -174,13 +192,23 @@ function stage(repository, paths) {
   selected.forEach((path) => { branch.stagedSnapshot[path] = branch.workingTree[path] ? copy(branch.workingTree[path]) : null })
   branch.stagedPaths = [...new Set([...branch.stagedPaths, ...selected])]; return { repository: next, count: selected.length }
 }
+// Commit ids must be unique across branches: pushes and frozen submissions
+// are tracked by id, and two commits can happen within one millisecond.
+function uniqueCommitId(repository) {
+  const used = new Set(Object.values(repository.branches).flatMap((branch) => branch.commits.map((item) => item.id)))
+  const base = Date.now().toString(36)
+  let id = base
+  for (let suffix = 1; used.has(id); suffix += 1) id = `${base}${suffix.toString(36)}`
+  return id
+}
+
 function commit(repository, message) {
   const next = copy(repository); const branch = currentBranch(next); const cleanMessage = String(message || '').trim()
   if (!cleanMessage) return { repository: next, error: 'Commit message required.' }
   if (!branch.stagedPaths.length) return { repository: next, error: 'No staged changes.' }
   const committedSnapshot = copy(branch.headSnapshot)
   branch.stagedPaths.forEach((path) => { const stagedFile = branch.stagedSnapshot[path]; if (stagedFile) committedSnapshot[path] = copy(stagedFile); else delete committedSnapshot[path] })
-  const record = { id: Date.now().toString(36), message: cleanMessage, author: 'CareerGrid User', createdAt: new Date().toISOString(), snapshot: copy(committedSnapshot) }
+  const record = { id: uniqueCommitId(next), message: cleanMessage, author: 'CareerGrid User', createdAt: new Date().toISOString(), snapshot: copy(committedSnapshot) }
   const filesChanged = branch.stagedPaths.length; branch.commits.push(record); branch.headSnapshot = committedSnapshot; branch.stagedPaths = []; branch.stagedSnapshot = {}
   return { repository: next, commit: record, filesChanged }
 }
@@ -201,6 +229,46 @@ function createPullRequest(repository, details) {
   const pullRequest = { repositoryPath: next.rootPath, baseBranch, compareBranch, id, url: `https://github.com/careergrid-sim/${next.repositorySlug}/pull/${id}`, status: 'open', title: title.trim(), description: description.trim(), repositoryName: next.repositoryName, repositorySlug: next.repositorySlug, author: 'CareerGrid User', createdAt: new Date().toISOString() }
   next.pullRequests.push(pullRequest); return { repository: next, pullRequest }
 }
+function diffSnapshots(before, after) {
+  const paths = [...new Set([...Object.keys(before || {}), ...Object.keys(after || {})])].sort()
+  return paths
+    .filter((path) => !sameFile(before?.[path], after?.[path]))
+    .map((path) => ({
+      path,
+      status: !before?.[path] ? 'added' : !after?.[path] ? 'deleted' : 'modified',
+      before: before?.[path]?.content || '',
+      after: after?.[path]?.content || '',
+    }))
+}
+
+function pushedCommit(repository, branchName) {
+  const id = repository.remote?.branchHeads?.[branchName]
+  if (!id || !repository.remote.pushedBranches.includes(branchName)) return null
+  return repository.branches[branchName]?.commits.find((item) => item.id === id) || null
+}
+
+// Describes what has and has not reached the simulated remote for one branch.
+function branchSyncStatus(repository, branchName = repository.currentBranch) {
+  const branch = repository.branches[branchName]
+  if (!branch) return null
+  const pushed = pushedCommit(repository, branchName)
+  const pushedIndex = pushed ? branch.commits.findIndex((item) => item.id === pushed.id) : -1
+  const unpushedCommits = pushed
+    ? branch.commits.slice(pushedIndex + 1)
+    : branch.commits.filter((item) => item.id !== 'initial')
+  const paths = new Set([...Object.keys(branch.headSnapshot), ...Object.keys(branch.workingTree)])
+  const uncommittedPaths = [...paths].filter((path) => !sameFile(branch.headSnapshot[path], branch.workingTree[path]))
+  return {
+    branch: branchName,
+    headCommitId: branch.commits.at(-1)?.id || null,
+    pushed: Boolean(pushed),
+    pushedCommit: pushed ? { id: pushed.id, message: pushed.message, createdAt: pushed.createdAt } : null,
+    stagedPaths: [...branch.stagedPaths],
+    uncommittedPaths: [...new Set([...uncommittedPaths, ...branch.stagedPaths])].sort(),
+    unpushedCommits: unpushedCommits.map(({ id, message }) => ({ id, message })),
+  }
+}
+
 function findPullRequestByUrl(repository, url) { return repository.pullRequests.find((item) => item.url === url) || null }
 function validatePullRequest(repository, pullRequest) {
   const current = pullRequest && repository.pullRequests.find((item) => item.id === pullRequest.id && item.url === pullRequest.url)
@@ -211,6 +279,7 @@ function validatePullRequest(repository, pullRequest) {
 }
 
 export {
+  branchSyncStatus,
   buildScenarioAttachments,
   changedFiles,
   commit,
@@ -218,12 +287,14 @@ export {
   createPullRequest,
   createRepository,
   diff,
+  diffSnapshots,
   downloadAttachment,
   extractProjectArchive,
   findPullRequestByUrl,
   loadRepository,
   persistRepository,
   push,
+  pushedCommit,
   repositoryStorageKey,
   saveFile,
   stage,

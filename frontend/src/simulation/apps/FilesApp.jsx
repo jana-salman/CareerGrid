@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
+import { isOpenableReference } from '../state/editorTabs.js'
+
 const locations = [
   ['/', '⌂', 'Home'],
   ['/Desktop', '▣', 'Desktop'],
@@ -8,7 +10,7 @@ const locations = [
   ['/Projects', '⌘', 'Projects'],
 ]
 
-function FilesApp({ downloadedAttachments, projectFiles, repository, onExtract }) {
+function FilesApp({ downloadedAttachments, projectFiles, repository, onExtract, onOpenInEditor = () => {} }) {
   const [location, setLocation] = useState('/Downloads')
   const [selectedKey, setSelectedKey] = useState(null)
   const [toast, setToast] = useState('')
@@ -139,6 +141,11 @@ function FilesApp({ downloadedAttachments, projectFiles, repository, onExtract }
                       {Object.keys(selected.archiveEntries || {}).map((entry) => <div className="files-archive-entry" key={entry}>{entry}</div>)}
                     </div>
                   </>
+                )}
+                {location === '/Downloads' && isOpenableReference(selected) && (
+                  <div className="files-preview-actions">
+                    <button className="files-action-button" type="button" onClick={() => onOpenInEditor(selected)}>Open in VS Code</button>
+                  </div>
                 )}
                 {selected.type === 'file' && <pre className="files-text-preview">{selected.content || 'No preview available.'}</pre>}
               </div>

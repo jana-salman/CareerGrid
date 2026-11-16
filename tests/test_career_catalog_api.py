@@ -37,7 +37,7 @@ def test_position_catalog_uses_service_owned_metadata(client):
 
 
 def test_company_catalog_keeps_demo_and_fallback_behavior(client, monkeypatch):
-    monkeypatch.setattr("routes.careers.fetch_adzuna_jobs", lambda *args, **kwargs: [])
+    monkeypatch.setattr("routes.careers.search_jobs", lambda *args, **kwargs: {"status": "no_results", "jobs": []})
 
     response = client.get(
         "/api/careers/software-developer/positions/backend-developer/companies"

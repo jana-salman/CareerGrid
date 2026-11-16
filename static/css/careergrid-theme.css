@@ -608,3 +608,77 @@ body:has(.workspace) {
     box-shadow: none;
     opacity: .82;
 }
+
+
+/* =========================================================
+   Workspace launch state and live-listing status
+   ========================================================= */
+
+.workspace-launch-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    background: rgba(3, 8, 23, .78);
+}
+
+.workspace-launch-card {
+    max-width: 460px;
+    padding: 28px;
+    text-align: center;
+    border: 1px solid var(--cg-border);
+    border-radius: 18px;
+    background: var(--cg-surface-strong);
+    box-shadow: var(--cg-glow);
+}
+
+.workspace-launch-card h2 { margin: 12px 0 8px; }
+.workspace-launch-card p { color: var(--cg-muted); }
+
+.workspace-launch-spinner {
+    display: inline-block;
+    width: 34px;
+    height: 34px;
+    border: 3px solid var(--cg-border);
+    border-top-color: var(--cg-blue);
+    border-radius: 50%;
+    animation: cg-spin 1s linear infinite;
+}
+
+@keyframes cg-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .workspace-launch-spinner { animation: none; } }
+
+.workspace-launch-error {
+    max-width: 1080px;
+    margin: 0 auto 18px;
+    padding: 16px 20px;
+    border: 1px solid var(--cg-border);
+    border-radius: 14px;
+    background: var(--cg-surface);
+}
+
+.workspace-launch-error { border-color: rgba(255, 120, 120, .55); }
+.workspace-launch-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.career-page .secondary-btn {
+    padding: 10px 16px;
+    color: var(--cg-text);
+    border: 1px solid var(--cg-border);
+    border-radius: 10px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.career-page button:disabled { opacity: .55; cursor: not-allowed; }
+
+.job-search-status,
+.job-search-attribution {
+    max-width: 1080px;
+    margin: 0 auto 14px;
+    color: var(--cg-muted);
+}
+.career-page .job-source { color: var(--cg-muted); }
+.career-page .job-source a,
+.job-search-attribution a { color: #8cc8ff; }

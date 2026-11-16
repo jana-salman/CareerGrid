@@ -128,7 +128,7 @@ def test_implemented_company_routes_still_render(
     monkeypatch,
     position_id,
 ):
-    monkeypatch.setattr(career_routes, "fetch_adzuna_jobs", lambda *args, **kwargs: [])
+    monkeypatch.setattr(career_routes, "search_jobs", lambda *args, **kwargs: {"status": "no_results", "jobs": []})
 
     response = client.get(
         f"/positions/software-developer/{position_id}"

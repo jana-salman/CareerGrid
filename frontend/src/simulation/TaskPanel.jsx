@@ -1,9 +1,37 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { restartFrontendSimulation, saveFrontendSimulationProgress } from '../services/simulationApi.js'
+import { saveFrontendSimulationProgress } from '../services/simulationApi.js'
+import { branchSyncStatus, diffSnapshots, pushedCommit } from './state/repositoryModel.js'
 
-const labels = ['Triage the production report', 'Investigate across viewports', 'Implement a focused fix', 'Verify behavior and regressions', 'Review, commit, and open a PR']
-const fields = [[['selected_email_id', 'Critical email ID'], ['selected_priority', 'Priority'], ['selected_action', 'First action'], ['written_response', 'Reply to the frontend lead', true]], [['viewports_tested', 'Viewports'], ['evidence_opened', 'Evidence inspected'], ['selected_root_cause', 'Root cause'], ['proposed_next_action', 'Proposed next action', true], ['investigation_summary', 'Investigation summary', true]], [['files_opened', 'Files opened'], ['product_js', 'Updated product.js', true], ['fix_explanation', 'Why this is the smallest safe fix', true]], [['commands_run', 'Safe commands'], ['tests_performed', 'Behavior checks'], ['viewport_checks', 'Viewports'], ['accessibility_checks', 'Accessibility checks'], ['release_decision', 'Release decision']], [['reviewed_files', 'Reviewed changed files'], ['commit_message', 'Commit message'], ['pr_title', 'Pull request title'], ['pr_description', 'Pull request description', true], ['testing_checklist', 'Testing checklist'], ['release_recommendation', 'Release recommendation'], ['final_team_message', 'Final team update', true]]]
+const defaultLabels = ['Triage the production report', 'Investigate across viewports', 'Implement the fix', 'Verify behavior and regressions', 'Deliver for review (pull request or main)']
+const fields = [[['selected_email_id', 'Critical email ID'], ['selected_priority', 'Priority'], ['selected_action', 'First action'], ['written_response', 'Reply to the frontend lead', true]], [['viewports_tested', 'Viewports'], ['evidence_opened', 'Evidence inspected'], ['selected_root_cause', 'Root cause'], ['proposed_next_action', 'Proposed next action', true], ['investigation_summary', 'Investigation summary', true]], [['files_opened', 'Files opened'], ['fix_explanation', 'What you changed and why it is safe', true]], [['commands_run', 'Commands you ran (self-reported)'], ['tests_performed', 'Behavior checks you did (self-reported)'], ['viewport_checks', 'Viewports'], ['accessibility_checks', 'Accessibility checks'], ['release_decision', 'Release decision']], [['reviewed_files', 'Reviewed changed files'], ['commit_message', 'Commit message'], ['pr_title', 'Pull request title', false, 'pull_request'], ['pr_description', 'Pull request description', true, 'pull_request'], ['testing_checklist', 'Testing checklist'], ['release_recommendation', 'Release recommendation'], ['final_team_message', 'Final team update', true]]]
+
+// Files the participant changed and saved in VS Code, compared with the
+// original project. Their final contents are what CareerGrid checks.
+function workspaceChanges(repository) {
+  if (!repository?.baseline?.snapshot) return {}
+  const branch = repository.branches[repository.currentBranch]
+  return Object.fromEntries(
+    diffSnapshots(repository.baseline.snapshot, branch.workingTree)
+      .filter((change) => change.status !== 'deleted')
+      .map((change) => [change.path, change.after]),
+  )
+}
+
+function deliveryEvidence(repository, mode) {
+  if (!repository) return { pushed: false }
+  const pullRequest = [...repository.pullRequests].reverse().find((item) => item.status === 'open')
+  const branch = mode === 'pull_request' && pullRequest ? pullRequest.compareBranch : repository.defaultBranch
+  const pushed = pushedCommit(repository, branch)
+  const status = branchSyncStatus(repository, branch)
+  return {
+    branch,
+    commit_id: pushed?.id || '',
+    pull_request_url: mode === 'pull_request' ? pullRequest?.url || '' : '',
+    pushed: Boolean(pushed) && !status?.unpushedCommits.length,
+    uncommitted_files: status?.uncommittedPaths || [],
+  }
+}
 
 const list = (value) =>
   String(value || '')
@@ -11,7 +39,7 @@ const list = (value) =>
     .map((item) => item.trim())
     .filter(Boolean)
 
-function buildStepPayload(step, value) {
+function buildStepPayload(step, value, repository) {
   if (step === 1) {
     return {
       opened_email_ids: [value('selected_email_id')],
@@ -36,7 +64,7 @@ function buildStepPayload(step, value) {
   if (step === 3) {
     return {
       files_opened: list(value('files_opened')),
-      changed_files: { 'product.js': value('product_js') },
+      changed_files: workspaceChanges(repository),
       fix_explanation: value('fix_explanation'),
     }
   }
@@ -51,7 +79,10 @@ function buildStepPayload(step, value) {
     }
   }
 
+  const mode = value('delivery_mode') || 'pull_request'
   return {
+    delivery_mode: mode,
+    delivery_evidence: deliveryEvidence(repository, mode),
     reviewed_files: list(value('reviewed_files')),
     commit_message: value('commit_message'),
     pr_title: value('pr_title'),
@@ -62,7 +93,10 @@ function buildStepPayload(step, value) {
   }
 }
 
-function TaskPanel({ attempt, progress, onProgress = () => {} }) {
+function TaskPanel({ attempt, progress, repository, onProgress = () => {} }) {
+  const scenario = attempt.public_scenario || {}
+  const labels = defaultLabels.map((label, index) => scenario.frontend_tasks?.[index]?.title || label)
+  const notice = scenario.simulation_notice || scenario.fictional_company_notice
   const [liveProgress, setLiveProgress] = useState(progress)
   const current = liveProgress || progress
   const step = Number(current?.current_step || 1)
@@ -79,7 +113,11 @@ function TaskPanel({ attempt, progress, onProgress = () => {} }) {
     setSaving(true)
     setError('')
     try {
-      const result = await saveFrontendSimulationProgress(attempt.attempt_id, step, buildStepPayload(step, value))
+      const payload = buildStepPayload(step, value, repository)
+      if (step === 3 && !Object.keys(payload.changed_files).length) {
+        throw new Error('No saved changes found. Edit the project files in VS Code and save them first.')
+      }
+      const result = await saveFrontendSimulationProgress(attempt.attempt_id, step, payload)
       const next = result.evaluation
         ? {
             ...current,
@@ -106,6 +144,7 @@ function TaskPanel({ attempt, progress, onProgress = () => {} }) {
     <aside className="frontend-task-panel">
       <small>FRONTEND WORKPLACE - TASK {Math.min(step, 5)} OF 5</small>
       <h2>{complete ? 'Frontend simulation complete' : labels[step - 1]}</h2>
+      {notice && <p className="frontend-task-note">{notice}</p>}
       <div className="frontend-task-progress">
         {Array.from({ length: 5 }, (_, index) => (
           <span className={index + 1 <= step ? 'done' : ''} key={index} />
@@ -113,11 +152,36 @@ function TaskPanel({ attempt, progress, onProgress = () => {} }) {
       </div>
       {complete ? (
         <Link className="frontend-task-submit" to={`/simulation/attempts/${encodeURIComponent(attempt.attempt_id)}/report`}>
-          Open report
+          Open feedback and personalized roadmap
         </Link>
       ) : (
         <form onSubmit={submit}>
-          {fields[step - 1].map(([name, label, area]) => (
+          {step === 3 && (
+            <div>
+              <small>Saved changes CareerGrid will check:</small>
+              <ul className="frontend-task-changes">
+                {Object.keys(workspaceChanges(repository)).map((path) => <li key={path}>{path}</li>)}
+                {!Object.keys(workspaceChanges(repository)).length && <li>None yet - edit and save files in VS Code.</li>}
+              </ul>
+            </div>
+          )}
+          {step === 5 && (
+            <label>
+              Delivery method
+              <select value={value('delivery_mode') || 'pull_request'} onChange={(e) => setValues({ ...values, delivery_mode: e.target.value })}>
+                <option value="pull_request">Pull request (branch, push, open PR)</option>
+                <option value="main">Directly on main (commit and push main)</option>
+              </select>
+              <small className="frontend-task-note">
+                {(value('delivery_mode') || 'pull_request') === 'main'
+                  ? 'Commit and push on main in the Terminal first. Only pushed work counts.'
+                  : 'Push your branch and open the pull request in GitHub first.'}
+              </small>
+            </label>
+          )}
+          {fields[step - 1]
+            .filter(([, , , onlyFor]) => !onlyFor || onlyFor === (value('delivery_mode') || 'pull_request'))
+            .map(([name, label, area]) => (
             <label key={name}>
               {label}
               {area ? (
@@ -127,6 +191,7 @@ function TaskPanel({ attempt, progress, onProgress = () => {} }) {
               )}
             </label>
           ))}
+          {step === 4 && <p className="frontend-task-note">The workspace cannot run commands. What you list here is recorded as your own report; CareerGrid separately checks your saved files.</p>}
           <p className="frontend-task-error">{error}</p>
           <button className="frontend-task-submit" disabled={saving} type="submit">
             {saving ? 'Saving...' : 'Save and continue'}

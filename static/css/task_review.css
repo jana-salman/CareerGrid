@@ -511,6 +511,98 @@ a {
 }
 
 
+/* Personalized roadmap: steps and learning resources per skill. */
+
+.roadmap-subheading {
+    margin: 18px 0 8px;
+
+    color: #d6def2;
+
+    font-size: .82rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+
+.roadmap-steps {
+    margin: 0;
+    padding-left: 22px;
+
+    display: grid;
+    gap: 8px;
+
+    color: #d6def2;
+
+    line-height: 1.55;
+}
+
+
+.roadmap-resources {
+    margin: 0;
+    padding: 0;
+
+    display: grid;
+    gap: 12px;
+
+    list-style: none;
+}
+
+
+.roadmap-resources li {
+    padding: 12px 14px;
+
+    border: 1px solid rgba(116, 145, 227, .25);
+    border-radius: 12px;
+
+    background: rgba(9, 17, 48, .55);
+}
+
+
+.roadmap-resources a {
+    color: #68c7ff;
+
+    font-weight: 700;
+
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+
+.roadmap-resources a:hover {
+    color: #9ad9ff;
+}
+
+
+.roadmap-resources a:focus-visible {
+    outline: 2px solid #68c7ff;
+    outline-offset: 3px;
+
+    border-radius: 4px;
+}
+
+
+.roadmap-resource-provider {
+    display: block;
+
+    margin-top: 4px;
+
+    color: var(--review-muted);
+
+    font-size: .85rem;
+}
+
+
+.roadmap-resources p,
+.performance-card .roadmap-resources p {
+    margin: 6px 0 0;
+}
+
+
+.roadmap-empty {
+    font-style: italic;
+}
+
+
 /* =========================================================
    FEEDBACK
    ========================================================= */

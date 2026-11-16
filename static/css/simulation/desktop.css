@@ -1065,3 +1065,57 @@ body.is-resizing-window * { user-select: none !important; }
         font-size: 9px;
     }
 }
+
+
+/* Task brief: one place for task, project, deliverables, submission, feedback. */
+.workspace-brief-toggle {
+    margin-left: auto;
+    margin-right: 16px;
+    padding: 7px 12px;
+    color: #e5e7eb;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    background: #111827;
+    cursor: pointer;
+}
+
+.workspace-brief {
+    position: absolute;
+    right: 18px;
+    top: 18px;
+    z-index: 40;
+    width: min(380px, calc(100% - 36px));
+    max-height: calc(100% - 36px);
+    overflow: auto;
+    padding: 16px 18px;
+    color: #e5e7eb;
+    border: 1px solid #334155;
+    border-radius: 14px;
+    background: #111827;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .35);
+}
+
+.workspace-brief-header { display: flex; justify-content: space-between; gap: 12px; }
+.workspace-brief-header small { color: #93a4c3; text-transform: uppercase; letter-spacing: .06em; }
+.workspace-brief-header h2 { margin: 2px 0 0; font-size: 1.05rem; }
+.workspace-brief-close { border: 0; color: #cbd5e1; background: transparent; font-size: 1.3rem; cursor: pointer; }
+.workspace-brief-notice { padding: 8px 10px; border-radius: 8px; background: #1e293b; color: #cbd5e1; font-size: .85rem; }
+.workspace-brief section { margin-top: 14px; }
+.workspace-brief h3 { margin: 0 0 6px; font-size: .92rem; }
+.workspace-brief p, .workspace-brief li { color: #b8c4d8; font-size: .86rem; }
+.workspace-brief ul, .workspace-brief ol { margin: 6px 0; padding-left: 20px; }
+.workspace-brief code { color: #e2e8f0; }
+.workspace-brief-subhead { margin-bottom: 0; font-weight: 600; }
+.workspace-brief-link {
+    padding: 0;
+    color: #7cc4ff;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: .86rem;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.workspace-brief-status { font-weight: 600; color: #e2e8f0 !important; }
+.workspace-brief-status.is-evaluation_failed { color: #fca5a5 !important; }
+.workspace-brief-status.is-evaluated { color: #86efac !important; }

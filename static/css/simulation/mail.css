@@ -1035,3 +1035,31 @@
 
     background: #dcfce7;
 }
+
+
+/* Submission status and guidance for the task thread. */
+.mail-submission-panel {
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #1e293b;
+    font-size: .9rem;
+}
+.mail-submission-panel.is-evaluation_failed { border-color: #f87171; background: #fef2f2; }
+.mail-submission-panel.is-evaluated { border-color: #4ade80; background: #f0fdf4; }
+.mail-submission-panel.is-evaluating { border-color: #60a5fa; background: #eff6ff; }
+.mail-submission-note { color: #475569; }
+.mail-submission-help summary { cursor: pointer; font-weight: 600; margin-top: 8px; }
+.mail-submission-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.mail-submission-options ol { margin: 6px 0; padding-left: 20px; }
+.mail-submission-git { color: #475569; margin: 8px 0; }
+.mail-secondary-action {
+    padding: 7px 12px;
+    border: 1px solid #94a3b8;
+    border-radius: 8px;
+    background: #fff;
+    color: #1e293b;
+    cursor: pointer;
+}

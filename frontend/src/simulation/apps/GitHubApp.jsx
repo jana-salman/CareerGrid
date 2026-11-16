@@ -1,9 +1,38 @@
 import { useEffect, useState } from 'react'
 
-import { createPullRequest } from '../state/repositoryModel.js'
+import { branchSyncStatus, createPullRequest } from '../state/repositoryModel.js'
 import { copyPullRequestLink } from '../state/pullRequestClipboard.js'
+import { SUBMISSION_OPTIONS, submissionState } from '../state/submissionWorkflow.js'
 
-function GitHubApp({ repository, onRepositoryChange }) {
+function SyncStatus({ repository }) {
+  const status = branchSyncStatus(repository, repository.currentBranch)
+  if (!status) return null
+  const items = []
+  if (status.uncommittedPaths.length) items.push(`${status.uncommittedPaths.length} uncommitted file(s) - not visible on GitHub until committed and pushed`)
+  if (status.unpushedCommits.length) items.push(`${status.unpushedCommits.length} local commit(s) not pushed yet - run git push`)
+  if (!items.length) items.push(status.pushed ? `Branch ${status.branch} is up to date with GitHub` : `Branch ${status.branch} has not been pushed`)
+  return <ul className="github-sync-status" aria-label="Branch status">{items.map((item) => <li key={item}>{item}</li>)}</ul>
+}
+
+function DeliveryGuide({ repository, taskId }) {
+  const state = taskId ? submissionState(repository, taskId) : null
+  return (
+    <aside className="github-section github-delivery-guide" style={{ marginTop: 16 }}>
+      <h3 className="github-section-title">Submitting your work</h3>
+      <div className="github-section-body">
+        {state && <p className="github-muted" role="status">Status: {state.label}</p>}
+        <p><strong>Pull request:</strong> push a feature branch, click Create Pull Request, then email the link from Mail.</p>
+        <p><strong>Directly on main:</strong> commit and push on main, then reply to the task email that the work is ready on main. No link is needed.</p>
+        <details><summary>Step-by-step</summary>
+          <p>Pull request</p><ol>{SUBMISSION_OPTIONS.pullRequest.map((step) => <li key={step}>{step}</li>)}</ol>
+          <p>Main</p><ol>{SUBMISSION_OPTIONS.main.map((step) => <li key={step}>{step}</li>)}</ol>
+        </details>
+      </div>
+    </aside>
+  )
+}
+
+function GitHubApp({ repository, taskId, onRepositoryChange }) {
   const [activeTab, setActiveTab] = useState('code')
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
@@ -70,7 +99,7 @@ function GitHubApp({ repository, onRepositoryChange }) {
             ? <PullRequestDetail pullRequest={pullRequest} repository={repository} onCopySuccess={() => setToast('Pull request link copied')} />
             : <PullRequestsView pullRequests={repository.pullRequests} onCreate={() => setShowForm(true)} />
         ) : (
-          <CodeView current={current} pushed={pushed} repository={repository} onCreate={() => setShowForm(true)} />
+          <CodeView current={current} pushed={pushed} repository={repository} taskId={taskId} onCreate={() => setShowForm(true)} />
         )}
       </div>
     </div>
@@ -78,12 +107,18 @@ function GitHubApp({ repository, onRepositoryChange }) {
   </>
 }
 
-function CodeView({ current, pushed, repository, onCreate }) {
+function CodeView({ current, pushed, repository, taskId, onCreate }) {
+  const onMain = repository.currentBranch === repository.defaultBranch
+  const prHint = onMain
+    ? 'Pull requests compare a feature branch with main. Create one with git switch -c <name>, or submit directly on main.'
+    : !pushed ? 'Push this branch (git push) to open a pull request.' : ''
   return <>
     <div className="github-actions">
       <label>Branch <select className="github-branch-select" value={repository.currentBranch} onChange={() => {}}><option>{repository.currentBranch}</option></select></label>
-      <button className="github-primary-button" type="button" disabled={!pushed || repository.currentBranch === repository.defaultBranch} onClick={onCreate}>Create Pull Request</button>
+      <button className="github-primary-button" type="button" disabled={!pushed || onMain} onClick={onCreate}>Create Pull Request</button>
     </div>
+    {prHint && <p className="github-muted">{prHint}</p>}
+    <SyncStatus repository={repository} />
     <div className="github-layout">
       <div>
         {current.commits.at(-1) && <section className="github-section"><div className="github-section-body"><div className="github-commit-title">{current.commits.at(-1).message}</div><div className="github-commit-meta">{current.commits.at(-1).author} committed · {current.commits.at(-1).id}</div></div></section>}
@@ -96,6 +131,7 @@ function CodeView({ current, pushed, repository, onCreate }) {
       </div>
       <div>
         <aside className="github-section"><h3 className="github-section-title">Branches</h3><div className="github-section-body github-branch-list">{Object.keys(repository.branches).map((branch) => <div className={`github-branch-row${branch === repository.currentBranch ? ' is-current' : ''}`} key={branch}><span className="github-branch-name">{branch === repository.currentBranch ? '● ' : ''}{branch}</span><span className={`github-status-badge ${repository.remote.pushedBranches.includes(branch) ? 'is-pushed' : 'is-local'}`}>{repository.remote.pushedBranches.includes(branch) ? 'Pushed' : 'Local only'}</span></div>)}</div></aside>
+        <DeliveryGuide repository={repository} taskId={taskId} />
         <aside className="github-section" style={{ marginTop: 16 }}><h3 className="github-section-title">Commits</h3><div className="github-section-body">{current.commits.slice().reverse().map((item) => <CommitRow commit={item} key={item.id} />)}</div></aside>
       </div>
     </div>

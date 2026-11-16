@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 
 import {
+  branchSyncStatus,
   changedFiles,
   commit,
   createBranch,
@@ -92,6 +93,11 @@ function statusOutput(repository) {
   const branch = repository.branches[repository.currentBranch]
   const changed = changedFiles(repository).filter((path) => !branch.stagedPaths.includes(path))
   const lines = [`On branch ${repository.currentBranch}`]
+  const sync = branchSyncStatus(repository, repository.currentBranch)
+  if (sync && !sync.pushed && sync.unpushedCommits.length) lines.push(`This branch has not been pushed. ${sync.unpushedCommits.length} commit(s) exist only locally (use "git push").`)
+  else if (sync?.unpushedCommits.length) lines.push(`Your branch is ahead of 'origin/${repository.currentBranch}' by ${sync.unpushedCommits.length} commit(s).
+  (use "git push" to publish your local commits)`)
+  else if (sync?.pushed) lines.push(`Your branch is up to date with 'origin/${repository.currentBranch}'.`)
   if (branch.stagedPaths.length) lines.push('Changes to be committed:', ...branch.stagedPaths.map((path) => `  modified: ${path}`))
   if (changed.length) lines.push('Changes not staged for commit:', ...changed.map((path) => `  modified: ${path}`))
   if (!branch.stagedPaths.length && !changed.length) lines.push('nothing to commit, working tree clean')
@@ -202,7 +208,8 @@ function TerminalApp({ files, repository, onRepositoryChange }) {
       return apply(commit(repository, message), (result) => `[${repository.currentBranch} ${result.commit.id}] ${result.commit.message}\n${result.filesChanged} file(s) changed`)
     }
     if (command === 'git push' || command.startsWith('git push ')) {
-      return apply(push(repository), (result) => `Branch '${result.branch}' pushed to origin`)
+      const head = repository.branches[repository.currentBranch].commits.at(-1)
+      return apply(push(repository), (result) => `Branch '${result.branch}' pushed to origin (${head?.id || 'no commits'})`)
     }
     if (command === 'git log') return logOutput(repository, false)
     if (command === 'git log --oneline') return logOutput(repository, true)
@@ -227,6 +234,12 @@ Git
   git log
   git log --oneline
   git push
+
+Submitting your work (only committed and pushed work is reviewed)
+  Pull request: git switch -c <branch>, commit, git push,
+                open a pull request in GitHub, email the link from Mail
+  Main:         commit on main, git push, then reply to the task
+                email that your work is ready on main
 
 Terminal
   help`

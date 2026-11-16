@@ -44,6 +44,7 @@ def create_workplace_simulation_attempt(
     career_id: str,
     position_id: str,
     company_id: str,
+    job_context: dict[str, Any] | None = None,
 ) -> str:
     """Create a workplace attempt awaiting one generated scenario."""
 
@@ -73,6 +74,8 @@ def create_workplace_simulation_attempt(
         "created_at": _current_utc_time(),
         "scenario_version": WORKPLACE_SCENARIO_VERSION,
     }
+    if job_context:
+        record["job_context"] = deepcopy(job_context)
 
     reference.set(record)
 
@@ -87,8 +90,14 @@ def save_workplace_scenario(
     private_context: dict[str, Any],
     generation_attempt_count: int,
     generation_source: str = "gemini",
+    generation_details: dict[str, Any] | None = None,
 ) -> None:
-    """Persist the validated scenario on its existing canonical attempt."""
+    """Persist the validated scenario on its existing canonical attempt.
+
+    ``generation_details`` holds internal diagnostics (model, timing, why a
+    fallback was used). It is stored server-side only and never returned by
+    the browser-facing APIs.
+    """
 
     if not user_id or not attempt_id:
         raise ValueError(
@@ -135,6 +144,7 @@ def save_workplace_scenario(
             "public_scenario": deepcopy(public_scenario),
             "private_context": deepcopy(private_context),
             "generation": {
+                **deepcopy(generation_details or {}),
                 "source": generation_source.strip(),
                 "generated_at": generated_at,
                 "attempt_count": generation_attempt_count,
@@ -182,6 +192,34 @@ def mark_workplace_generation_failed(
     reference.update(
         {
             "status": "generation_failed",
+            "updated_at": _current_utc_time(),
+        }
+    )
+
+
+def restart_workplace_generation(
+    *,
+    user_id: str,
+    attempt_id: str,
+) -> None:
+    """Return a failed (or stale) attempt without a scenario to generating.
+
+    Retrying on the same attempt avoids creating duplicate attempts.
+    """
+
+    reference = get_database_reference(
+        f"users/{user_id}/simulation_attempts/{attempt_id}"
+    )
+    existing_attempt = reference.get()
+    if (
+        not isinstance(existing_attempt, dict)
+        or existing_attempt.get("simulation_mode") != WORKPLACE_SIMULATION_MODE
+        or existing_attempt.get("public_scenario")
+    ):
+        raise RuntimeError("This workplace attempt cannot be regenerated.")
+    reference.update(
+        {
+            "status": "generating",
             "updated_at": _current_utc_time(),
         }
     )
@@ -324,6 +362,10 @@ _USER_VISIBLE_EVALUATION_FIELDS = {
     "review_message",
     "step_feedback",
     "frontend_readiness",
+    "personalized_roadmap",
+    "git_workflow_feedback",
+    "submission_overview",
+    "verification_note",
 }
 
 

@@ -205,3 +205,64 @@ def get_company_display_name(career_id, position_id, company_id):
         return company_id.replace("-", " ").title()
 
     return "Company"
+
+
+# Role profiles for CareerGrid's fictional practice companies. They give task
+# generation the same kind of context a real job listing would, without
+# claiming to describe a real employer.
+COMPANY_ROLE_CONTEXT = {
+    ("backend-developer", "technova"): {
+        "title": "Junior Backend Developer",
+        "company": "TechNova",
+        "description": (
+            "TechNova builds internal platforms for a mid-sized software company: user "
+            "accounts, permissions, notifications, and reporting services used by other "
+            "teams. Junior backend developers fix production issues in Python/Flask "
+            "services, extend REST endpoints, keep API contracts stable for internal "
+            "consumers, and write pytest regression tests. Work arrives as support "
+            "escalations, tickets, and log excerpts, and changes are reviewed by senior "
+            "engineers before release."
+        ),
+    },
+    ("backend-developer", "brightsoft"): {
+        "title": "Junior Backend Developer",
+        "company": "BrightSoft",
+        "description": (
+            "BrightSoft runs a commerce platform for partner merchants: orders, payments, "
+            "vouchers, inventory, and partner integrations exposed through JSON APIs. "
+            "Junior backend developers implement business rules, validate partner input, "
+            "make request handling safe to retry, handle data imports, and add unit and "
+            "integration tests. They read API contracts and partner tickets and document "
+            "rollout risks in handovers."
+        ),
+    },
+    ("frontend-developer", "pixelworks"): {
+        "title": "Junior Frontend Developer",
+        "company": "PixelWorks",
+        "description": (
+            "PixelWorks designs and builds customer-facing web experiences for retail and "
+            "media clients. Junior frontend developers implement and fix interactive UI in "
+            "HTML, CSS, and vanilla JavaScript, work from design specs and QA reports, "
+            "care about accessibility (keyboard use, focus, ARIA) and responsive layouts, "
+            "and write unit tests for UI logic."
+        ),
+    },
+    ("frontend-developer", "cloudbyte"): {
+        "title": "Junior Frontend Developer",
+        "company": "CloudByte",
+        "description": (
+            "CloudByte sells a cloud dashboard for small businesses: usage charts, billing "
+            "settings, team management, and onboarding flows. Junior frontend developers "
+            "build forms with validation, data tables with filtering and empty states, and "
+            "settings pages, following product acceptance criteria and accessibility "
+            "guidelines, with unit tests for client-side logic."
+        ),
+    },
+}
+
+
+def get_company_role_context(position_id: str, company_id: str) -> dict | None:
+    """Return the defined role profile for a CareerGrid practice company."""
+
+    context = COMPANY_ROLE_CONTEXT.get((position_id, company_id))
+    return dict(context) if context else None

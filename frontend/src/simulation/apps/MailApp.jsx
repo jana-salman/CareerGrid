@@ -3,9 +3,64 @@ import { useNavigate } from 'react-router-dom'
 
 import { evaluateWorkplaceSimulation, requestAdvisorGuidance } from '../../services/simulationApi.js'
 import { buildEvaluationEvidence, markEvaluationFailed, markEvaluationPending, recordEvaluation } from '../state/evaluationEvidence.js'
-import { createFinalReportMessage, ensureFinalReportMessage } from '../state/reportMail.js'
-import { buildScenarioAttachments } from '../state/repositoryModel.js'
-import { processCompletionReply, SUBMISSION_ACKNOWLEDGEMENT } from '../state/submissionWorkflow.js'
+import { createFinalReportMessage, ensureFinalReportMessage, finalReportPath } from '../state/reportMail.js'
+import { branchSyncStatus, buildScenarioAttachments } from '../state/repositoryModel.js'
+import {
+  MAIN_SUBMISSION_ACKNOWLEDGEMENT,
+  processCompletionReply,
+  SUBMISSION_ACKNOWLEDGEMENT,
+  SUBMISSION_OPTIONS,
+  submissionState,
+} from '../state/submissionWorkflow.js'
+
+const MAIL_STORAGE_PREFIX = 'careergrid:mail:'
+
+// Thread replies are kept per attempt so reopening the workspace keeps the
+// submission conversation (the repository already persists Git state).
+function loadMailReplies(attemptId) {
+  try {
+    const stored = globalThis.localStorage?.getItem(`${MAIL_STORAGE_PREFIX}${attemptId}`)
+    const parsed = stored ? JSON.parse(stored) : null
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function persistMailReplies(attemptId, messages) {
+  try {
+    const replies = Object.fromEntries(messages.filter((item) => item.replies?.length).map((item) => [item.id, item.replies]))
+    globalThis.localStorage?.setItem(`${MAIL_STORAGE_PREFIX}${attemptId}`, JSON.stringify(replies))
+  } catch { /* keep the thread in memory */ }
+}
+
+// A submission draft the user reviews and sends; it goes through the same
+// detection and confirmation steps as a hand-written reply.
+function submissionDraft(repository) {
+  const pullRequest = [...repository.pullRequests].reverse().find((item) => item.status === 'open')
+  if (pullRequest) {
+    return `Hi,
+
+My work is ready for review in this pull request:
+Branch: ${pullRequest.compareBranch}
+${pullRequest.url}
+
+What I found: 
+What I changed: 
+How I verified it: 
+
+Thanks`
+  }
+  return `Hi,
+
+My work is ready for review on main (committed and pushed).
+
+What I found: 
+What I changed: 
+How I verified it: 
+
+Thanks`
+}
 
 function createMessages(scenario) {
   const task = scenario.task || {}
@@ -38,7 +93,12 @@ function createMessages(scenario) {
 function MailApp({ attempt, downloadedAttachments, repository, userIdentity, onDownload, onRepositoryChange, onUnreadChange }) {
   const navigate = useNavigate()
   const scenario = attempt.public_scenario || {}
-  const [messages, setMessages] = useState(() => createMessages(scenario))
+  const [messages, setMessages] = useState(() => {
+    const saved = loadMailReplies(attempt.attempt_id)
+    return createMessages(scenario).map((message) => (
+      Array.isArray(saved[message.id]) ? { ...message, replies: saved[message.id], unread: false } : message
+    ))
+  })
   const [folder, setFolder] = useState('inbox')
   const [selectedId, setSelectedId] = useState(null)
   const [query, setQuery] = useState('')
@@ -63,6 +123,8 @@ function MailApp({ attempt, downloadedAttachments, repository, userIdentity, onD
   useEffect(() => {
     onUnreadChange(messages.filter((message) => !message.sent && message.unread).length)
   }, [messages, onUnreadChange])
+
+  useEffect(() => { persistMailReplies(attempt.attempt_id, messages) }, [attempt.attempt_id, messages])
 
   useEffect(() => {
     const completedTask = messages.find((message) => message.task && repository.evaluations[message.id]?.status === 'completed')
@@ -147,7 +209,7 @@ function MailApp({ attempt, downloadedAttachments, repository, userIdentity, onD
                   ...(item.replies || []),
                   userMessage,
                   {
-                    body: SUBMISSION_ACKNOWLEDGEMENT,
+                    body: submission.mode === 'main' ? MAIN_SUBMISSION_ACKNOWLEDGEMENT : SUBMISSION_ACKNOWLEDGEMENT,
                     id: `advisor-confirm-${userMessage.id}`,
                     role: selected.role,
                     sender: selected.sender,
@@ -188,7 +250,7 @@ function MailApp({ attempt, downloadedAttachments, repository, userIdentity, onD
             userMessage,
             { body: advisorReply, id: `advisor-${Date.now()}`, role: selected.role, sender: selected.sender },
           )
-        } else if (completionFailed && advisorReply !== SUBMISSION_ACKNOWLEDGEMENT) {
+        } else if (completionFailed && ![SUBMISSION_ACKNOWLEDGEMENT, MAIN_SUBMISSION_ACKNOWLEDGEMENT].includes(advisorReply)) {
           replies.push({
             body: advisorReply,
             id: `advisor-evaluation-${userMessage.id}`,
@@ -269,6 +331,16 @@ function MailApp({ attempt, downloadedAttachments, repository, userIdentity, onD
               </div>
             </header>
 
+            {selected.task && completionEnabled && (
+              <SubmissionPanel
+                attemptId={attempt.attempt_id}
+                repository={repository}
+                state={submissionState(repository, selected.id)}
+                onOpenReport={(path) => navigate(path)}
+                onPrepare={() => { setReplying(true); setDraft(submissionDraft(repository)); setError('') }}
+              />
+            )}
+
             <div className="mail-thread">
               <ThreadMessage message={selected} onOpenReport={(path) => navigate(path)} />
               {selected.replies?.map((reply) => <ThreadMessage message={reply} onOpenReport={(path) => navigate(path)} key={reply.id} />)}
@@ -312,6 +384,47 @@ function MailApp({ attempt, downloadedAttachments, repository, userIdentity, onD
         )}
       </section>
     </div>
+  )
+}
+
+function gitSummary(repository) {
+  const status = branchSyncStatus(repository, repository.currentBranch)
+  if (!repository.workspace?.projectExtracted) return 'Project not extracted yet - download the attachment below and extract it in Files.'
+  if (!status) return ''
+  const parts = [`On branch ${status.branch}`]
+  if (status.uncommittedPaths.length) parts.push(`${status.uncommittedPaths.length} uncommitted file(s)`)
+  if (status.unpushedCommits.length) parts.push(`${status.unpushedCommits.length} commit(s) not pushed`)
+  if (!status.uncommittedPaths.length && !status.unpushedCommits.length && status.pushed) parts.push('everything committed and pushed')
+  return parts.join(' · ')
+}
+
+function SubmissionPanel({ attemptId, repository, state, onOpenReport, onPrepare }) {
+  const open = ['not_submitted', 'awaiting_confirmation'].includes(state.stage)
+  return (
+    <section className={`mail-submission-panel is-${state.stage}`} aria-label="Submission status">
+      <div className="mail-submission-status" role="status" aria-live="polite">
+        <strong>Submission:</strong> <span>{state.label}</span>
+        {state.stage === 'evaluating' && <span className="mail-submission-note"> Your submitted work is frozen and being reviewed. This can take up to a minute.</span>}
+        {state.stage === 'evaluation_failed' && <span className="mail-submission-note"> {state.message} Reply <strong>retry</strong> to try again.</span>}
+      </div>
+      {state.stage === 'evaluated' && (
+        <button className="mail-download-button" type="button" onClick={() => onOpenReport(finalReportPath(attemptId))}>Open feedback and personalized roadmap</button>
+      )}
+      {open && (
+        <details className="mail-submission-help">
+          <summary>How to submit (pull request or main)</summary>
+          <div className="mail-submission-options">
+            <div><strong>Option A - pull request</strong><ol>{SUBMISSION_OPTIONS.pullRequest.map((step) => <li key={step}>{step}</li>)}</ol></div>
+            <div><strong>Option B - directly on main</strong><ol>{SUBMISSION_OPTIONS.main.map((step) => <li key={step}>{step}</li>)}</ol></div>
+          </div>
+          <p>Only committed and pushed work is reviewed. I will ask you to confirm before the final review starts. Feedback and your roadmap arrive in this thread.</p>
+        </details>
+      )}
+      {open && <p className="mail-submission-git">{gitSummary(repository)}</p>}
+      {state.stage === 'not_submitted' && (
+        <button className="mail-secondary-action" type="button" onClick={onPrepare}>Prepare submission reply</button>
+      )}
+    </section>
   )
 }
 

@@ -141,3 +141,9 @@
 .element-tree .bad {
     color: #fda4af;
 }
+
+
+.frontend-task-panel select,
+.frontend-task-panel .frontend-task-changes { width: 100%; }
+.frontend-task-changes { margin: 6px 0; padding-left: 18px; color: #cbd5e1; font-size: .86rem; }
+.frontend-task-note { font-size: .82rem; }

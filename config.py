@@ -11,6 +11,7 @@ from constants import (
     ADZUNA_DEFAULT_RESULTS,
     ADZUNA_REQUEST_TIMEOUT_SECONDS,
     DEFAULT_GEMINI_MODEL,
+    JOB_SEARCH_DEFAULT_COUNTRY,
     INTERVIEW_UNLOCK_SCORE,
     MAX_ADZUNA_COMPANY_NAME_LENGTH,
     MAX_INTERVIEW_AUDIO_BYTES,
@@ -61,6 +62,16 @@ def get_gemini_model(default: str = DEFAULT_GEMINI_MODEL) -> str:
     return get_environment_value("GEMINI_MODEL", default) or default
 
 
+def get_scenario_model() -> str:
+    """Model used for task generation; falls back to GEMINI_MODEL.
+
+    Generating a full multi-file assignment is the most demanding call, so it
+    can be pointed at a stronger model without changing the rest of the app.
+    """
+
+    return (get_environment_value("GEMINI_SCENARIO_MODEL") or "").strip() or get_gemini_model()
+
+
 def build_app_config() -> dict:
     """Build Flask configuration from environment values and stable defaults."""
 
@@ -71,6 +82,15 @@ def build_app_config() -> dict:
         "ADZUNA_APP_ID": get_environment_value("ADZUNA_APP_ID"),
         "ADZUNA_APP_KEY": get_environment_value("ADZUNA_APP_KEY"),
         "ADZUNA_DEFAULT_RESULTS": ADZUNA_DEFAULT_RESULTS,
+        # Default country for live listings (two-letter code). Users can pick
+        # another supported country on the company page.
+        "JOB_SEARCH_COUNTRY": (
+            get_environment_value("JOB_SEARCH_COUNTRY", JOB_SEARCH_DEFAULT_COUNTRY)
+            or JOB_SEARCH_DEFAULT_COUNTRY
+        ).strip().lower(),
+        "JOB_SEARCH_LOCATION": (get_environment_value("JOB_SEARCH_LOCATION", "") or "").strip(),
+        # Optional: only needed for Lebanon listings (Adzuna does not cover Lebanon).
+        "JOOBLE_API_KEY": get_environment_value("JOOBLE_API_KEY"),
         "ADZUNA_REQUEST_TIMEOUT_SECONDS": ADZUNA_REQUEST_TIMEOUT_SECONDS,
         "MAX_ADZUNA_COMPANY_NAME_LENGTH": MAX_ADZUNA_COMPANY_NAME_LENGTH,
         "INTERVIEW_UNLOCK_SCORE": INTERVIEW_UNLOCK_SCORE,

@@ -5,6 +5,7 @@ import { getAuthenticatedSession } from '../services/authApi.js'
 import ScenarioUnavailablePage from '../pages/ScenarioUnavailablePage.jsx'
 import { getFrontendSimulationProgress, getSimulationAttempt } from '../services/simulationApi.js'
 import TaskPanel from './TaskPanel.jsx'
+import WorkspaceBrief from './WorkspaceBrief.jsx'
 import AdvisorApp from './apps/AdvisorApp.jsx'
 import BrowserApp from './apps/BrowserApp.jsx'
 import FilesApp from './apps/FilesApp.jsx'
@@ -19,6 +20,17 @@ import {
   persistRepository,
   saveFile,
 } from './state/repositoryModel.js'
+import { recoverInterruptedEvaluations } from './state/evaluationEvidence.js'
+
+const BRIEF_STORAGE_PREFIX = 'careergrid:brief-hidden:'
+
+function briefInitiallyOpen(attemptId) {
+  try { return globalThis.localStorage?.getItem(`${BRIEF_STORAGE_PREFIX}${attemptId}`) !== '1' } catch { return true }
+}
+
+function rememberBrief(attemptId, open) {
+  try { globalThis.localStorage?.setItem(`${BRIEF_STORAGE_PREFIX}${attemptId}`, open ? '0' : '1') } catch { /* optional */ }
+}
 
 const apps = [
   { headerClass: 'mail-window-header', icon: '✉', id: 'mail', label: 'Mail', windowClass: 'mail-window' },
@@ -42,6 +54,9 @@ function SimulationDesktop() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [now, setNow] = useState(() => new Date())
   const [userIdentity, setUserIdentity] = useState(null)
+  const [briefOpen, setBriefOpen] = useState(() => briefInitiallyOpen(attemptId))
+  // A new object per click, so reopening the same resource still focuses it.
+  const [editorRequest, setEditorRequest] = useState(null)
   const scenarioUnavailable = attempt
     && ['generating', 'generation_failed'].includes(attempt.status)
 
@@ -83,12 +98,12 @@ function SimulationDesktop() {
         setProgress(loadedProgress)
         setUserIdentity(authenticatedSession.user)
         if (!unavailable) {
-          setRepository(loadRepository(attemptId, project.files || [], {
+          setRepository(recoverInterruptedEvaluations(loadRepository(attemptId, project.files || [], {
             archiveName: project.archive_name,
             name: project.name || 'careergrid-workspace',
             path: `/Projects/${project.name || 'careergrid-workspace'}`,
             requireExtraction: loaded.position_id !== 'frontend-developer',
-          }))
+          })))
         }
       })
       .catch((requestError) => {
@@ -128,6 +143,10 @@ function SimulationDesktop() {
     if (!result.error) setRepository(result.repository)
     return result
   }
+  const openInEditor = (resource) => {
+    setEditorRequest({ resourceId: resource.id, requestedAt: Date.now() })
+    setActiveApp('vscode')
+  }
   const save = (path, content) => {
     const result = saveFile(repository, path, content)
     if (!result.error) setRepository(result.repository)
@@ -141,6 +160,16 @@ function SimulationDesktop() {
           <div className="brand-icon">CG</div>
           <div className="brand-text"><strong>CareerGrid</strong><span>Interactive Career Simulation</span></div>
         </div>
+        {attempt.position_id !== 'frontend-developer' && (
+          <button
+            className="workspace-brief-toggle"
+            type="button"
+            aria-expanded={briefOpen}
+            onClick={() => { rememberBrief(attemptId, !briefOpen); setBriefOpen(!briefOpen) }}
+          >
+            {briefOpen ? 'Hide task brief' : 'Task brief'}
+          </button>
+        )}
         <div className="workspace-user">
           <div className="workspace-clock">
             <strong>{now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
@@ -173,7 +202,7 @@ function SimulationDesktop() {
           <div className="welcome-card">
             <span className="welcome-label">Workspace ready</span>
             <h1>Welcome to your {title} workspace.</h1>
-            <p>You're working with <strong>{company}</strong>. Check your inbox to see what needs your attention today.</p>
+            <p>You're working with <strong>{company}</strong>. Check your inbox to see what needs your attention today. The task brief summarises the task, deliverables, and how to submit.</p>
             <button className="open-mail-btn" type="button" onClick={() => setActiveApp('mail')}>Open Mail</button>
           </div>
           <div className="role-card">
@@ -194,25 +223,35 @@ function SimulationDesktop() {
             onClose={() => setActiveApp(null)}
             onDownload={download}
             onExtract={extract}
+            onOpenInEditor={openInEditor}
+            editorRequest={editorRequest}
             onUnreadChange={setUnreadCount}
             onSave={save}
             onRepositoryChange={setRepository}
           />
         ))}
-        {attempt.position_id === 'frontend-developer' && <TaskPanel attempt={attempt} progress={progress} />}
+        {attempt.position_id === 'frontend-developer' && <TaskPanel attempt={attempt} progress={progress} repository={repository} />}
+        {attempt.position_id !== 'frontend-developer' && briefOpen && (
+          <WorkspaceBrief
+            attempt={attempt}
+            repository={repository}
+            onOpenApp={setActiveApp}
+            onClose={() => { rememberBrief(attemptId, false); setBriefOpen(false) }}
+          />
+        )}
       </section>
     </main>
   )
 }
 
-function AppWindow({ active, app, attempt, downloads, files, repository, userIdentity, onClose, onDownload, onExtract, onSave, onRepositoryChange, onUnreadChange }) {
+function AppWindow({ active, app, attempt, downloads, editorRequest, files, repository, userIdentity, onClose, onDownload, onExtract, onOpenInEditor, onSave, onRepositoryChange, onUnreadChange }) {
   const appContent = {
     mail: <MailApp attempt={attempt} downloadedAttachments={downloads} repository={repository} userIdentity={userIdentity} onDownload={onDownload} onRepositoryChange={onRepositoryChange} onUnreadChange={onUnreadChange} />,
-    files: <FilesApp downloadedAttachments={downloads} projectFiles={files} repository={repository} onExtract={onExtract} />,
-    vscode: <VSCodeApp files={files} repository={repository} onSave={onSave} />,
+    files: <FilesApp downloadedAttachments={downloads} projectFiles={files} repository={repository} onExtract={onExtract} onOpenInEditor={onOpenInEditor} />,
+    vscode: <VSCodeApp downloads={downloads} files={files} openRequest={editorRequest} repository={repository} onSave={onSave} />,
     terminal: <TerminalApp files={files} repository={repository} onRepositoryChange={onRepositoryChange} />,
     browser: <BrowserApp active={active} attempt={attempt} />,
-    github: <GitHubApp repository={repository} onRepositoryChange={onRepositoryChange} />,
+    github: <GitHubApp repository={repository} taskId={attempt.public_scenario?.task?.id} onRepositoryChange={onRepositoryChange} />,
   }
   const content = appContent[app.id] ?? <AdvisorApp attempt={attempt} />
 

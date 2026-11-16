@@ -980,3 +980,45 @@
     .vscode-layout { grid-template-columns: 40px 145px minmax(0, 1fr); }
     .vscode-sidebar-header { padding: 0 8px; }
 }
+
+
+/* Reference resources downloaded from Mail: read-only, outside the repository. */
+.vscode-reference-explorer {
+    border-top: 1px solid #252525;
+}
+
+.vscode-reference-note {
+    margin: 6px 12px;
+    color: #8b8b8b;
+    font-size: 11px;
+}
+
+.vscode-readonly-badge,
+.vscode-tab-readonly {
+    padding: 1px 6px;
+    border: 1px solid #5a4a1a;
+    border-radius: 4px;
+    background: #3a3015;
+    color: #e2c26b;
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.vscode-tab-readonly {
+    margin-left: 4px;
+}
+
+.vscode-tab.is-reference .vscode-tab-label {
+    font-style: italic;
+}
+
+.vscode-code-editor.is-readonly {
+    background: #1b1b1b;
+    color: #c8c8c8;
+    cursor: default;
+}
+
+.vscode-tree-row .vscode-tab-unsaved {
+    margin-left: auto;
+    margin-right: 8px;
+}

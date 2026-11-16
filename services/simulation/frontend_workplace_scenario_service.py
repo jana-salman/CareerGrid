@@ -11,15 +11,26 @@ import re
 from copy import deepcopy
 from typing import Any
 
-from google.genai import types
 
-from ai_prompt.prompts.scenario_v1 import build_frontend_scenario_prompt
+from ai_prompt.prompts.scenario_v5 import build_frontend_prompt_v5
+from ai_prompt.prompts.scenario_v4 import build_spec_prompt
 from ai_prompt.rubrics.workplace_v1 import build_frontend_demo_private_rubric
-from config import get_gemini_model
 from constants import WORKPLACE_FINAL_STEP
-from services.ai.gemini_service import get_gemini_client
+from services.ai.scenario_quality import assignment_quality_problems
+from services.simulation.frontend_fallback_project import FALLBACK_FILES, FALLBACK_RESOURCES
+from services.ai.generation_runtime import GenerationReport
+from services.ai.scenario_drafts import (
+    FRONTEND_BUILD_SCHEMA,
+    FRONTEND_DRAFT_SCHEMA,
+    FRONTEND_SPEC_SCHEMA,
+    assemble_frontend,
+)
 from services.ai.scenario_generation_service import (
     ScenarioGenerationError,
+    ScenarioQualityError,
+    run_task_generation,
+    assert_private_not_public,
+    validate_task_brief,
     validate_workplace_scenario,
 )
 
@@ -36,7 +47,10 @@ FRONTEND_MAX_PROJECT_FILES = 10
 
 FRONTEND_APPLICATIONS = ("mail", "browser", "vscode", "testing", "github")
 FRONTEND_FILE_EXTENSIONS = (".html", ".css", ".js", ".json", ".md")
-FRONTEND_REQUIRED_FILES = {"index.html", "styles.css", "product.js", "package.json"}
+FRONTEND_REQUIRED_FILES = {"index.html", "styles.css", "package.json"}
+PATCH_CHECK_CATEGORIES = {"correctness", "robustness", "accessibility", "regression"}
+PATCH_CHECK_ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]{0,39}$")
+MAX_PATCH_PATTERN_LENGTH = 200
 FRONTEND_TERMINAL_COMMANDS = {
     "help",
     "clear",
@@ -85,10 +99,15 @@ def deterministic_frontend_scenario(company_name: str, attempt_id: str) -> dict:
         "Frontend Team Lead",
         "Urgent: Buy Now no longer opens checkout",
         (
-            "QA confirmed that the product-page Buy Now interaction stopped "
-            "opening the checkout panel after today's deployment. Reproduce it "
-            "on desktop and mobile, investigate the frontend evidence, and "
-            "prepare a focused fix for review."
+            "QA confirmed that Buy Now stopped opening the checkout panel after "
+            "today's deployment, and colour changes no longer update price or "
+            "stock. Release is blocked. While you are in this code, please also "
+            "close the open checkout issues in qa-regression-notes.md (quantity "
+            "validation, duplicate summary lines, and focus when the panel opens). "
+            "Start from browser-console.log, check the agreed behaviour in "
+            "checkout-acceptance.md and the README, keep the existing styling and "
+            "mobile layout, and add unit tests for any new logic. Reproduce on "
+            "desktop and mobile, then deliver for review."
         ),
         "critical",
         FRONTEND_ISSUE_ID,
@@ -127,61 +146,7 @@ def deterministic_frontend_scenario(company_name: str, attempt_id: str) -> dict:
             "low",
         ),
     ]
-    files = [
-        {
-            "path": "index.html",
-            "content": """<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="styles.css"><script src="product.js" defer></script></head><body><main><article class="product"><h1>Everyday Headphones</h1><button id="buy-now-btn" class="buy-now" type="button">Buy Now</button><section id="checkout-panel" class="checkout" hidden aria-live="polite">Checkout ready</section></article></main></body></html>""",
-        },
-        {
-            "path": "styles.css",
-            "content": """body { margin: 0; font: 16px system-ui; background: #071126; color: white; }
-.product { width: min(680px, calc(100% - 32px)); margin: 48px auto; }
-.buy-now { min-height: 44px; padding: 10px 18px; }
-.buy-now:focus-visible { outline: 3px solid #69c9ff; outline-offset: 3px; }
-@media (max-width: 480px) { .product { margin-top: 20px; } .buy-now { width: 100%; } }""",
-        },
-        {
-            "path": "product.js",
-            "content": """const checkoutButton = document.querySelector('#checkout-btn');
-const checkoutPanel = document.querySelector('#checkout-panel');
-
-function openCheckoutPanel() {
-    checkoutPanel.hidden = false;
-}
-
-checkoutButton.addEventListener('click', openCheckoutPanel);""",
-        },
-        {
-            "path": "product.test.js",
-            "content": (
-                "// Controlled CareerGrid checks cover mouse, keyboard, repeated "
-                "activation, and mobile layout."
-            ),
-        },
-        {
-            "path": "package.json",
-            "content": json.dumps(
-                {
-                    "name": "product-page",
-                    "private": True,
-                    "scripts": {
-                        "test": "careergrid-test",
-                        "lint": "careergrid-lint",
-                        "build": "careergrid-build",
-                    },
-                },
-                indent=2,
-            ),
-        },
-        {
-            "path": "README.md",
-            "content": (
-                "Run npm test, npm run lint, and npm run build in the simulated "
-                "terminal. No external packages are required."
-            ),
-        },
-    ]
+    files = deepcopy(FALLBACK_FILES)
     tasks = [
         {
             "step": 1,
@@ -234,10 +199,10 @@ checkoutButton.addEventListener('click', openCheckoutPanel);""",
         {
             "step": 5,
             "application": "github",
-            "title": "Prepare the pull request",
+            "title": "Deliver for review (pull request or main)",
             "instructions": (
-                "Review the same diff and test evidence, create a simulated pull "
-                "request, and send the final release update."
+                "Review the same diff and check results, then deliver through a "
+                "pull request or by pushing to main, and send the final release update."
             ),
             "required_actions": ["review_diff", "create_pr", "final_update"],
         },
@@ -249,8 +214,9 @@ checkoutButton.addEventListener('click', openCheckoutPanel);""",
         "title": "Product-page Buy Now regression",
         "company_name": company_name,
         "fictional_company_notice": (
-            "All employees, code, incidents, and messages in this simulation "
-            "are fictional."
+            "Practice simulation (fallback scenario): all employees, code, "
+            "incidents, and messages are fictional. This is not a real "
+            "employer assignment."
         ),
         "advisor": {
             "name": "Maya Lewis",
@@ -264,7 +230,24 @@ checkoutButton.addEventListener('click', openCheckoutPanel);""",
             "body": urgent["body"],
             "priority": "high",
             "deadline_minutes": 240,
-            "attachments": ["README.md"],
+            "attachments": ["README.md", "console-log", "qa-notes", "acceptance"],
+            "requirements": [
+                "Buy Now opens the checkout panel again by mouse and keyboard on desktop and mobile, and colour changes update price and stock.",
+                "Quantity must be a whole number from 1 to the selected colour's stock; invalid, zero, negative, or decimal values show a message in #quantity-error and keep checkout closed.",
+                "The checkout summary shows exactly one line for the current selection, even after repeated Buy Now presses.",
+                "Opening the panel moves keyboard focus into it and Close returns focus to Buy Now, while existing styling, focus outlines, out-of-stock handling, and the mobile layout are preserved.",
+            ],
+            "deliverables": [
+                "Saved code changes to the product page scripts",
+                "Unit tests for new quantity or pricing logic in tests/cart.test.js",
+                "Delivery through a pull request or a push to main, plus a final team update",
+            ],
+            "acceptance_criteria": [
+                "No console errors on load; Buy Now opens checkout and Midnight disables Buy Now.",
+                "Quantity 0, -2, 2.5, and 5 on Sand show a message and do not open checkout.",
+                "Pressing Buy Now twice shows one summary line with the correct total.",
+                "Focus moves into the panel on open and back to Buy Now on Close.",
+            ],
         },
         "background_emails": background,
         "inbox_emails": [urgent, *background],
@@ -275,27 +258,7 @@ checkoutButton.addEventListener('click', openCheckoutPanel);""",
             "default_branch": "main",
             "files": files,
         },
-        "resources": [
-            {
-                "id": "console-log",
-                "name": "browser-console.log",
-                "type": "text",
-                "content": (
-                    "Uncaught TypeError: Cannot read properties of null (reading "
-                    "'addEventListener') at product.js"
-                ),
-            },
-            {
-                "id": "network-log",
-                "name": "network.log",
-                "type": "text",
-                "content": (
-                    "GET /product/headphones 200\n"
-                    "GET /product.js 200\n"
-                    "GET /styles.css 200"
-                ),
-            },
-        ],
+        "resources": deepcopy(FALLBACK_RESOURCES),
         "skill_targets": [
             "prioritization",
             "browser debugging",
@@ -333,13 +296,65 @@ def _is_string_list(value: Any, *, allow_empty: bool = True) -> bool:
     )
 
 
+def _validate_patch_checks(checks: Any, file_paths: set[str]) -> None:
+    if not isinstance(checks, list) or not 3 <= len(checks) <= 8:
+        raise ScenarioGenerationError("Frontend scenarios need 3-8 patch checks.")
+    seen = set()
+    for check in checks:
+        if not isinstance(check, dict):
+            raise ScenarioGenerationError("Every patch check must be an object.")
+        check_id = check.get("id")
+        if not isinstance(check_id, str) or not PATCH_CHECK_ID_PATTERN.fullmatch(check_id) or check_id in seen:
+            raise ScenarioGenerationError("Patch check IDs must be unique snake_case keys.")
+        seen.add(check_id)
+        if check.get("category") not in PATCH_CHECK_CATEGORIES:
+            raise ScenarioGenerationError("Patch check category is invalid.")
+        for field_name in ("description", "feedback"):
+            if not isinstance(check.get(field_name), str) or not check[field_name].strip():
+                raise ScenarioGenerationError(f"Patch check '{field_name}' is required.")
+        conditions = check.get("any_of")
+        if not isinstance(conditions, list) or not conditions:
+            raise ScenarioGenerationError("Patch checks need at least one condition.")
+        for condition in conditions:
+            if not isinstance(condition, dict) or condition.get("file") not in file_paths:
+                raise ScenarioGenerationError("Patch check refers to a missing project file.")
+            patterns = 0
+            for key in ("must_include_all", "must_include_any", "must_not_include"):
+                values = condition.get(key, [])
+                if not isinstance(values, list) or not all(
+                    isinstance(item, str) and item and len(item) <= MAX_PATCH_PATTERN_LENGTH
+                    for item in values
+                ):
+                    raise ScenarioGenerationError("Patch check patterns must be short strings.")
+                patterns += len(values)
+            if not patterns:
+                raise ScenarioGenerationError("Patch check conditions need a pattern.")
+            if set(condition.get("must_include_all", [])) & set(condition.get("must_not_include", [])):
+                raise ScenarioGenerationError("Patch check condition contradicts itself.")
+
+
+def _starter_fails_a_correctness_check(scenario: dict[str, dict[str, Any]]) -> None:
+    """A generated task must not already pass its own correctness checks."""
+
+    from services.simulation.frontend_workplace_progress_service import evaluate_patch_checks
+
+    checks = scenario["private_context"]["patch_checks"]
+    files = {item["path"]: item["content"] for item in scenario["public_scenario"]["project"]["files"]}
+    results = evaluate_patch_checks(checks, files)
+    if all(results[check["id"]] for check in checks if check["category"] == "correctness"):
+        raise ScenarioGenerationError("Starter files already pass every correctness check.")
+
+
 def _validate_frontend_private_context(
     private_context: dict[str, Any],
     file_paths: set[str],
 ) -> None:
     """Validate Frontend-only private fields while they remain server-side."""
 
-    _ = file_paths
+    _validate_patch_checks(private_context.get("patch_checks"), file_paths)
+    keywords = private_context.get("root_cause_keywords")
+    if not _is_string_list(keywords, allow_empty=False) or len(keywords) > 5:
+        raise ScenarioGenerationError("Frontend private context needs 1-5 root-cause keywords.")
     expected_patch = private_context.get("expected_patch")
     if not isinstance(expected_patch, dict) or not all(
         isinstance(key, str) and isinstance(value, str)
@@ -428,7 +443,9 @@ def validate_frontend_requirements(
         )
 
     file_paths = {file_item["path"] for file_item in files}
-    if not FRONTEND_REQUIRED_FILES.issubset(file_paths):
+    if not FRONTEND_REQUIRED_FILES.issubset(file_paths) or not any(
+        path.endswith(".js") and not path.endswith(".test.js") for path in file_paths
+    ):
         raise ScenarioGenerationError("Frontend project is missing required files.")
     if project.get("default_branch") != "main":
         raise ScenarioGenerationError("Frontend project default branch must be main.")
@@ -538,38 +555,90 @@ def validate_frontend_workplace_scenario(
         private_context_validator=_validate_frontend_private_context,
         allowed_extensions=FRONTEND_FILE_EXTENSIONS,
     )
-    return validate_frontend_requirements(scenario)
+    validate_frontend_requirements(scenario)
+    validate_task_brief(scenario["public_scenario"])
+    assert_private_not_public(scenario["public_scenario"], scenario["private_context"])
+    _starter_fails_a_correctness_check(scenario)
+    problems = assignment_quality_problems(scenario, kind="frontend")
+    if problems:
+        raise ScenarioQualityError(problems)
+    return scenario
+
+
+def normalize_generated_private_keys(payload: Any) -> Any:
+    """Make private mapping keys Firebase-safe (models often use file names).
+
+    These keys are private labels such as "form.js"; only their characters are
+    changed, never their meaning, so this is not a quality shortcut.
+    """
+
+    private = payload.get("private_context") if isinstance(payload, dict) else None
+    if not isinstance(private, dict):
+        return payload
+    for field_name in ("expected_patch", "scoring_notes"):
+        mapping = private.get(field_name)
+        if isinstance(mapping, dict):
+            private[field_name] = {
+                re.sub(r"[.#$/\[\]]", "_", str(key)) or "item": (
+                    value if isinstance(value, str)
+                    else "; ".join(map(str, value)) if isinstance(value, list)
+                    else json.dumps(value, ensure_ascii=False)
+                )
+                for key, value in mapping.items()
+            }
+    return payload
 
 
 def generate_frontend_workplace_scenario(
     *,
     company_name: str,
     attempt_id: str,
+    job_context: dict[str, Any] | None = None,
+    report: GenerationReport | None = None,
 ) -> tuple[dict, int]:
-    """Generate a validated scenario, using the stable fallback on failure."""
+    """Generate a validated assignment within a time budget, else the fallback.
 
-    prompt = build_frontend_scenario_prompt(
-        company_name=company_name,
-        attempt_id=attempt_id,
-    )
+    Returns ``(scenario, generation_count)``; a count of 0 marks the fallback.
+    ``report`` records each attempt and why the fallback was used.
+    """
 
-    try:
-        with get_gemini_client() as client:
-            response = client.models.generate_content(
-                model=get_gemini_model(),
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    temperature=0.45,
-                ),
-            )
-        payload = json.loads(response.text or "")
-        return validate_frontend_workplace_scenario(payload), 1
-    except Exception as error:
-        # Generation is intentionally fail-safe: the five-step simulation must
-        # remain available when Gemini, JSON parsing, or validation is unavailable.
-        logger.warning(
-            "Frontend scenario generation failed; using deterministic fallback (%s).",
-            type(error).__name__,
+    report = report if report is not None else GenerationReport()
+    report.kind = "frontend"
+    report.attempt_id = attempt_id
+    report.job_context_source = (job_context or {}).get("source", "")
+
+    def build_prompt(feedback):
+        return build_frontend_prompt_v5(
+            company_name=company_name,
+            job_context=job_context,
+            feedback=feedback,
         )
-        return deepcopy(deterministic_frontend_scenario(company_name, attempt_id)), 0
+
+    def spec_prompt(feedback):
+        return build_spec_prompt(
+            kind="frontend",
+            role="Frontend Developer",
+            difficulty="junior",
+            competencies=["UI debugging", "JavaScript", "accessibility", "responsive layout", "testing"],
+            company_name=company_name,
+            job_context=job_context,
+            feedback=feedback,
+        )
+
+    scenario = run_task_generation(
+        kind="frontend",
+        report=report,
+        single_prompt=build_prompt,
+        single_schema=FRONTEND_DRAFT_SCHEMA,
+        spec_prompt=spec_prompt,
+        spec_schema=FRONTEND_SPEC_SCHEMA,
+        build_schema=FRONTEND_BUILD_SCHEMA,
+        assemble=lambda draft: assemble_frontend(draft, attempt_id=attempt_id, company_name=company_name),
+        validate=validate_frontend_workplace_scenario,
+    )
+    if scenario is not None:
+        return scenario, len(report.attempts)
+    # Fail-safe: the five-step simulation stays available with a substantial,
+    # validated built-in assignment rather than a shallow generated one.
+    logger.warning("Using the built-in Frontend fallback assignment: %s", report.failure_reason)
+    return deepcopy(deterministic_frontend_scenario(company_name, attempt_id)), 0

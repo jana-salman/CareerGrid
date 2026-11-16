@@ -88,7 +88,7 @@ def test_frontend_project_rejects_duplicates_and_missing_required_files():
     scenario = deterministic_frontend_scenario("Example Co", "project-files")
 
     duplicate = deepcopy(scenario)
-    duplicate["public_scenario"]["project"]["files"][1]["path"] = "index.html"
+    duplicate["public_scenario"]["project"]["files"][2]["path"] = "index.html"
     with pytest.raises(ScenarioGenerationError, match="duplicate project file"):
         validate_frontend_workplace_scenario(duplicate)
 
@@ -96,10 +96,20 @@ def test_frontend_project_rejects_duplicates_and_missing_required_files():
     missing["public_scenario"]["project"]["files"] = [
         file_item
         for file_item in missing["public_scenario"]["project"]["files"]
-        if file_item["path"] != "product.js"
+        if file_item["path"] != "styles.css"
     ]
     with pytest.raises(ScenarioGenerationError, match="missing required files"):
         validate_frontend_workplace_scenario(missing)
+
+    # Removing a file that a patch check reads is also rejected.
+    unchecked = deepcopy(scenario)
+    unchecked["public_scenario"]["project"]["files"] = [
+        file_item
+        for file_item in unchecked["public_scenario"]["project"]["files"]
+        if file_item["path"] != "product.js"
+    ]
+    with pytest.raises(ScenarioGenerationError):
+        validate_frontend_workplace_scenario(unchecked)
 
 
 def test_frontend_scenario_rejects_invalid_steps_and_applications():

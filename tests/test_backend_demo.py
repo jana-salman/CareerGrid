@@ -70,16 +70,23 @@ def _project_file(scenario, path):
 def test_backend_companies_page_shows_demo_before_live_jobs(client, monkeypatch):
     monkeypatch.setattr(
         career_routes,
-        "fetch_adzuna_jobs",
-        lambda *args, **kwargs: [
-            {
-                "title": "Live Backend Position",
-                "company": {"display_name": "Live Company"},
-                "location": {"display_name": "Remote"},
-                "description": "Live Adzuna listing",
-                "redirect_url": "https://example.com/job",
-            }
-        ],
+        "search_jobs",
+        lambda *args, **kwargs: {
+            "status": "ok",
+            "provider": "adzuna",
+            "jobs": [
+                {
+                    "title": "Live Backend Position",
+                    "company_name": "Live Company",
+                    "location": "Remote",
+                    "description": "Live Adzuna listing",
+                    "url": "https://example.com/job",
+                    "created": "",
+                    "source": "adzuna",
+                    "source_label": "Adzuna",
+                }
+            ],
+        },
     )
 
     response = client.get(
@@ -96,8 +103,8 @@ def test_backend_companies_page_shows_demo_before_live_jobs(client, monkeypatch)
 def test_frontend_companies_page_does_not_offer_backend_demo(client, monkeypatch):
     monkeypatch.setattr(
         career_routes,
-        "fetch_adzuna_jobs",
-        lambda *args, **kwargs: [],
+        "search_jobs",
+        lambda *args, **kwargs: {"status": "no_results", "jobs": []},
     )
 
     response = client.get(
@@ -138,11 +145,13 @@ def test_demo_start_uses_predefined_scenario_without_gemini(client, monkeypatch)
         "/workspace/attempt/attempt-demo"
     )
     assert saved["public_scenario"]["scenario_id"] == (
-        "technova-user-profile-availability-v2"
+        "technova-user-profile-availability-v3"
     )
     assert {change["path"] for change in saved["private_context"]["expected_changes"]} == {
-        "app.py",
+        "api/profiles.py",
         "services/user_service.py",
+        "services/visibility.py",
+        "tests/test_profiles.py",
     }
     assert saved["generation_source"] == "predefined_demo"
     assert saved["generation_attempt_count"] == 1
@@ -167,7 +176,8 @@ def test_demo_public_evidence_contains_both_reported_cases():
     assert task["subject"] == "Production issue — User Profile API"
     assert "user IDs that do not exist" in task["body"]
     assert "deactivated account is still accessible" in task["body"]
-    assert evidence.count("Case ") == 2
+    assert "SUP-2291" in task["body"]
+    assert evidence.count("Case ") == 3
     assert "GET /api/users/1842" in evidence
     assert "Expected: 404 Not Found" in evidence
     assert "Actual: 500 Internal Server Error" in evidence
@@ -213,8 +223,15 @@ def test_demo_private_context_covers_both_causes_and_required_changes():
     assert "without guarding" in root_cause
     assert "matches only by id" in root_cause
     assert "deactivated user 103" in root_cause
-    assert set(expectations) == {"app.py", "services/user_service.py"}
-    assert "http 404" in expectations["app.py"]
+    assert "soft-deleted user 118" in root_cause
+    assert "computes total before filtering" in root_cause
+    assert set(expectations) == {
+        "api/profiles.py",
+        "services/user_service.py",
+        "services/visibility.py",
+        "tests/test_profiles.py",
+    }
+    assert "http 404" in expectations["api/profiles.py"]
     assert "deactivated users" in expectations["services/user_service.py"]
     assert "active users" in expectations["services/user_service.py"]
 
@@ -267,12 +284,20 @@ def test_normal_backend_start_still_uses_gemini_generator(client, monkeypatch):
     )
 
     assert response.status_code == 302
-    generated.assert_called_once_with(
-        career_id="software-developer",
-        position_id="backend-developer",
-        company_id="technova",
-        attempt_id="attempt-normal",
-    )
+    generated.assert_called_once()
+    kwargs = generated.call_args.kwargs
+    assert {key: kwargs[key] for key in ("career_id", "position_id", "company_id", "attempt_id", "company_name")} == {
+        "career_id": "software-developer",
+        "position_id": "backend-developer",
+        "company_id": "technova",
+        # Generated once for the company and position, under the shared assignment's id.
+        "attempt_id": "practice-software-developer-backend-developer-technova-v1",
+        "company_name": "TechNova",
+    }
+    # Practice companies pass their defined role profile, not nothing.
+    assert kwargs["job_context"]["source"] == "catalog"
+    assert "TechNova builds internal platforms" in kwargs["job_context"]["description"]
+    assert "recent_assignments" not in kwargs
     assert saved["generation_source"] == "gemini"
 
 
@@ -319,10 +344,12 @@ def test_frontend_start_still_uses_its_dedicated_generator(client, monkeypatch):
     )
 
     assert response.status_code == 302
-    frontend_generator.assert_called_once_with(
-        company_name="PixelWorks",
-        attempt_id="attempt-frontend",
-    )
+    frontend_generator.assert_called_once()
+    kwargs = frontend_generator.call_args.kwargs
+    assert kwargs["company_name"] == "PixelWorks"
+    assert kwargs["attempt_id"] == "practice-software-developer-frontend-developer-pixelworks-v1"
+    assert kwargs["job_context"]["source"] == "catalog"
+    assert "PixelWorks designs and builds" in kwargs["job_context"]["description"]
 
 
 def test_demo_attempt_uses_predefined_interview_without_gemini(client, monkeypatch):
